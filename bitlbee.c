@@ -319,7 +319,6 @@ int bitlbee_connection_create( int fd )
 		return( 0 );
 	
 	connection_list = g_list_append( connection_list, newconn );
-	conf_loaddefaults( newconn );
 
         set_add( newconn, "away_devoice", "true",  set_eval_away_devoice );
 	set_add( newconn, "auto_connect", "true", set_eval_bool );
@@ -330,11 +329,7 @@ int bitlbee_connection_create( int fd )
 #ifdef ICONV
         set_add( newconn, "charset", "none", NULL );  
 #endif
-#ifdef DEBUG
-	set_add( newconn, "debug", "true", set_eval_bool );
-#else
 	set_add( newconn, "debug", "false", set_eval_bool );
-#endif
 	set_add( newconn, "handle_unknown", "root", NULL );
 	set_add( newconn, "html", "nostrip", NULL );
 	set_add( newconn, "ops", "both", set_eval_ops );
@@ -343,6 +338,8 @@ int bitlbee_connection_create( int fd )
 	set_add( newconn, "to_char", ": ", set_eval_to_char );
 	set_add( newconn, "typing_notice", "false", set_eval_bool );
 
+	conf_loaddefaults( newconn );
+	
 	return( 1 );	
 } 
 
@@ -477,7 +474,7 @@ int bitlbee_save( irc_t *irc )
 	fclose( fp );
 
 	snprintf( s, 512, "%s%s%s", global.conf->configdir, irc->nick, ".nicks~" );
-	line = strndup( s, strlen( s ) - 1 );
+	line = g_strndup( s, strlen( s ) - 1 );
 	if( unlink( line ) != 0 )
 	{
 		if( errno != ENOENT )
@@ -565,7 +562,7 @@ int bitlbee_save( irc_t *irc )
 	fclose( fp );
 	
 	snprintf( s, 512, "%s%s%s", global.conf->configdir, irc->nick, ".accounts~" );
-	line = strndup( s, strlen( s ) - 1 );
+	line = g_strndup( s, strlen( s ) - 1 );
 	if( unlink( line ) != 0 )
 	{
 		if( errno != ENOENT )

@@ -1,3 +1,15 @@
+Version 0.85a:
+- Fixed an authentication problem with logging into some MSN accounts.
+- Removed a non-critical warning message from the ICQ servers when logging
+  in with an empty contact list.
+- Fixed reading the [defaults] section of bitlbee.conf.
+- The last newline in outgoing messages when using the buddy_sendbuffer is
+  now removed correctly.
+- Yahoo! colour/font tag stripping now actually works.
+- Fixed compilation on *BSD and some Linux architectures.
+
+Finished 24 Mar 2004
+
 Version 0.85:
 - Users can specify alternate configuration files/directories at runtime
   now.

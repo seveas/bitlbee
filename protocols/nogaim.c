@@ -312,8 +312,11 @@ void account_online( struct gaim_connection *gc )
 			n = n->next;
 		}
 		
-		gc->prpl->add_buddies( gc, ul );
-		g_list_free( ul );
+		if( ul )
+		{
+			gc->prpl->add_buddies( gc, ul );
+			g_list_free( ul );
+		}
 	}
 	
 	if( u && u->away ) proto_away( gc, u->away );
@@ -466,7 +469,7 @@ void add_buddy( struct gaim_connection *gc, char *group, char *handle, char *rea
 	if( ( s = strchr( handle, '@' ) ) )
 	{
 		u->host = strdup( s + 1 );
-		u->user = strndup( handle, s - handle );
+		u->user = g_strndup( handle, s - handle );
 	}
 	else if( gc->user->proto_opt[0] && *gc->user->proto_opt[0] )
 	{

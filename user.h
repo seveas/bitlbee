@@ -23,7 +23,7 @@
   Suite 330, Boston, MA  02111-1307  USA
 */
 
-typedef struct user
+typedef struct __USER__ /* struct user exists on some architectures already... */
 {
 	char *nick;
 	char *user;
@@ -42,7 +42,7 @@ typedef struct user
 	int sendbuf_len;
 	guint sendbuf_timer;
 	
-	int (*send_handler) ( irc_t *irc, struct user *u, char *msg );
+	int (*send_handler) ( irc_t *irc, struct __USER__ *u, char *msg );
 	
 	void *next;
 } user_t;

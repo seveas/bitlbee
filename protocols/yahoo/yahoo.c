@@ -83,7 +83,7 @@ static char *byahoo_strip( char *in )
 	while( *in && st )
 	{
 		st = 0;
-		if( strcasecmp( in, "<font" ) == 0 )
+		if( strncasecmp( in, "<font", 5 ) == 0 )
 		{
 			char *s = strchr( in, '>' );
 			if( !s )
@@ -92,7 +92,7 @@ static char *byahoo_strip( char *in )
 			in = s + 1;
 			st = 1;
 		}
-		else if( strcmp( in, "\e[#" ) == 0 )
+		else if( strncmp( in, "\e[#", 3 ) == 0 )
 		{
 			if( strlen( in ) < 10 )
 				break;

@@ -1246,7 +1246,7 @@ gboolean buddy_send_handler_delayed( gpointer data )
 {
 	user_t *u = data;
 	
-	u->sendbuf[u->sendbuf_len-1] = 0; /* Cut off the last newline */
+	u->sendbuf[u->sendbuf_len-2] = 0; /* Cut off the last newline */
 	serv_send_im( u->gc->irc, u, u->sendbuf );
 	
 	free( u->sendbuf );

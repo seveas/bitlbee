@@ -236,25 +236,14 @@ char *passport_get_id(char *header_i, char *url)
 	if (dummy)
 		*dummy = 0;
 
-	/* X509 stuff */
-	gnutls_certificate_allocate_credentials(&xcred);
-	/* initialize TLS session */
-	gnutls_init(&session, GNUTLS_CLIENT);
-
-	/* use the default priorities */
-	gnutls_transport_set_lowat(session, 50);
-
-	gnutls_set_default_priority(session);
-	gnutls_certificate_type_set_priority(session,
-					     pp_cert_type_priority);
-	/* put the x509 credentials to the current session */
-	gnutls_credentials_set(session, GNUTLS_CRD_CERTIFICATE, xcred);
-	
-	/* create a connection to the server */
 	sd = tcp_connect(server, "443");
-	/* associate the connection to the session */
+	
+	gnutls_certificate_allocate_credentials(&xcred);
+	gnutls_init(&session, GNUTLS_CLIENT);
+	gnutls_set_default_priority(session);
+	gnutls_credentials_set(session, GNUTLS_CRD_CERTIFICATE, xcred);
 	gnutls_transport_set_ptr(session, (gnutls_transport_ptr) sd);
-	/* perform the TLS handshake */
+	
 	ret = gnutls_handshake(session);
 
 	if (ret < 0) {

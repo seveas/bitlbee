@@ -32,7 +32,7 @@ void nick_set( irc_t *irc, char *handle, int proto, char *nick )
 	
 	while( n )
 	{
-		if( ( g_ascii_strcasecmp( n->handle, handle ) == 0 ) && n->proto == proto )
+		if( ( g_strcasecmp( n->handle, handle ) == 0 ) && n->proto == proto )
 		{
 			g_free( n->nick );
 			n->nick = nick_dup( nick );
@@ -65,7 +65,7 @@ char *nick_get( irc_t *irc, char *handle, int proto, const char *realname )
 	memset( nick, 0, MAX_NICK_LENGTH + 1 );
 	
 	while( n && !*nick )
-		if( ( n->proto == proto ) && ( g_ascii_strcasecmp( n->handle, handle ) == 0 ) )
+		if( ( n->proto == proto ) && ( g_strcasecmp( n->handle, handle ) == 0 ) )
 			strcpy( nick, n->nick );
 		else
 			n = n->next;
@@ -86,15 +86,21 @@ char *nick_get( irc_t *irc, char *handle, int proto, const char *realname )
 			g_snprintf( nick, MAX_NICK_LENGTH, "%s", realname );
 		
 		nick_strip( nick );
-		nick_lc( nick );
+		if (set_getint(irc, "lcnicks")) 
+			nick_lc( nick );
 	}
 	
 	while( !nick_ok( nick ) || user_find( irc, nick ) )
 	{
-		if( strlen( nick ) > 4 )
-			nick[strlen(nick)-1] = 0;
+		if( strlen( nick ) < ( MAX_NICK_LENGTH - 1 ) )
+		{
+			nick[strlen(nick)+1] = 0;
+			nick[strlen(nick)] = '_';
+		}
 		else
+		{
 			nick[0] ++;
+		}
 		
 		if( inf_protection-- == 0 )
 		{
@@ -129,7 +135,7 @@ void nick_del( irc_t *irc, char *nick )
 	
 	while( n )
 	{
-		if( g_ascii_strcasecmp( n->nick, nick ) == 0 )
+		if( g_strcasecmp( n->nick, nick ) == 0 )
 		{
 			if( l )
 				l->next = n->next;

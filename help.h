@@ -32,14 +32,14 @@ typedef union
 	char *mem_offset;
 } help_off_t;
 
-typedef struct help_t
+typedef struct help
 {
 	int fd;
 	time_t mtime;
 	char *string;
 	help_off_t offset;
 	int length;
-	void *next;
+	struct help *next;
 } help_t;
 
 help_t *help_init( help_t **help );

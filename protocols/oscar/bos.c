@@ -1,9 +1,7 @@
-
-#define FAIM_INTERNAL
 #include <aim.h>
 
 /* Request BOS rights (group 9, type 2) */
-faim_export int aim_bos_reqrights(aim_session_t *sess, aim_conn_t *conn)
+int aim_bos_reqrights(aim_session_t *sess, aim_conn_t *conn)
 {
 	return aim_genericreq_n(sess, conn, 0x0009, 0x0002);
 }
@@ -13,7 +11,7 @@ static int rights(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, aim_m
 {
 	aim_rxcallback_t userfunc;
 	aim_tlvlist_t *tlvlist;
-	fu16_t maxpermits = 0, maxdenies = 0;
+	guint16 maxpermits = 0, maxdenies = 0;
 	int ret = 0;
 
 	/* 
@@ -51,7 +49,7 @@ static int rights(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, aim_m
  * a bitwise OR of all the user classes you want to see you.
  *
  */
-faim_export int aim_bos_setgroupperm(aim_session_t *sess, aim_conn_t *conn, fu32_t mask)
+int aim_bos_setgroupperm(aim_session_t *sess, aim_conn_t *conn, guint32 mask)
 {
 	return aim_genericreq_l(sess, conn, 0x0009, 0x0004, &mask);
 }
@@ -84,11 +82,11 @@ faim_export int aim_bos_setgroupperm(aim_session_t *sess, aim_conn_t *conn, fu32
  *
  * XXX ye gods.
  */
-faim_export int aim_bos_changevisibility(aim_session_t *sess, aim_conn_t *conn, int changetype, const char *denylist)
+int aim_bos_changevisibility(aim_session_t *sess, aim_conn_t *conn, int changetype, const char *denylist)
 {
 	aim_frame_t *fr;
 	int packlen = 0;
-	fu16_t subtype;
+	guint16 subtype;
 	char *localcpy = NULL, *tmpptr = NULL;
 	int i;
 	int listcount;
@@ -145,13 +143,13 @@ static int snachandler(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, 
 	return 0;
 }
 
-faim_internal int bos_modfirst(aim_session_t *sess, aim_module_t *mod)
+int bos_modfirst(aim_session_t *sess, aim_module_t *mod)
 {
 
 	mod->family = 0x0009;
 	mod->version = 0x0001;
 	mod->toolid = 0x0110;
-	mod->toolversion = 0x047b;
+	mod->toolversion = 0x0629;
 	mod->flags = 0;
 	strncpy(mod->name, "bos", sizeof(mod->name));
 	mod->snachandler = snachandler;

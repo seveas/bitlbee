@@ -68,7 +68,7 @@ set_t *set_find( irc_t *irc, char *key )
 	
 	while( s )
 	{
-		if( g_ascii_strcasecmp( s->key, key ) == 0 )
+		if( g_strcasecmp( s->key, key ) == 0 )
 			break;
 		s = s->next;
 	}
@@ -94,7 +94,7 @@ int set_getint( irc_t *irc, char *key )
 	if( !s )
 		return( 0 );
 	
-	if( ( g_ascii_strcasecmp( s, "true" ) == 0 ) || ( g_ascii_strcasecmp( s, "yes" ) == 0 ) || ( g_ascii_strcasecmp( s, "on" ) == 0 ) )
+	if( ( g_strcasecmp( s, "true" ) == 0 ) || ( g_strcasecmp( s, "yes" ) == 0 ) || ( g_strcasecmp( s, "on" ) == 0 ) )
 		return( 1 );
 	
 	if( sscanf( s, "%d", &i ) != 1 )
@@ -143,7 +143,7 @@ void set_del( irc_t *irc, char *key )
 	
 	while( s )
 	{
-		if( g_ascii_strcasecmp( s->key, key ) == 0 )
+		if( g_strcasecmp( s->key, key ) == 0 )
 			break;
 		s = (t=s)->next;
 	}
@@ -170,9 +170,9 @@ char *set_eval_int( irc_t *irc, set_t *set, char *value )
 
 char *set_eval_bool( irc_t *irc, set_t *set, char *value )
 {
-	if( ( g_ascii_strcasecmp( value, "true" ) == 0 ) || ( g_ascii_strcasecmp( value, "yes" ) == 0 ) || ( g_ascii_strcasecmp( value, "on" ) == 0 ) )
+	if( ( g_strcasecmp( value, "true" ) == 0 ) || ( g_strcasecmp( value, "yes" ) == 0 ) || ( g_strcasecmp( value, "on" ) == 0 ) )
 		return( value );
-	if( ( g_ascii_strcasecmp( value, "false" ) == 0 ) || ( g_ascii_strcasecmp( value, "no" ) == 0 ) || ( g_ascii_strcasecmp( value, "off" ) == 0 ) )
+	if( ( g_strcasecmp( value, "false" ) == 0 ) || ( g_strcasecmp( value, "no" ) == 0 ) || ( g_strcasecmp( value, "off" ) == 0 ) )
 		return( value );
 	return( set_eval_int( irc, set, value ) );
 }
@@ -191,25 +191,25 @@ char *set_eval_to_char( irc_t *irc, set_t *set, char *value )
 
 char *set_eval_ops( irc_t *irc, set_t *set, char *value )
 {
-	if( g_ascii_strcasecmp( value, "user" ) == 0 )
+	if( g_strcasecmp( value, "user" ) == 0 )
 	{
 		irc_write( irc, ":%s!%s@%s MODE %s %s %s %s", irc->mynick, irc->mynick, irc->myhost,
 		                                              irc->channel, "+o-o", irc->nick, irc->mynick );
 		return( value );
 	}
-	else if( g_ascii_strcasecmp( value, "root" ) == 0 )
+	else if( g_strcasecmp( value, "root" ) == 0 )
 	{
 		irc_write( irc, ":%s!%s@%s MODE %s %s %s %s", irc->mynick, irc->mynick, irc->myhost,
 		                                              irc->channel, "-o+o", irc->nick, irc->mynick );
 		return( value );
 	}
-	else if( g_ascii_strcasecmp( value, "both" ) == 0 )
+	else if( g_strcasecmp( value, "both" ) == 0 )
 	{
 		irc_write( irc, ":%s!%s@%s MODE %s %s %s %s", irc->mynick, irc->mynick, irc->myhost,
 		                                              irc->channel, "+oo", irc->nick, irc->mynick );
 		return( value );
 	}
-	else if( g_ascii_strcasecmp( value, "none" ) == 0 )
+	else if( g_strcasecmp( value, "none" ) == 0 )
 	{
 		irc_write( irc, ":%s!%s@%s MODE %s %s %s %s", irc->mynick, irc->mynick, irc->myhost,
 		                                              irc->channel, "-oo", irc->nick, irc->mynick );

@@ -4,7 +4,7 @@
   * Copyright 2002-2004 Wilmer van der Gaast and others                *
   \********************************************************************/
 
-/* Questions to the user (mainly authorization requests from IM)        */
+/* SSL module - dummy version                                           */
 
 /*
   This program is free software; you can redistribute it and/or modify
@@ -23,22 +23,28 @@
   Suite 330, Boston, MA  02111-1307  USA
 */
 
-#ifndef _QUERY_H
-#define _QUERY_H
+#include "ssl_client.h"
 
-typedef struct query
+void *ssl_connect( char *host, int port, SslInputFunction func, gpointer data )
 {
-	struct gaim_connection *gc;
-	char *question;
-	void (* yes) ( gpointer w, void *data );
-	void (* no) ( gpointer w, void *data );
-	void *data;
-	struct query *next;
-} query_t;
+	return( NULL );
+}
 
-query_t *query_add( irc_t *irc, struct gaim_connection *gc, char *question, void *yes, void *no, void *data );
-void query_del( irc_t *irc, query_t *q );
-void query_del_by_gc( irc_t *irc, struct gaim_connection *gc );
-void query_answer( irc_t *irc, query_t *q, int ans );
+int ssl_read( void *conn, char *buf, int len )
+{
+	return( -1 );
+}
 
-#endif
+int ssl_write( void *conn, const char *buf, int len )
+{
+	return( -1 );
+}
+
+void ssl_disconnect( void *conn_ )
+{
+}
+
+int ssl_getfd( void *conn )
+{
+	return( -1 );
+}

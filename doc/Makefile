@@ -1,21 +1,21 @@
 -include ../Makefile.settings
 
-all: user-guide.txt user-guide.html # user-guide.pdf user-guide.ps user-guide.rtf
+all: user-guide.txt user-guide.html help.txt # user-guide.pdf user-guide.ps user-guide.rtf
 
 user-guide.txt: user-guide.xml
-	xmlto txt user-guide.xml
+	xmlto txt $<
 
 user-guide.html: user-guide.xml
-	xmlto html-nochunks user-guide.xml
+	xsltproc --output $@ http://docbook.sourceforge.net/release/xsl/current/html/docbook.xsl $<
 
 user-guide.pdf: user-guide.xml
-	xmlto pdf user-guide.xml
-
-user-guide.rtf: user-guide.xml
-	xmlto rtf user-guide.xml
+	xmlto pdf $<
 
 user-guide.ps: user-guide.xml
-	xmlto ps user-guide.xml
+	xmlto ps $<
+
+help.txt: help.xml help.xsl
+	xsltproc help.xsl $< | sed -e 's/_b_//g' > $@
 
 clean: 
 	rm -f *.html *.pdf *.ps *.rtf *.txt

@@ -4,11 +4,10 @@
  *
  */
 
-#define FAIM_INTERNAL
 #include <aim.h>
 #include <ctype.h>
 
-faim_export faim_shortfunc int aimutil_putstr(u_char *dest, const char *src, int len)
+faim_shortfunc int aimutil_putstr(u_char *dest, const char *src, int len)
 {
 	memcpy(dest, src, len);
 	return len;
@@ -19,7 +18,7 @@ faim_export faim_shortfunc int aimutil_putstr(u_char *dest, const char *src, int
  *   -- DMP.
  *
  */
-faim_export int aimutil_tokslen(char *toSearch, int index, char dl)
+int aimutil_tokslen(char *toSearch, int index, char dl)
 {
 	int curCount = 1;
 	char *next;
@@ -43,7 +42,7 @@ faim_export int aimutil_tokslen(char *toSearch, int index, char dl)
 	return toReturn;
 }
 
-faim_export int aimutil_itemcnt(char *toSearch, char dl)
+int aimutil_itemcnt(char *toSearch, char dl)
 {
 	int curCount;
 	char *next;
@@ -60,7 +59,7 @@ faim_export int aimutil_itemcnt(char *toSearch, char dl)
 	return curCount;
 }
 
-faim_export char *aimutil_itemidx(char *toSearch, int index, char dl)
+char *aimutil_itemidx(char *toSearch, int index, char dl)
 {
 	int curCount;
 	char *next;
@@ -106,7 +105,7 @@ faim_export char *aimutil_itemidx(char *toSearch, int index, char dl)
 * return is equal to that of strlen().
 *
 */
-int aim_snlen(const char *sn)
+static int aim_snlen(const char *sn)
 {
 	int i = 0;
 	const char *curPtr = NULL;

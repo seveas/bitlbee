@@ -90,11 +90,11 @@ typedef struct irc
 	struct query *queries;
 	struct account *accounts;
 	
-	void *users;
+	struct __USER *users;
 	GHashTable *userhash;
-	void *nicks;
-	void *help;
-	void *set;
+	struct __NICK *nicks;
+	struct help *help;
+	struct set *set;
 } irc_t;
 
 #include "user.h"

@@ -153,7 +153,7 @@ static int _jid_nullstrcasecmp(char *a, char *b)
 {
     if(a == NULL && b == NULL) return 0;
     if(a == NULL || b == NULL) return -1;
-    return g_ascii_strcasecmp(a,b);
+    return g_strcasecmp(a,b);
 }
 
 /* suggested by Anders Qvist <quest@valdez.netg.se> */

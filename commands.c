@@ -110,7 +110,7 @@ int cmd_identify( irc_t *irc, char **cmd )
 int cmd_register( irc_t *irc, char **cmd )
 {
 	int checkie;
-	char *path, *file;
+	char path[512];
 	
 	if( global.conf->authmode == AUTHMODE_REGISTERED )
 	{
@@ -118,23 +118,11 @@ int cmd_register( irc_t *irc, char **cmd )
 		return( 0 );
 	}
 	
-	file = (char *) bitlbee_alloc( strlen( irc->nick ) + strlen( ".accounts" ) + 1 );
+	g_snprintf( path, 511, "%s%s%s", global.conf->configdir, irc->nick, ".accounts" );
+	checkie = access( path, F_OK );
 	
-	strcpy( file, irc->nick );
-	strcat( file, ".accounts" );
-	path = g_build_path( G_DIR_SEPARATOR_S, global.conf->configdir, file, NULL );
-	
-	checkie = g_file_test( path, G_FILE_TEST_EXISTS ) ? 0 : -1 ;
-	g_free( path );
-	
-	strcpy( file, irc->nick );
-	strcat( file, ".nicks" );
-	path = g_build_path( G_DIR_SEPARATOR_S, global.conf->configdir, file, NULL );
-	
-	checkie += g_file_test( path, G_FILE_TEST_EXISTS ) ? 0 : -1;
-	
-	g_free( file );
-	g_free( path );
+	g_snprintf( path, 511, "%s%s%s", global.conf->configdir, irc->nick, ".nicks" );
+	checkie += access( path, F_OK );
 	
 	if( checkie == -2 )
 	{
@@ -152,21 +140,14 @@ int cmd_register( irc_t *irc, char **cmd )
 
 int cmd_drop( irc_t *irc, char **cmd )
 {
-	char *path, *file, s[512];
+	char s[512];
 	FILE *fp;
 	
-	file = (char *) bitlbee_alloc( strlen( irc->nick ) + strlen( ".accounts" ) + 1 );
-	
-	strcpy( file, irc->nick );
-	strcat( file, ".accounts" );
-	path = g_build_path( G_DIR_SEPARATOR_S, global.conf->configdir, file, NULL );
-	
-	fp = fopen( path, "r" );
+	g_snprintf( s, 511, "%s%s%s", global.conf->configdir, irc->nick, ".accounts" );
+	fp = fopen( s, "r" );
 	if( !fp )
 	{
 		irc_usermsg( irc, "That account does not exist" );
-		g_free( path );
-		g_free( file );
 		return( 0 );
 	}
 	
@@ -175,22 +156,14 @@ int cmd_drop( irc_t *irc, char **cmd )
 	if( setpass( irc, cmd[1], s ) < 0 )
 	{
 		irc_usermsg( irc, "Incorrect password" );
-		g_free( path );
-		g_free( file );
 		return( 0 );
 	}
 	
-	unlink( path );
-	g_free( path );
+	g_snprintf( s, 511, "%s%s%s", global.conf->configdir, irc->nick, ".accounts" );
+	unlink( s );
 	
-	strcpy( file, irc->nick );
-	strcat( file, ".nicks" );
-	path = g_build_path( G_DIR_SEPARATOR_S, global.conf->configdir, file, NULL );
-	
-	unlink( path );
-	g_free( path );
-	
-	g_free( file );
+	g_snprintf( s, 511, "%s%s%s", global.conf->configdir, irc->nick, ".nicks" );
+	unlink( s );
 	
 	setpassnc( irc, NULL );
 	irc_usermsg( irc, "Files belonging to account `%s' removed", irc->nick );
@@ -328,8 +301,15 @@ int cmd_account( irc_t *irc, char **cmd )
 	{
 		if( !cmd[2] )
 		{
-			irc_usermsg( irc, "Not enough parameters" );
-			return( 0 );
+			irc_usermsg( irc, "Deactivating all active (re)connections..." );
+			
+			for( a = irc->accounts; a; a = a->next )
+			{
+				if( a->gc )
+					account_off( irc, a );
+				else if( a->reconnect )
+					cancel_auto_reconnect( a );
+			}
 		}
 		else if( ( a = account_get( irc, cmd[2] ) ) )
 		{
@@ -353,6 +333,10 @@ int cmd_account( irc_t *irc, char **cmd )
 			irc_usermsg( irc, "Invalid account" );
 			return( 0 );
 		}
+	}
+	else
+	{
+		irc_usermsg( irc, "Unknown command: account %s. Please use help commands to get a list of available commands.", cmd[1] );
 	}
 	
 	return( 1 );
@@ -517,21 +501,22 @@ int cmd_block( irc_t *irc, char **cmd )
 	else if( !( a = account_get( irc, cmd[1] ) ) )
 	{
 		irc_usermsg( irc, "Invalid account" );
+		return( 1 );
 	}
 	else if( !( gc = a->gc ) )
 	{
 		irc_usermsg( irc, "That account is not on-line" );
+		return( 1 );
 	}
-	else if( !gc->prpl->add_deny || !gc->prpl->rem_permit )
+	
+	if( !gc->prpl->add_deny || !gc->prpl->rem_permit )
 	{
 		irc_usermsg( irc, "Command `%s' not supported by this protocol", cmd[0] );
-		return( 1 );
 	}
 	else
 	{
 		gc->prpl->rem_permit( gc, cmd[2] );
 		gc->prpl->add_deny( gc, cmd[2] );
-		
 		irc_usermsg( irc, "Buddy `%s' moved from your permit- to your deny-list", cmd[2] );
 	}
 	
@@ -557,15 +542,17 @@ int cmd_allow( irc_t *irc, char **cmd )
 	else if( !( a = account_get( irc, cmd[1] ) ) )
 	{
 		irc_usermsg( irc, "Invalid account" );
+		return( 1 );
 	}
 	else if( !( gc = a->gc ) )
 	{
 		irc_usermsg( irc, "That account is not on-line" );
+		return( 1 );
 	}
-	else if( !gc->prpl->rem_deny || !gc->prpl->add_permit )
+	
+	if( !gc->prpl->rem_deny || !gc->prpl->add_permit )
 	{
 		irc_usermsg( irc, "Command `%s' not supported by this protocol", cmd[0] );
-		return( 1 );
 	}
 	else
 	{
@@ -722,8 +709,15 @@ int cmd_nick( irc_t *irc, char **cmd )
 	}
 	else
 	{
+		char utf8[1024];
+		
 		irc_usermsg( irc, "Setting your name to `%s'", cmd[2] );
-		a->gc->prpl->set_info( a->gc, cmd[2] );
+		
+		if( g_strncasecmp( set_getstr( irc, "charset" ), "none", 4 ) != 0 &&
+		    do_iconv( set_getstr( irc, "charset" ), "UTF-8", cmd[2], utf8, 0, 1024 ) != -1 )
+			a->gc->prpl->set_info( a->gc, utf8 );
+		else
+			a->gc->prpl->set_info( a->gc, cmd[2] );
 	}
 	
 	return( 1 );

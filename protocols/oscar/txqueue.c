@@ -5,7 +5,6 @@
  *
  */
 
-#define FAIM_INTERNAL
 #include <aim.h>
 
 #ifndef _WIN32
@@ -24,12 +23,12 @@
  * chan = channel for FLAP, hdrtype for OFT
  *
  */
-faim_internal aim_frame_t *aim_tx_new(aim_session_t *sess, aim_conn_t *conn, fu8_t framing, fu8_t chan, int datalen)
+aim_frame_t *aim_tx_new(aim_session_t *sess, aim_conn_t *conn, guint8 framing, guint8 chan, int datalen)
 {
 	aim_frame_t *fr;
 
 	if (!conn) {
-		faimdprintf(sess, 0, "aim_tx_new: ERROR: no connection specified\n");
+		do_error_dialog(sess->aux_data, "no connection specified", "Gaim");
 		return NULL;
 	}
 
@@ -37,12 +36,12 @@ faim_internal aim_frame_t *aim_tx_new(aim_session_t *sess, aim_conn_t *conn, fu8
 	if ((conn->type == AIM_CONN_TYPE_RENDEZVOUS) || 
 			(conn->type == AIM_CONN_TYPE_RENDEZVOUS_OUT)) {
 		if (framing != AIM_FRAMETYPE_OFT) {
-			faimdprintf(sess, 0, "aim_tx_new: attempted to allocate inappropriate frame type for rendezvous connection\n");
+			do_error_dialog(sess->aux_data, "attempted to allocate inappropriate frame type for rendezvous connection", "Gaim");
 			return NULL;
 		}
 	} else {
 		if (framing != AIM_FRAMETYPE_FLAP) {
-			faimdprintf(sess, 0, "aim_tx_new: attempted to allocate inappropriate frame type for FLAP connection\n");
+			do_error_dialog(sess->aux_data, "attempted to allocate inappropriate frame type for FLAP connection", "Gaim");
 			return NULL;
 		}
 	}
@@ -64,10 +63,10 @@ faim_internal aim_frame_t *aim_tx_new(aim_session_t *sess, aim_conn_t *conn, fu8
 		fr->hdr.oft.hdr2len = 0; /* this will get setup by caller */
 
 	} else 
-		faimdprintf(sess, 0, "tx_new: unknown framing\n");
+		do_error_dialog(sess->aux_data, "unknown framing", "Gaim");
 
 	if (datalen > 0) {
-		fu8_t *data;
+		guint8 *data;
 
 		if (!(data = (unsigned char *)g_malloc(datalen))) {
 			aim_frame_destroy(fr);
@@ -98,7 +97,7 @@ static int aim_tx_enqueue__queuebased(aim_session_t *sess, aim_frame_t *fr)
 {
 
 	if (!fr->conn) {
-		faimdprintf(sess, 1, "aim_tx_enqueue: WARNING: enqueueing packet with no connecetion\n");
+		do_error_dialog(sess->aux_data, "WARNING: enqueueing packet with no connection", "Gaim");
 		fr->conn = aim_getconn_type(sess, AIM_CONN_TYPE_BOS);
 	}
 
@@ -138,7 +137,7 @@ static int aim_tx_enqueue__immediate(aim_session_t *sess, aim_frame_t *fr)
 {
 
 	if (!fr->conn) {
-		faimdprintf(sess, 1, "aim_tx_enqueue: ERROR: packet has no connection\n");
+		do_error_dialog(sess->aux_data, "packet has no connection", "Gaim");
 		aim_frame_destroy(fr);
 		return 0;
 	}
@@ -155,7 +154,7 @@ static int aim_tx_enqueue__immediate(aim_session_t *sess, aim_frame_t *fr)
 	return 0;
 }
 
-faim_export int aim_tx_setenqueue(aim_session_t *sess, int what, int (*func)(aim_session_t *, aim_frame_t *))
+int aim_tx_setenqueue(aim_session_t *sess, int what, int (*func)(aim_session_t *, aim_frame_t *))
 {
 	
 	if (what == AIM_TX_QUEUED)
@@ -172,7 +171,7 @@ faim_export int aim_tx_setenqueue(aim_session_t *sess, int what, int (*func)(aim
 	return 0;
 }
 
-faim_internal int aim_tx_enqueue(aim_session_t *sess, aim_frame_t *fr)
+int aim_tx_enqueue(aim_session_t *sess, aim_frame_t *fr)
 {
 	
 	/*
@@ -197,7 +196,7 @@ faim_internal int aim_tx_enqueue(aim_session_t *sess, aim_frame_t *fr)
  *   before enqueuement (in aim_tx_enqueue()).
  *
  */
-faim_internal flap_seqnum_t aim_get_next_txseqnum(aim_conn_t *conn)
+flap_seqnum_t aim_get_next_txseqnum(aim_conn_t *conn)
 {
 	flap_seqnum_t ret;
 	
@@ -257,21 +256,6 @@ static int aim_bstream_send(aim_bstream_t *bs, aim_conn_t *conn, size_t count)
 		
 	}
 	
-
-	if (((aim_session_t *)conn->sessv)->debug >= 2) {
-		int i;
-		aim_session_t *sess = (aim_session_t *)conn->sessv;
-
-		faimdprintf(sess, 2, "\nOutgoing data: (%d bytes)", wrote);
-		for (i = 0; i < wrote; i++) {
-			if (!(i % 8)) 
-				faimdprintf(sess, 2, "\n\t");
-			faimdprintf(sess, 2, "0x%02x ", *(bs->data + bs->offset + i));
-		}
-		faimdprintf(sess, 2, "\n");
-	}
-
-
 	bs->offset += wrote;
 
 	return wrote;	
@@ -280,7 +264,7 @@ static int aim_bstream_send(aim_bstream_t *bs, aim_conn_t *conn, size_t count)
 static int sendframe_flap(aim_session_t *sess, aim_frame_t *fr)
 {
 	aim_bstream_t obs;
-	fu8_t *obs_raw;
+	guint8 *obs_raw;
 	int payloadlen, err = 0, obslen;
 
 	payloadlen = aim_bstream_curpos(&fr->data);
@@ -316,7 +300,7 @@ static int sendframe_flap(aim_session_t *sess, aim_frame_t *fr)
 static int sendframe_oft(aim_session_t *sess, aim_frame_t *fr)
 {
 	aim_bstream_t hbs;
-	fu8_t *hbs_raw;
+	guint8 *hbs_raw;
 	int hbslen;
 	int err = 0;
 	
@@ -359,7 +343,7 @@ static int sendframe_oft(aim_session_t *sess, aim_frame_t *fr)
 
 }
 
-faim_internal int aim_tx_sendframe(aim_session_t *sess, aim_frame_t *fr)
+int aim_tx_sendframe(aim_session_t *sess, aim_frame_t *fr)
 {
 	if (fr->hdrtype == AIM_FRAMETYPE_FLAP)
 		return sendframe_flap(sess, fr);
@@ -368,7 +352,7 @@ faim_internal int aim_tx_sendframe(aim_session_t *sess, aim_frame_t *fr)
 	return -1;
 }
 
-faim_export int aim_tx_flushqueue(aim_session_t *sess)
+int aim_tx_flushqueue(aim_session_t *sess)
 {
 	aim_frame_t *cur;
 
@@ -413,7 +397,7 @@ faim_export int aim_tx_flushqueue(aim_session_t *sess)
  *  reduce memory footprint at run time!  
  *
  */
-faim_export void aim_tx_purgequeue(aim_session_t *sess)
+void aim_tx_purgequeue(aim_session_t *sess)
 {
 	aim_frame_t *cur, **prev;
 
@@ -440,7 +424,7 @@ faim_export void aim_tx_purgequeue(aim_session_t *sess)
  * disappear without warning.
  *
  */
-faim_internal void aim_tx_cleanqueue(aim_session_t *sess, aim_conn_t *conn)
+void aim_tx_cleanqueue(aim_session_t *sess, aim_conn_t *conn)
 {
 	aim_frame_t *cur;
 

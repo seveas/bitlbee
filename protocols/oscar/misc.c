@@ -11,7 +11,6 @@
  *
  */
 
-#define FAIM_INTERNAL
 #include <aim.h> 
 
 /*
@@ -26,7 +25,7 @@
  * XXX: I can't stress the TODO enough.
  *
  */
-faim_export int aim_bos_setbuddylist(aim_session_t *sess, aim_conn_t *conn, const char *buddy_list)
+int aim_bos_setbuddylist(aim_session_t *sess, aim_conn_t *conn, const char *buddy_list)
 {
 	aim_frame_t *fr;
 	aim_snacid_t snacid;
@@ -38,7 +37,6 @@ faim_export int aim_bos_setbuddylist(aim_session_t *sess, aim_conn_t *conn, cons
 		return -EINVAL;
 
 	for (tmpptr = strtok(localcpy, "&"); tmpptr; ) {
-		faimdprintf(sess, 2, "---adding: %s (%d)\n", tmpptr, strlen(tmpptr));
 		len += 1 + strlen(tmpptr);
 		tmpptr = strtok(NULL, "&");
 	}
@@ -52,8 +50,6 @@ faim_export int aim_bos_setbuddylist(aim_session_t *sess, aim_conn_t *conn, cons
 	strncpy(localcpy, buddy_list, strlen(buddy_list) + 1);
 
 	for (tmpptr = strtok(localcpy, "&"); tmpptr; ) {
-
-		faimdprintf(sess, 2, "---adding: %s (%d)\n", tmpptr, strlen(tmpptr));
 
 		aimbs_put8(&fr->data, strlen(tmpptr));
 		aimbs_putraw(&fr->data, tmpptr, strlen(tmpptr));
@@ -73,9 +69,9 @@ faim_export int aim_bos_setbuddylist(aim_session_t *sess, aim_conn_t *conn, cons
  * Gives BOS your profile.
  * 
  */
-faim_export int aim_bos_setprofile(aim_session_t *sess, aim_conn_t *conn, const char *profile, const char *awaymsg, fu32_t caps)
+int aim_bos_setprofile(aim_session_t *sess, aim_conn_t *conn, const char *profile, const char *awaymsg, guint32 caps)
 {
-	static const char defencoding[] = {"text/aolrtf; charset=\"us-ascii\""};
+	static const char defencoding[] = {"text/aolrtf; charset=\"utf-8\""};
 	aim_frame_t *fr;
 	aim_tlvlist_t *tl = NULL;
 	aim_snacid_t snacid;
@@ -124,7 +120,7 @@ faim_export int aim_bos_setprofile(aim_session_t *sess, aim_conn_t *conn, const 
  * Request Buddy List rights.
  *
  */
-faim_export int aim_bos_reqbuddyrights(aim_session_t *sess, aim_conn_t *conn)
+int aim_bos_reqbuddyrights(aim_session_t *sess, aim_conn_t *conn)
 {
 	return aim_genericreq_n(sess, conn, 0x0003, 0x0002);
 }
@@ -138,11 +134,11 @@ faim_export int aim_bos_reqbuddyrights(aim_session_t *sess, aim_conn_t *conn)
  * returns -1 on error (couldn't alloc packet), 0 on success. 
  *
  */
-faim_export int aim_send_warning(aim_session_t *sess, aim_conn_t *conn, const char *destsn, fu32_t flags)
+int aim_send_warning(aim_session_t *sess, aim_conn_t *conn, const char *destsn, guint32 flags)
 {
 	aim_frame_t *fr;
 	aim_snacid_t snacid;
-	fu16_t outflags = 0x0000;
+	guint16 outflags = 0x0000;
 
 	if (!(fr = aim_tx_new(sess, conn, AIM_FRAMETYPE_FLAP, 0x02, strlen(destsn)+13)))
 		return -ENOMEM;
@@ -175,7 +171,7 @@ faim_export int aim_send_warning(aim_session_t *sess, aim_conn_t *conn, const ch
  * back to the single.  I don't see any advantage to doing it either way.
  *
  */
-faim_internal int aim_genericreq_n(aim_session_t *sess, aim_conn_t *conn, fu16_t family, fu16_t subtype)
+int aim_genericreq_n(aim_session_t *sess, aim_conn_t *conn, guint16 family, guint16 subtype)
 {
 	aim_frame_t *fr;
 	aim_snacid_t snacid = 0x00000000;
@@ -190,7 +186,7 @@ faim_internal int aim_genericreq_n(aim_session_t *sess, aim_conn_t *conn, fu16_t
 	return 0;
 }
 
-faim_internal int aim_genericreq_n_snacid(aim_session_t *sess, aim_conn_t *conn, fu16_t family, fu16_t subtype)
+int aim_genericreq_n_snacid(aim_session_t *sess, aim_conn_t *conn, guint16 family, guint16 subtype)
 {
 	aim_frame_t *fr;
 	aim_snacid_t snacid;
@@ -206,7 +202,7 @@ faim_internal int aim_genericreq_n_snacid(aim_session_t *sess, aim_conn_t *conn,
 	return 0;
 }
 
-faim_internal int aim_genericreq_l(aim_session_t *sess, aim_conn_t *conn, fu16_t family, fu16_t subtype, fu32_t *longdata)
+int aim_genericreq_l(aim_session_t *sess, aim_conn_t *conn, guint16 family, guint16 subtype, guint32 *longdata)
 {
 	aim_frame_t *fr;
 	aim_snacid_t snacid;
@@ -227,7 +223,7 @@ faim_internal int aim_genericreq_l(aim_session_t *sess, aim_conn_t *conn, fu16_t
 	return 0;
 }
 
-faim_internal int aim_genericreq_s(aim_session_t *sess, aim_conn_t *conn, fu16_t family, fu16_t subtype, fu16_t *shortdata)
+int aim_genericreq_s(aim_session_t *sess, aim_conn_t *conn, guint16 family, guint16 subtype, guint16 *shortdata)
 {
 	aim_frame_t *fr;
 	aim_snacid_t snacid;
@@ -254,7 +250,7 @@ faim_internal int aim_genericreq_s(aim_session_t *sess, aim_conn_t *conn, fu16_t
  * Request Location services rights.
  *
  */
-faim_export int aim_bos_reqlocaterights(aim_session_t *sess, aim_conn_t *conn)
+int aim_bos_reqlocaterights(aim_session_t *sess, aim_conn_t *conn)
 {
 	return aim_genericreq_n(sess, conn, 0x0002, 0x0002);
 }
@@ -264,7 +260,7 @@ faim_export int aim_bos_reqlocaterights(aim_session_t *sess, aim_conn_t *conn)
  *
  * privacy: 1 to allow searching, 0 to disallow.
  */
-faim_export int aim_setdirectoryinfo(aim_session_t *sess, aim_conn_t *conn, const char *first, const char *middle, const char *last, const char *maiden, const char *nickname, const char *street, const char *city, const char *state, const char *zip, int country, fu16_t privacy) 
+int aim_setdirectoryinfo(aim_session_t *sess, aim_conn_t *conn, const char *first, const char *middle, const char *last, const char *maiden, const char *nickname, const char *street, const char *city, const char *state, const char *zip, int country, guint16 privacy) 
 {
 	aim_frame_t *fr;
 	aim_snacid_t snacid;
@@ -310,7 +306,7 @@ faim_export int aim_setdirectoryinfo(aim_session_t *sess, aim_conn_t *conn, cons
 }
 
 /* XXX pass these in better */
-faim_export int aim_setuserinterests(aim_session_t *sess, aim_conn_t *conn, const char *interest1, const char *interest2, const char *interest3, const char *interest4, const char *interest5, fu16_t privacy)
+int aim_setuserinterests(aim_session_t *sess, aim_conn_t *conn, const char *interest1, const char *interest2, const char *interest3, const char *interest4, const char *interest5, guint16 privacy)
 {
 	aim_frame_t *fr;
 	aim_snacid_t snacid;
@@ -385,7 +381,7 @@ static int snachandler(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, 
 	return 0;
 }
 
-faim_internal int misc_modfirst(aim_session_t *sess, aim_module_t *mod)
+int misc_modfirst(aim_session_t *sess, aim_module_t *mod)
 {
 
 	mod->family = 0xffff;

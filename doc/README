@@ -28,23 +28,20 @@ DEPENDENCIES
 ============
 
 BitlBee's only real dependency is GLib. This is available on virtually every
-platform. At the moment, GLib 2.0 or higher is required. Older versions
-(pre-0.90) used to work with older GLib versions, and so might future
-BitlBee's.
+platform. Any recent version of GLib (including 1.x versions) will work.
 
 These days, MSN Messenger clients have to connect to the MS Passport servers
-through HTTPS. BitlBee uses libgnutls for this. We're not sure about the
-exact version you'll need for this to work, but at least verion 0.8.9 is
-known to work. Of course you don't need libgnutls when you leave out MSN
-support.
+through HTTPS. BitlBee can use serveral SSL libraries for this: GnuTLS, NSS
+(which comes with Mozilla) and OpenSSL. OpenSSL is not GPL-compatible in some
+situations, so using GnuTLS or NSS is preferred. However, especially on *BSD,
+OpenSSL can be considered part of the operating system, which eliminates the
+GPL incompatibility.
 
-GnuTLS might be a bit hard-to-get on the less common platforms, unfortunately.
-This means BitlBee is not as portable anymore as it used to be. You might
-wonder why we don't use OpenSSL instead then: That's because it's illegal to
-link GPL'ed programs with OpenSSL.
-
-Instead of GnuTLS, you can also use libnss now. libnss is the SSL library
-used in Mozilla, available on many platforms.
+The incompatibility is also the reason why the SSL library detection code
+doesn't attempt to use OpenSSL. If you want to use OpenSSL, you have to
+force configure to use it using the --ssl=openssl parameter. For more
+information about this problem, see the URL's configure will write to stdout
+when you attempt to use OpenSSL.
 
 
 PORTABILITY ISSUES
@@ -93,7 +90,7 @@ not daemons).
 See utils/bitlbeed.c for more information about the program.
 
 Just a little note: We run our public server im.bitlbee.org for a couple of
-weeks now, and so far we haven't experienced this problem yet. The only
+months now, and so far we haven't experienced this problem yet. The only
 BitlBee processes killed because of CPU-time overuse were running for a long
 time already, they were usually killed during the MSN login process (which
 is quite CPU-time consuming).

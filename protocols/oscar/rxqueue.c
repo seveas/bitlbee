@@ -6,7 +6,6 @@
  * aim_rxhandlers.c.
  */
 
-#define FAIM_INTERNAL
 #include <aim.h> 
 
 #ifndef _WIN32
@@ -16,7 +15,7 @@
 /*
  *
  */
-faim_internal int aim_recv(int fd, void *buf, size_t count)
+int aim_recv(int fd, void *buf, size_t count)
 {
 	int left, cur; 
 
@@ -40,7 +39,7 @@ faim_internal int aim_recv(int fd, void *buf, size_t count)
  * Read into a byte stream.  Will not read more than count, but may read
  * less if there is not enough room in the stream buffer.
  */
-int aim_bstream_recv(aim_bstream_t *bs, int fd, size_t count)
+static int aim_bstream_recv(aim_bstream_t *bs, int fd, size_t count)
 {
 	int red = 0;
 
@@ -63,7 +62,7 @@ int aim_bstream_recv(aim_bstream_t *bs, int fd, size_t count)
 	return red;
 }
 
-faim_internal int aim_bstream_init(aim_bstream_t *bs, fu8_t *data, int len)
+int aim_bstream_init(aim_bstream_t *bs, guint8 *data, int len)
 {
 	
 	if (!bs)
@@ -76,17 +75,17 @@ faim_internal int aim_bstream_init(aim_bstream_t *bs, fu8_t *data, int len)
 	return 0;
 }
 
-faim_internal int aim_bstream_empty(aim_bstream_t *bs)
+int aim_bstream_empty(aim_bstream_t *bs)
 {
 	return bs->len - bs->offset;
 }
 
-faim_internal int aim_bstream_curpos(aim_bstream_t *bs)
+int aim_bstream_curpos(aim_bstream_t *bs)
 {
 	return bs->offset;
 }
 
-faim_internal int aim_bstream_setpos(aim_bstream_t *bs, int off)
+int aim_bstream_setpos(aim_bstream_t *bs, int off)
 {
 
 	if (off > bs->len)
@@ -97,7 +96,7 @@ faim_internal int aim_bstream_setpos(aim_bstream_t *bs, int off)
 	return off;
 }
 
-faim_internal void aim_bstream_rewind(aim_bstream_t *bs)
+void aim_bstream_rewind(aim_bstream_t *bs)
 {
 
 	aim_bstream_setpos(bs, 0);
@@ -105,7 +104,7 @@ faim_internal void aim_bstream_rewind(aim_bstream_t *bs)
 	return;
 }
 
-faim_internal int aim_bstream_advance(aim_bstream_t *bs, int n)
+int aim_bstream_advance(aim_bstream_t *bs, int n)
 {
 
 	if (aim_bstream_empty(bs) < n)
@@ -116,7 +115,7 @@ faim_internal int aim_bstream_advance(aim_bstream_t *bs, int n)
 	return n;
 }
 
-faim_internal fu8_t aimbs_get8(aim_bstream_t *bs)
+guint8 aimbs_get8(aim_bstream_t *bs)
 {
 	
 	if (aim_bstream_empty(bs) < 1)
@@ -127,7 +126,7 @@ faim_internal fu8_t aimbs_get8(aim_bstream_t *bs)
 	return aimutil_get8(bs->data + bs->offset - 1);
 }
 
-faim_internal fu16_t aimbs_get16(aim_bstream_t *bs)
+guint16 aimbs_get16(aim_bstream_t *bs)
 {
 	
 	if (aim_bstream_empty(bs) < 2)
@@ -138,7 +137,7 @@ faim_internal fu16_t aimbs_get16(aim_bstream_t *bs)
 	return aimutil_get16(bs->data + bs->offset - 2);
 }
 
-faim_internal fu32_t aimbs_get32(aim_bstream_t *bs)
+guint32 aimbs_get32(aim_bstream_t *bs)
 {
 	
 	if (aim_bstream_empty(bs) < 4)
@@ -149,7 +148,7 @@ faim_internal fu32_t aimbs_get32(aim_bstream_t *bs)
 	return aimutil_get32(bs->data + bs->offset - 4);
 }
 
-faim_internal fu8_t aimbs_getle8(aim_bstream_t *bs)
+guint8 aimbs_getle8(aim_bstream_t *bs)
 {
 	
 	if (aim_bstream_empty(bs) < 1)
@@ -160,7 +159,7 @@ faim_internal fu8_t aimbs_getle8(aim_bstream_t *bs)
 	return aimutil_getle8(bs->data + bs->offset - 1);
 }
 
-faim_internal fu16_t aimbs_getle16(aim_bstream_t *bs)
+guint16 aimbs_getle16(aim_bstream_t *bs)
 {
 	
 	if (aim_bstream_empty(bs) < 2)
@@ -171,7 +170,7 @@ faim_internal fu16_t aimbs_getle16(aim_bstream_t *bs)
 	return aimutil_getle16(bs->data + bs->offset - 2);
 }
 
-faim_internal fu32_t aimbs_getle32(aim_bstream_t *bs)
+guint32 aimbs_getle32(aim_bstream_t *bs)
 {
 	
 	if (aim_bstream_empty(bs) < 4)
@@ -182,7 +181,7 @@ faim_internal fu32_t aimbs_getle32(aim_bstream_t *bs)
 	return aimutil_getle32(bs->data + bs->offset - 4);
 }
 
-faim_internal int aimbs_put8(aim_bstream_t *bs, fu8_t v)
+int aimbs_put8(aim_bstream_t *bs, guint8 v)
 {
 
 	if (aim_bstream_empty(bs) < 1)
@@ -193,7 +192,7 @@ faim_internal int aimbs_put8(aim_bstream_t *bs, fu8_t v)
 	return 1;
 }
 
-faim_internal int aimbs_put16(aim_bstream_t *bs, fu16_t v)
+int aimbs_put16(aim_bstream_t *bs, guint16 v)
 {
 
 	if (aim_bstream_empty(bs) < 2)
@@ -204,7 +203,7 @@ faim_internal int aimbs_put16(aim_bstream_t *bs, fu16_t v)
 	return 2;
 }
 
-faim_internal int aimbs_put32(aim_bstream_t *bs, fu32_t v)
+int aimbs_put32(aim_bstream_t *bs, guint32 v)
 {
 
 	if (aim_bstream_empty(bs) < 4)
@@ -215,7 +214,7 @@ faim_internal int aimbs_put32(aim_bstream_t *bs, fu32_t v)
 	return 1;
 }
 
-faim_internal int aimbs_putle8(aim_bstream_t *bs, fu8_t v)
+int aimbs_putle8(aim_bstream_t *bs, guint8 v)
 {
 
 	if (aim_bstream_empty(bs) < 1)
@@ -226,7 +225,7 @@ faim_internal int aimbs_putle8(aim_bstream_t *bs, fu8_t v)
 	return 1;
 }
 
-faim_internal int aimbs_putle16(aim_bstream_t *bs, fu16_t v)
+int aimbs_putle16(aim_bstream_t *bs, guint16 v)
 {
 
 	if (aim_bstream_empty(bs) < 2)
@@ -237,7 +236,7 @@ faim_internal int aimbs_putle16(aim_bstream_t *bs, fu16_t v)
 	return 2;
 }
 
-faim_internal int aimbs_putle32(aim_bstream_t *bs, fu32_t v)
+int aimbs_putle32(aim_bstream_t *bs, guint32 v)
 {
 
 	if (aim_bstream_empty(bs) < 4)
@@ -248,7 +247,7 @@ faim_internal int aimbs_putle32(aim_bstream_t *bs, fu32_t v)
 	return 1;
 }
 
-faim_internal int aimbs_getrawbuf(aim_bstream_t *bs, fu8_t *buf, int len)
+int aimbs_getrawbuf(aim_bstream_t *bs, guint8 *buf, int len)
 {
 
 	if (aim_bstream_empty(bs) < len)
@@ -260,9 +259,9 @@ faim_internal int aimbs_getrawbuf(aim_bstream_t *bs, fu8_t *buf, int len)
 	return len;
 }
 
-faim_internal fu8_t *aimbs_getraw(aim_bstream_t *bs, int len)
+guint8 *aimbs_getraw(aim_bstream_t *bs, int len)
 {
-	fu8_t *ob;
+	guint8 *ob;
 
 	if (!(ob = g_malloc(len)))
 		return NULL;
@@ -275,7 +274,7 @@ faim_internal fu8_t *aimbs_getraw(aim_bstream_t *bs, int len)
 	return ob;
 }
 
-faim_internal char *aimbs_getstr(aim_bstream_t *bs, int len)
+char *aimbs_getstr(aim_bstream_t *bs, int len)
 {
 	char *ob;
 
@@ -292,7 +291,7 @@ faim_internal char *aimbs_getstr(aim_bstream_t *bs, int len)
 	return ob;
 }
 
-faim_internal int aimbs_putraw(aim_bstream_t *bs, const fu8_t *v, int len)
+int aimbs_putraw(aim_bstream_t *bs, const guint8 *v, int len)
 {
 
 	if (aim_bstream_empty(bs) < len)
@@ -304,7 +303,7 @@ faim_internal int aimbs_putraw(aim_bstream_t *bs, const fu8_t *v, int len)
 	return len;
 }
 
-faim_internal int aimbs_putbs(aim_bstream_t *bs, aim_bstream_t *srcbs, int len)
+int aimbs_putbs(aim_bstream_t *bs, aim_bstream_t *srcbs, int len)
 {
 
 	if (aim_bstream_empty(srcbs) < len)
@@ -327,7 +326,7 @@ faim_internal int aimbs_putbs(aim_bstream_t *bs, aim_bstream_t *srcbs, int len)
  * returns -1 on error; 0 on success.  
  *
  */
-faim_internal void aim_frame_destroy(aim_frame_t *frame)
+void aim_frame_destroy(aim_frame_t *frame)
 {
 
 	g_free(frame->data.data); /* XXX aim_bstream_free */
@@ -344,12 +343,12 @@ faim_internal void aim_frame_destroy(aim_frame_t *frame)
  * Grab a single command sequence off the socket, and enqueue
  * it in the incoming event queue in a seperate struct.
  */
-faim_export int aim_get_command(aim_session_t *sess, aim_conn_t *conn)
+int aim_get_command(aim_session_t *sess, aim_conn_t *conn)
 {
-	fu8_t flaphdr_raw[6];
+	guint8 flaphdr_raw[6];
 	aim_bstream_t flaphdr;
 	aim_frame_t *newrx;
-	fu16_t payloadlen;
+	guint16 payloadlen;
 	
 	if (!sess || !conn)
 		return 0;
@@ -370,7 +369,7 @@ faim_export int aim_get_command(aim_session_t *sess, aim_conn_t *conn)
 	if (conn->type == AIM_CONN_TYPE_RENDEZVOUS) 
 		return aim_get_command_rendezvous(sess, conn);
 	else if (conn->type == AIM_CONN_TYPE_RENDEZVOUS_OUT) {
-		faimdprintf(sess, 0, "AIM_CONN_TYPE_RENDEZVOUS_OUT on fd %d\n", conn->fd);
+		do_error_dialog(sess->aux_data,"AIM_CONN_TYPE_RENDEZVOUS_OUT shouldn't use FLAP", "Gaim");
 		return 0; 
 	}
 
@@ -396,11 +395,11 @@ faim_export int aim_get_command(aim_session_t *sess, aim_conn_t *conn)
 	 * or we break.  We must handle it just in case.
 	 */
 	if (aimbs_get8(&flaphdr) != 0x2a) {
-		fu8_t start;
+		guint8 start;
 
 		aim_bstream_rewind(&flaphdr);
 		start = aimbs_get8(&flaphdr);
-		faimdprintf(sess, 0, "FLAP framing disrupted (0x%02x)", start);
+		do_error_dialog(sess->aux_data, "FLAP framing disrupted", "Gaim");
 		aim_conn_close(conn);
 		return -1;
 	}	
@@ -419,9 +418,9 @@ faim_export int aim_get_command(aim_session_t *sess, aim_conn_t *conn)
 	newrx->nofree = 0; /* free by default */
 
 	if (payloadlen) {
-		fu8_t *payload = NULL;
+		guint8 *payload = NULL;
 
-		if (!(payload = (fu8_t *) g_malloc(payloadlen))) {
+		if (!(payload = (guint8 *) g_malloc(payloadlen))) {
 			aim_frame_destroy(newrx);
 			return -1;
 		}
@@ -470,7 +469,7 @@ faim_export int aim_get_command(aim_session_t *sess, aim_conn_t *conn)
  * does not keep a pointer, it's lost forever.
  *
  */
-faim_export void aim_purge_rxqueue(aim_session_t *sess)
+void aim_purge_rxqueue(aim_session_t *sess)
 {
 	aim_frame_t *cur, **prev;
 
@@ -496,7 +495,7 @@ faim_export void aim_purge_rxqueue(aim_session_t *sess)
  * XXX: this is something that was handled better in the old connection
  * handling method, but eh.
  */
-faim_internal void aim_rxqueue_cleanbyconn(aim_session_t *sess, aim_conn_t *conn)
+void aim_rxqueue_cleanbyconn(aim_session_t *sess, aim_conn_t *conn)
 {
 	aim_frame_t *currx;
 

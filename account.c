@@ -46,6 +46,7 @@ account_t *account_add( irc_t *irc, int protocol, char *user, char *pass )
 	a->protocol = protocol;
 	a->user = g_strdup( user );
 	a->pass = g_strdup( pass );
+	a->irc = irc;
 	
 	return( a );
 }
@@ -134,6 +135,7 @@ void account_on( irc_t *irc, account_t *a )
 	
 	u = bitlbee_alloc( sizeof( struct aim_user ) );
 	memset( u, 0, sizeof( *u ) );
+	u->irc = irc;
 	u->protocol = a->protocol;
 	strncpy( u->username, a->user, sizeof( u->username ) - 1 );
 	strncpy( u->password, a->pass, sizeof( u->password ) - 1 );

@@ -4,7 +4,9 @@
   * Copyright 2002-2004 Wilmer van der Gaast and others                *
   \********************************************************************/
 
-/* SSL module - GnuTLS version                                          */
+/* SSL module - NSS version                                             */
+
+/* Copyright 2004 Jelmer Vernooij                                       */
 
 /*
   This program is free software; you can redistribute it and/or modify
@@ -23,7 +25,14 @@
   Suite 330, Boston, MA  02111-1307  USA
 */
 
-#include <gnutls/gnutls.h>
+#include <nspr.h>
+#include <prio.h>
+#include <sslproto.h>
+#include <nss.h>
+#include <private/pprio.h>
+#include <ssl.h>
+#include <secerr.h>
+#include <sslerr.h>
 #include "proxy.h"
 #include "ssl_client.h"
 #include "sock.h"
@@ -35,14 +44,47 @@ struct scd
 	SslInputFunction func;
 	gpointer data;
 	int fd;
+	PRFileDesc *prfd;
 	gboolean established;
-	
-	gnutls_session session;
-	gnutls_certificate_credentials xcred;
 };
 
 static void ssl_connected( gpointer data, gint source, GaimInputCondition cond );
 
+
+static SECStatus nss_auth_cert (void *arg, PRFileDesc *socket, PRBool checksig, PRBool isserver)
+{
+	return SECSuccess;
+}
+
+static SECStatus nss_bad_cert (void *arg, PRFileDesc *socket) 
+{
+	PRErrorCode err;
+
+	if(!arg) return SECFailure;
+
+	*(PRErrorCode *)arg = err = PORT_GetError();
+
+	switch(err) {
+	case SEC_ERROR_INVALID_AVA:
+	case SEC_ERROR_INVALID_TIME:
+	case SEC_ERROR_BAD_SIGNATURE:
+	case SEC_ERROR_EXPIRED_CERTIFICATE:
+	case SEC_ERROR_UNKNOWN_ISSUER:
+	case SEC_ERROR_UNTRUSTED_CERT:
+	case SEC_ERROR_CERT_VALID:
+	case SEC_ERROR_EXPIRED_ISSUER_CERTIFICATE:
+	case SEC_ERROR_CRL_EXPIRED:
+	case SEC_ERROR_CRL_BAD_SIGNATURE:
+	case SEC_ERROR_EXTENSION_VALUE_INVALID:
+	case SEC_ERROR_CA_CERT_INVALID:
+	case SEC_ERROR_CERT_USAGES_INVALID:
+	case SEC_ERROR_UNKNOWN_CRITICAL_EXTENSION:
+		return SECSuccess;
+
+	default:
+		return SECFailure;
+	}
+}
 
 
 void *ssl_connect( char *host, int port, SslInputFunction func, gpointer data )
@@ -61,14 +103,11 @@ void *ssl_connect( char *host, int port, SslInputFunction func, gpointer data )
 	
 	if( !initialized )
 	{
-		gnutls_global_init();
-		initialized = TRUE;
+		PR_Init( PR_SYSTEM_THREAD, PR_PRIORITY_NORMAL, 1);
+		NSS_NoDB_Init(NULL);
+		NSS_SetDomesticPolicy();
 	}
-	
-	gnutls_certificate_allocate_credentials( &conn->xcred );
-	gnutls_init( &conn->session, GNUTLS_CLIENT );
-	gnutls_set_default_priority( conn->session );
-	gnutls_credentials_set( conn->session, GNUTLS_CRD_CERTIFICATE, conn->xcred );
+
 	
 	return( conn );
 }
@@ -79,21 +118,31 @@ static void ssl_connected( gpointer data, gint source, GaimInputCondition cond )
 	
 	if( source == -1 )
 		goto ssl_connected_failure;
+
 	
-	gnutls_transport_set_ptr( conn->session, (gnutls_transport_ptr) conn->fd );
-	
-	if( gnutls_handshake( conn->session ) < 0 )
+
+
+	conn->prfd = SSL_ImportFD(NULL, PR_ImportTCPSocket(source));
+	SSL_OptionSet(conn->prfd, SSL_SECURITY, PR_TRUE);
+	SSL_OptionSet(conn->prfd, SSL_HANDSHAKE_AS_CLIENT, PR_TRUE);
+	SSL_BadCertHook(conn->prfd, (SSLBadCertHandler)nss_bad_cert, NULL);
+	SSL_AuthCertificateHook(conn->prfd, (SSLAuthCertificate)nss_auth_cert, (void *)CERT_GetDefaultCertDB());
+	SSL_ResetHandshake(conn->prfd, PR_FALSE);
+
+	if (SSL_ForceHandshake(conn->prfd)) {
 		goto ssl_connected_failure;
+	}
+	
 	
 	conn->established = TRUE;
 	conn->func( conn->data, conn, cond );
 	return;
 	
-ssl_connected_failure:
+	ssl_connected_failure:
+	
 	conn->func( conn->data, NULL, cond );
 	
-	gnutls_deinit( conn->session );
-	gnutls_certificate_free_credentials( conn->xcred );
+	PR_Close( conn -> prfd );
 	if( source >= 0 ) closesocket( source );
 	g_free( conn );
 }
@@ -103,28 +152,24 @@ int ssl_read( void *conn, char *buf, int len )
 	if( !((struct scd*)conn)->established )
 		return( 0 );
 	
-	return( gnutls_record_recv( ((struct scd*)conn)->session, buf, len ) );
+	return( PR_Read( ((struct scd*)conn)->prfd, buf, len ) );
 }
 
-int ssl_write( void *conn, char *buf, int len )
+int ssl_write( void *conn, const char *buf, int len )
 {
 	if( !((struct scd*)conn)->established )
 		return( 0 );
 	
-	return( gnutls_record_send( ((struct scd*)conn)->session, buf, len ) );
+	return( PR_Write ( ((struct scd*)conn)->prfd, buf, len ) );
 }
 
 void ssl_disconnect( void *conn_ )
 {
 	struct scd *conn = conn_;
 	
-	if( conn->established )
-		gnutls_bye( conn->session, GNUTLS_SHUT_WR );
-	
+	PR_Close( conn->prfd );
 	closesocket( conn->fd );
 	
-	gnutls_deinit( conn->session );
-	gnutls_certificate_free_credentials( conn->xcred );
 	g_free( conn );
 }
 

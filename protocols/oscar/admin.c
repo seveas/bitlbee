@@ -1,5 +1,3 @@
-
-#define FAIM_INTERNAL
 #include <aim.h>
 
 /* called for both reply and change-reply */
@@ -8,21 +6,21 @@ static int infochange(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, a
 
 	/*
 	 * struct {
-	 *    unsigned short perms;
-	 *    unsigned short tlvcount;
+	 *    guint16 perms;
+	 *    guint16 tlvcount;
 	 *    aim_tlv_t tlvs[tlvcount];
 	 *  } admin_info[n];
 	 */
 	while (aim_bstream_empty(bs)) {
-		fu16_t perms, tlvcount;
+		guint16 perms, tlvcount;
 
 		perms = aimbs_get16(bs);
 		tlvcount = aimbs_get16(bs);
 
 		while (tlvcount && aim_bstream_empty(bs)) {
 			aim_rxcallback_t userfunc;
-			fu16_t type, len;
-			fu8_t *val;
+			guint16 type, len;
+			guint8 *val;
 			int str = 0;
 
 			type = aimbs_get16(bs);
@@ -52,7 +50,7 @@ static int infochange(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, a
 static int accountconfirm(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, aim_modsnac_t *snac, aim_bstream_t *bs)
 {
 	aim_rxcallback_t userfunc;
-	fu16_t status;
+	guint16 status;
 
 	status = aimbs_get16(bs);
 
@@ -73,13 +71,13 @@ static int snachandler(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, 
 	return 0;
 }
 
-faim_internal int admin_modfirst(aim_session_t *sess, aim_module_t *mod)
+int admin_modfirst(aim_session_t *sess, aim_module_t *mod)
 {
 
 	mod->family = 0x0007;
 	mod->version = 0x0001;
 	mod->toolid = AIM_TOOL_NEWWIN;
-	mod->toolversion = 0x0361; /* XXX this and above aren't right */
+	mod->toolversion = 0x0629; 
 	mod->flags = 0;
 	strncpy(mod->name, "admin", sizeof(mod->name));
 	mod->snachandler = snachandler;
@@ -87,7 +85,7 @@ faim_internal int admin_modfirst(aim_session_t *sess, aim_module_t *mod)
 	return 0;
 }
 
-faim_export int aim_admin_changepasswd(aim_session_t *sess, aim_conn_t *conn, const char *newpw, const char *curpw)
+int aim_admin_changepasswd(aim_session_t *sess, aim_conn_t *conn, const char *newpw, const char *curpw)
 {
 	aim_frame_t *tx;
 	aim_tlvlist_t *tl = NULL;
@@ -121,7 +119,7 @@ faim_export int aim_admin_changepasswd(aim_session_t *sess, aim_conn_t *conn, co
  * get the TRIAL flag removed from your account.
  *
  */
-faim_export int aim_admin_reqconfirm(aim_session_t *sess, aim_conn_t *conn)
+int aim_admin_reqconfirm(aim_session_t *sess, aim_conn_t *conn)
 {
 	return aim_genericreq_n(sess, conn, 0x0007, 0x0006);
 }
@@ -132,7 +130,7 @@ faim_export int aim_admin_reqconfirm(aim_session_t *sess, aim_conn_t *conn)
  * The only known valid tag is 0x0011 (email address).
  *
  */ 
-faim_export int aim_admin_getinfo(aim_session_t *sess, aim_conn_t *conn, fu16_t info)
+int aim_admin_getinfo(aim_session_t *sess, aim_conn_t *conn, guint16 info)
 {
 	aim_frame_t *tx;
 	aim_snacid_t snacid;
@@ -151,7 +149,7 @@ faim_export int aim_admin_getinfo(aim_session_t *sess, aim_conn_t *conn, fu16_t 
 	return 0;
 }
 
-faim_export int aim_admin_setemail(aim_session_t *sess, aim_conn_t *conn, const char *newemail)
+int aim_admin_setemail(aim_session_t *sess, aim_conn_t *conn, const char *newemail)
 {
 	aim_frame_t *tx;
 	aim_snacid_t snacid;
@@ -173,7 +171,7 @@ faim_export int aim_admin_setemail(aim_session_t *sess, aim_conn_t *conn, const 
 	return 0;
 }
 
-faim_export int aim_admin_setnick(aim_session_t *sess, aim_conn_t *conn, const char *newnick)
+int aim_admin_setnick(aim_session_t *sess, aim_conn_t *conn, const char *newnick)
 {
 	aim_frame_t *tx;
 	aim_snacid_t snacid;

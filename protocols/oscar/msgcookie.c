@@ -11,7 +11,6 @@
  * wrong, we get quirky behavior when cookies step on each others' toes.
  */
 
-#define FAIM_INTERNAL
 #include <aim.h>
 
 /**
@@ -27,7 +26,7 @@
  * in may be free'd, so don't count on its value after calling this!
  * 
  */
-faim_internal int aim_cachecookie(aim_session_t *sess, aim_msgcookie_t *cookie)
+int aim_cachecookie(aim_session_t *sess, aim_msgcookie_t *cookie)
 {
 	aim_msgcookie_t *newcook;
 
@@ -60,7 +59,7 @@ faim_internal int aim_cachecookie(aim_session_t *sess, aim_msgcookie_t *cookie)
  *
  * if found, returns the struct; if none found (or on error), returns NULL:
  */
-faim_internal aim_msgcookie_t *aim_uncachecookie(aim_session_t *sess, fu8_t *cookie, int type)
+aim_msgcookie_t *aim_uncachecookie(aim_session_t *sess, guint8 *cookie, int type)
 {
 	aim_msgcookie_t *cur, **prev;
 
@@ -89,7 +88,7 @@ faim_internal aim_msgcookie_t *aim_uncachecookie(aim_session_t *sess, fu8_t *coo
  * success.
  *
  */
-faim_internal aim_msgcookie_t *aim_mkcookie(fu8_t *c, int type, void *data) 
+aim_msgcookie_t *aim_mkcookie(guint8 *c, int type, void *data) 
 {
 	aim_msgcookie_t *cookie;
 
@@ -117,7 +116,7 @@ faim_internal aim_msgcookie_t *aim_mkcookie(fu8_t *c, int type, void *data)
  *
  */
 
-faim_internal aim_msgcookie_t *aim_checkcookie(aim_session_t *sess, const fu8_t *cookie, int type)
+aim_msgcookie_t *aim_checkcookie(aim_session_t *sess, const guint8 *cookie, int type)
 {
 	aim_msgcookie_t *cur;
 
@@ -131,7 +130,7 @@ faim_internal aim_msgcookie_t *aim_checkcookie(aim_session_t *sess, const fu8_t 
 }
 
 #if 0 /* debugging feature */
-faim_internal int aim_dumpcookie(aim_msgcookie_t *cookie) 
+int aim_dumpcookie(aim_msgcookie_t *cookie) 
 {
 
 	if (!cookie)
@@ -158,7 +157,7 @@ faim_internal int aim_dumpcookie(aim_msgcookie_t *cookie)
  * returns -1 on error, 0 on success.
  *
  */
-faim_internal int aim_cookie_free(aim_session_t *sess, aim_msgcookie_t *cookie) 
+int aim_cookie_free(aim_session_t *sess, aim_msgcookie_t *cookie) 
 {
 	aim_msgcookie_t *cur, **prev;
 
@@ -179,7 +178,7 @@ faim_internal int aim_cookie_free(aim_session_t *sess, aim_msgcookie_t *cookie)
 } 
 
 /* XXX I hate switch */
-faim_internal int aim_msgcookie_gettype(int reqclass) 
+int aim_msgcookie_gettype(int reqclass) 
 {
 	/* XXX: hokey-assed. needs fixed. */
 	switch(reqclass) {

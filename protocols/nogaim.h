@@ -157,6 +157,7 @@ struct aim_user {
 	char proto_opt[7][256];
 
 	struct gaim_connection *gc;
+	irc_t *irc;
 };
 
 struct prpl {
@@ -190,9 +191,7 @@ struct prpl {
 	void (* get_away)       (struct gaim_connection *, char *who);
 	void (* set_idle)	(struct gaim_connection *, int idletime);
 	void (* add_buddy)	(struct gaim_connection *, char *name);
-	void (* add_buddies)	(struct gaim_connection *, GList *buddies);
 	void (* remove_buddy)	(struct gaim_connection *, char *name, char *group);
-	void (* remove_buddies)	(struct gaim_connection *, GList *buddies, char *group);
 	void (* add_permit)	(struct gaim_connection *, char *name);
 	void (* add_deny)	(struct gaim_connection *, char *name);
 	void (* rem_permit)	(struct gaim_connection *, char *name);
@@ -252,8 +251,8 @@ extern struct prpl *proto_prpl[16];
 int serv_send_im(irc_t *irc, user_t *u, char *msg);
 int serv_send_chat(irc_t *irc, struct gaim_connection *gc, int id, char *msg );
 
-int do_iconv(char *to, char *from, char *src, char *dst, size_t size);
-char *set_eval_charset(irc_t *irc, set_t *set, char *value);
+G_MODULE_EXPORT signed int do_iconv( char *from_cs, char *to_cs, char *src, char *dst, size_t size, size_t maxbuf );
+char *set_eval_charset( irc_t *irc, set_t *set, char *value );
 
 void nogaim_init();
 int proto_away( struct gaim_connection *gc, char *away );
@@ -275,7 +274,7 @@ G_MODULE_EXPORT void account_offline( struct gaim_connection *gc );
 G_MODULE_EXPORT void signoff( struct gaim_connection *gc );
 
 /* dialogs.c */
-G_MODULE_EXPORT void do_error_dialog( char *msg, char *title );
+G_MODULE_EXPORT void do_error_dialog( struct gaim_connection *gc, char *msg, char *title );
 G_MODULE_EXPORT void do_ask_dialog( struct gaim_connection *gc, char *msg, void *data, void *doit, void *dont );
 
 /* list.c */
@@ -286,8 +285,6 @@ G_MODULE_EXPORT struct buddy *find_buddy( struct gaim_connection *gc, char *hand
 G_MODULE_EXPORT void do_export( struct gaim_connection *gc );
 G_MODULE_EXPORT void signoff_blocked( struct gaim_connection *gc );
 
-/* buddy.c */
-G_MODULE_EXPORT void handle_buddy_rename( struct buddy *buddy, char *handle );
 G_MODULE_EXPORT void serv_buddy_rename( struct gaim_connection *gc, char *handle, char *realname );
 
 /* buddy_chat.c */
@@ -316,6 +313,7 @@ G_MODULE_EXPORT char *tobase64( const char *text );
 G_MODULE_EXPORT char *normalize( const char *s );
 G_MODULE_EXPORT time_t get_time( int year, int month, int day, int hour, int min, int sec );
 G_MODULE_EXPORT void strip_html( char *msg );
+G_MODULE_EXPORT void info_string_append(GString *str, char *newline, char *name, char *value);
 
 #ifdef WITH_MSN
 /* msn.c */

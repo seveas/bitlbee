@@ -28,15 +28,7 @@
 
 #define MSN_BUF_LEN 8192
 
-#ifdef DEBUG
-#define __log(msg...) irc_usermsg( IRC, msg )
-#else
-void __log(char *fmt, ...) {}
-#endif
-
-
 static char *prd_cached = NULL;
-
 
 static char *passport_create_header( char *reply, char *email, char *pwd );
 static int passport_retrieve_dalogin( gpointer data, gpointer func, char *header );
@@ -139,7 +131,6 @@ static void passport_retrieve_dalogin_connected( gpointer data, void *ssl, GaimI
 	
 	if( ( ret = ssl_read( ssl, buffer, PPR_BUFFERSIZE ) ) <= 0 )
 	{
-		__log( "Server did not respond(004,%d)", ret );
 		goto failure;
 	}
 
@@ -148,10 +139,7 @@ static void passport_retrieve_dalogin_connected( gpointer data, void *ssl, GaimI
 		char *urlend;
 		
 		if( !dalogin )
-		{
-			__log( "Incorrect DALogin reply" );
 			goto failure;
-		}
 		
 		dalogin += strlen( "DALogin=" );
 		urlend = strchr( dalogin, ',' );
@@ -256,10 +244,7 @@ static void passport_get_id_connected( gpointer data, void *ssl, GaimInputCondit
 	}
 	
 	if( *buffer == 0 )
-	{
-		__log( "Server did not respond(006,%d)", ret );
 		goto end;
-	}
 	
 	if( ( dummy = strstr( buffer, "Location:" ) ) )
 	{

@@ -38,6 +38,7 @@
 #include "nogaim.h"
 #include "bitlbee.h"
 #include "proxy.h"
+#include "ssl_client.h"
 
 /* The priv member of gjconn's is a gaim_connection for now. */
 #define GJ_GC(x) ((struct gaim_connection *)(x)->priv)
@@ -56,8 +57,7 @@
 #define DEFAULT_SERVER "jabber.org"
 #define DEFAULT_GROUPCHAT "conference.jabber.org"
 #define DEFAULT_PORT 5222
-
-#define USEROPT_PORT 0
+#define DEFAULT_PORT_SSL 5223
 
 #define JABBER_GROUP "Friends"
 
@@ -74,6 +74,7 @@ typedef struct gjconn_struct {
 	int state;		/* Connection state flag */
 	int was_connected;	/* We were once connected */
 	int fd;			/* Connection file descriptor */
+	void *ssl;		/* SSL connection */
 	jid user;		/* User info */
 	char *pass;		/* User passwd */
 
@@ -91,7 +92,6 @@ typedef struct gjconn_struct {
 	GHashTable *queries;	/* query tracker */
 
 	void *priv;
-
 } *gjconn, gjconn_struct;
 
 typedef void (*gjconn_state_h)(gjconn gjc, int state);
@@ -165,6 +165,7 @@ static char *jabber_name()
 #define STATE_EVT(arg) if(gjc->on_state) { (gjc->on_state)(gjc, (arg) ); }
 
 static void jabber_remove_buddy(struct gaim_connection *gc, char *name, char *group);
+static void jabber_handlevcard(gjconn gjc, xmlnode querynode, char *from);
 
 static char *create_valid_jid(const char *given, char *server, char *resource)
 {
@@ -247,7 +248,12 @@ static void gjab_stop(gjconn gjc)
 	gjab_send_raw(gjc, "</stream:stream>");
 	gjc->state = JCONN_STATE_OFF;
 	gjc->was_connected = 0;
-	closesocket(gjc->fd);
+	if (gjc->ssl) {
+		ssl_disconnect(gjc->ssl);
+		gjc->ssl = NULL;
+	} else {
+		closesocket(gjc->fd);
+	}
 	gjc->fd = -1;
 	XML_ParserFree(gjc->parser);
 	gjc->parser = NULL;
@@ -289,7 +295,11 @@ static void gjab_send(gjconn gjc, xmlnode x)
 {
 	if (gjc && gjc->state != JCONN_STATE_OFF) {
 		char *buf = xmlnode2str(x);
-		if (buf)
+		if (!buf)
+			return;
+		else if (gjc->ssl)
+			ssl_write(gjc->ssl, buf, strlen(buf));
+		else
 			write(gjc->fd, buf, strlen(buf));
 	}
 }
@@ -297,10 +307,17 @@ static void gjab_send(gjconn gjc, xmlnode x)
 static void gjab_send_raw(gjconn gjc, const char *str)
 {
 	if (gjc && gjc->state != JCONN_STATE_OFF) {
+		int len;
+		
 		/*
 		 * JFIXME: No error detection?!?!
 		 */
-		if(write(gjc->fd, str, strlen(str)) < 0) {
+		if (gjc->ssl)
+			len = ssl_write(gjc->ssl, str, strlen(str));
+		else
+			len = write(gjc->fd, str, strlen(str));
+			
+		if(len < 0) {
 			/* Do NOT write to stdout/stderr directly, IRC clients
 			   might get confused, and we don't want that...
 			fprintf(stderr, "DBG: Problem sending.  Error: %d\n", errno);
@@ -390,8 +407,13 @@ static void gjab_recv(gjconn gjc)
 
 	if (!gjc || gjc->state == JCONN_STATE_OFF)
 		return;
-
-	if ((len = read(gjc->fd, buf, sizeof(buf) - 1)) > 0) {
+	
+	if (gjc->ssl)
+		len = ssl_read(gjc->ssl, buf, sizeof(buf) - 1);
+	else
+		len = read(gjc->fd, buf, sizeof(buf) - 1);
+	
+	if (len > 0) {
 		struct jabber_data *jd = GJ_GC(gjc)->proto_data;
 		buf[len] = '\0';
 		XML_Parse(gjc->parser, buf, len, 0);
@@ -517,116 +539,67 @@ static void gjab_connected(gpointer data, gint source, GaimInputCondition cond)
 	gc->inpa = gaim_input_add(gjc->fd, GAIM_INPUT_READ, jabber_callback, gc);
 }
 
+static void gjab_connected_ssl(gpointer data, void *source, GaimInputCondition cond)
+{
+	struct gaim_connection *gc = data;
+	struct jabber_data *jd;
+	gjconn gjc;
+	
+	if (!g_slist_find(get_connections(), gc)) {
+		ssl_disconnect(source);
+		return;
+	}
+	
+	jd = gc->proto_data;
+	gjc = jd->gjc;
+	
+	if (source == NULL) {
+		STATE_EVT(JCONN_STATE_OFF)
+		return;
+	}
+	
+	gjab_connected(data, gjc->fd, cond);
+}
+
 static void gjab_start(gjconn gjc)
 {
 	struct aim_user *user;
-	int port;
+	int port = -1, ssl = 0;
 
 	if (!gjc || gjc->state != JCONN_STATE_OFF)
 		return;
 
 	user = GJ_GC(gjc)->user;
-	port = user->proto_opt[USEROPT_PORT][0] ? atoi(user->proto_opt[USEROPT_PORT]) : DEFAULT_PORT;
+	if (*user->proto_opt[0]) {
+		if (isdigit(user->proto_opt[0][0]))
+			sscanf(user->proto_opt[0], "%d", &port);
+		
+		if (strstr(user->proto_opt[0], "ssl"))
+			ssl = 1;
+	}
+	
+	if (port == -1 && !ssl)
+		port = DEFAULT_PORT;
+	else if (port == -1 && ssl)
+		port = DEFAULT_PORT_SSL;
 
 	gjc->parser = XML_ParserCreate(NULL);
 	XML_SetUserData(gjc->parser, (void *)gjc);
 	XML_SetElementHandler(gjc->parser, startElement, endElement);
 	XML_SetCharacterDataHandler(gjc->parser, charData);
-
-	gjc->fd = proxy_connect(gjc->user->server, port, gjab_connected, GJ_GC(gjc));
+	
+	if (ssl) {
+		gjc->ssl = ssl_connect(gjc->user->server, port, gjab_connected_ssl, GJ_GC(gjc));
+		gjc->fd = ssl_getfd(gjc->ssl);
+	} else {
+		gjc->fd = proxy_connect(gjc->user->server, port, gjab_connected, GJ_GC(gjc));
+	}
+	
 	if (!user->gc || (gjc->fd < 0)) {
 		STATE_EVT(JCONN_STATE_OFF)
 		return;
 	}
 }
-
-/*
- * Find chat by chat group name
- */
-/* ** Not needed yet - Bitlbee **
-static struct conversation *find_chat(struct gaim_connection *gc, char *name)
-{
-	GSList *bcs = gc->buddy_chats;
-	struct conversation *b = NULL;
-	char *chat = g_strdup(normalize(name));
-
-	while (bcs) {
-		b = bcs->data;
-		if (!g_ascii_strcasecmp(normalize(b->name), chat))
-			break;
-		b = NULL;
-		bcs = bcs->next;
-	}
-
-	g_free(chat);
-	return b;
-}
-** End - Bitlbee ** */
-
-/*
- * Find chat by "chat id"
- *
- * Returns: 0 on success and jabber_chat pointer set
- * or -EINVAL on error and jabber_chat pointer is
- * undefined.
- *
- * TBD: Slogging through the buddy_chats list seems
- * redundant since the chat i.d. is mirrored in the
- * jabber_chat struct list.  But that's the way it
- * was, so that's the way I'm leaving it--for now.
- */
-/* ** Not needed yet - Bitlbee **
-static int jabber_find_chat_by_convo_id(struct gaim_connection *gc, int id, struct jabber_chat **jc)
-{
-	GSList *bcs = gc->buddy_chats;
-	struct conversation *b = NULL;
-	struct jabber_data *jd = gc->proto_data;
-
-	*jc = NULL;
-
-	while(bcs != NULL) {
-		b = bcs->data;
-		if (id == b->id)
-			break;
-		bcs = bcs->next;
-	}
-
-	if (bcs != NULL) {
-		bcs = jd->chats;
-		while (bcs != NULL) {
-			*jc = bcs->data;
-			if ((*jc)->state == JCS_ACTIVE && (*jc)->b == b)
-				break;
-			bcs = bcs->next;
-		}
-	}
-
-	return(bcs == NULL? -EINVAL : 0);
-}
-** End - Bitlbee ** */
-
-/* [SH] Not needed now */
-#if 0
-/*
- * Find any chat
- */
-static struct jabber_chat *find_any_chat(struct gaim_connection *gc, jid chat)
-{
-	GSList *jcs = ((struct jabber_data *)gc->proto_data)->chats;
-	struct jabber_chat *jc = NULL;
-
-	while (jcs) {
-		jc = jcs->data;
-		if (!jid_cmpx(chat, jc->Jid, JID_USER | JID_SERVER))
-			break;
-		jc = NULL;
-		jcs = jcs->next;
-	}
-
-	return jc;
-}
-#endif
-/* [SH] Till here */
 
 /*
  * Find existing/active Jabber chat
@@ -707,17 +680,17 @@ static void jabber_track_away(gjconn gjc, jpacket p, char *name, char *type)
 	char *status = NULL;
 	char *msg = NULL;
 
-	if (type && (g_ascii_strcasecmp(type, "unavailable") == 0)) {
+	if (type && (g_strcasecmp(type, "unavailable") == 0)) {
 		vshow = _("Unavailable");
 	} else {
 		if((show = xmlnode_get_tag_data(p->x, "show")) != NULL) {
-			if (!g_ascii_strcasecmp(show, "away")) {
+			if (!g_strcasecmp(show, "away")) {
 				vshow = _("Away");
-			} else if (!g_ascii_strcasecmp(show, "chat")) {
+			} else if (!g_strcasecmp(show, "chat")) {
 				vshow = _("Online");
-			} else if (!g_ascii_strcasecmp(show, "xa")) {
+			} else if (!g_strcasecmp(show, "xa")) {
 				vshow = _("Extended Away");
-			} else if (!g_ascii_strcasecmp(show, "dnd")) {
+			} else if (!g_strcasecmp(show, "dnd")) {
 				vshow = _("Do Not Disturb");
 			}
 		}
@@ -790,7 +763,7 @@ static void jabber_handlemessage(gjconn gjc, jpacket p)
 	   z = xmlnode_get_nextsibling(z);
 	}
 
-	if (!type || !g_ascii_strcasecmp(type, "normal") || !g_ascii_strcasecmp(type, "chat")) {
+	if (!type || !g_strcasecmp(type, "normal") || !g_strcasecmp(type, "chat")) {
 
 		/* XXX namespaces could be handled better. (mid) */
 		if ((xmlns = xmlnode_get_tag(p->x, "x")))
@@ -810,7 +783,7 @@ static void jabber_handlemessage(gjconn gjc, jpacket p)
 		if (!from)
 			return;
 
-		if (type && !g_ascii_strcasecmp(type, "jabber:x:conference")) {
+		if (type && !g_strcasecmp(type, "jabber:x:conference")) {
 			char *room;
 			GList *m = NULL;
 			char **data;
@@ -849,7 +822,7 @@ static void jabber_handlemessage(gjconn gjc, jpacket p)
 			}
 		}
 
-	} else if (!g_ascii_strcasecmp(type, "error")) {
+	} else if (!g_strcasecmp(type, "error")) {
 		if ((y = xmlnode_get_tag(p->x, "error"))) {
 			type = xmlnode_get_attrib(y, "code");
 			msg = xmlnode_get_data(y);
@@ -857,10 +830,10 @@ static void jabber_handlemessage(gjconn gjc, jpacket p)
 
 		if (msg) {
 			from = g_strdup_printf("Error %s", type ? type : "");
-			do_error_dialog(msg, from);
+			do_error_dialog(GJ_GC(gjc), msg, from);
 			g_free(from);
 		}
-	} else if (!g_ascii_strcasecmp(type, "groupchat")) {
+	} else if (!g_strcasecmp(type, "groupchat")) {
 		struct jabber_chat *jc;
 		static int i = 0;
 
@@ -950,20 +923,20 @@ static void jabber_handlepresence(gjconn gjc, jpacket p)
 	from = xmlnode_get_attrib(p->x, "from");
 	type = xmlnode_get_attrib(p->x, "type");
 	
-	if (type && g_ascii_strcasecmp(type, "error") == 0) {
+	if (type && g_strcasecmp(type, "error") == 0) {
 		return;
 	}
 	else if ((y = xmlnode_get_tag(p->x, "show"))) {
 		show = xmlnode_get_data(y);
 		if (!show) {
 			state = 0;
-		} else if (!g_ascii_strcasecmp(show, "away")) {
+		} else if (!g_strcasecmp(show, "away")) {
 			state = UC_AWAY;
-		} else if (!g_ascii_strcasecmp(show, "chat")) {
+		} else if (!g_strcasecmp(show, "chat")) {
 			state = UC_CHAT;
-		} else if (!g_ascii_strcasecmp(show, "xa")) {
+		} else if (!g_strcasecmp(show, "xa")) {
 			state = UC_XA;
-		} else if (!g_ascii_strcasecmp(show, "dnd")) {
+		} else if (!g_strcasecmp(show, "dnd")) {
 			state = UC_DND;
 		}
 	} else {
@@ -1006,7 +979,7 @@ static void jabber_handlepresence(gjconn gjc, jpacket p)
 		/* keep track of away msg same as yahoo plugin */
 		jabber_track_away(gjc, p, normalize(b->name), type);
 
-		if (type && (g_ascii_strcasecmp(type, "unavailable") == 0)) {
+		if (type && (g_strcasecmp(type, "unavailable") == 0)) {
 			if (resources) {
 				g_free(resources->data);
 				b->proto_data = g_slist_remove(b->proto_data, resources->data);
@@ -1030,7 +1003,7 @@ static void jabber_handlepresence(gjconn gjc, jpacket p)
 			jabber_track_away(gjc, p, buf, type);
 			g_free(buf);
 
-			if (type && !g_ascii_strcasecmp(type, "unavailable")) {
+			if (type && !g_strcasecmp(type, "unavailable")) {
 				struct jabber_data *jd;
 				if (!jc && !(jc = find_existing_chat(GJ_GC(gjc), who))) {
 					g_free(buddy);
@@ -1163,7 +1136,7 @@ static void jabber_handles10n(gjconn gjc, jpacket p)
 					!strcmp(status, "Not Found")) {
 				char *msg = g_strdup_printf("%s: \"%s\"", _("No such user"), 
 					xmlnode_get_attrib(p->x, "from"));
-				do_error_dialog(msg, _("Jabber Error"));
+				do_error_dialog(GJ_GC(gjc), msg, _("Jabber Error"));
 				g_free(msg);
 			}
 		}
@@ -1179,26 +1152,26 @@ static void jabber_handles10n(gjconn gjc, jpacket p)
 /*
  * Pending subscription to a buddy?
  */
-#define BUD_SUB_TO_PEND(sub, ask) ((!g_ascii_strcasecmp((sub), "none") || !g_ascii_strcasecmp((sub), "from")) && \
-					(ask) != NULL && !g_ascii_strcasecmp((ask), "subscribe")) 
+#define BUD_SUB_TO_PEND(sub, ask) ((!g_strcasecmp((sub), "none") || !g_strcasecmp((sub), "from")) && \
+					(ask) != NULL && !g_strcasecmp((ask), "subscribe")) 
 
 /*
  * Subscribed to a buddy?
  */
-#define BUD_SUBD_TO(sub, ask) ((!g_ascii_strcasecmp((sub), "to") || !g_ascii_strcasecmp((sub), "both")) && \
-					((ask) == NULL || !g_ascii_strcasecmp((ask), "subscribe")))
+#define BUD_SUBD_TO(sub, ask) ((!g_strcasecmp((sub), "to") || !g_strcasecmp((sub), "both")) && \
+					((ask) == NULL || !g_strcasecmp((ask), "subscribe")))
 
 /*
  * Pending unsubscription to a buddy?
  */
-#define BUD_USUB_TO_PEND(sub, ask) ((!g_ascii_strcasecmp((sub), "to") || !g_ascii_strcasecmp((sub), "both")) && \
-					(ask) != NULL && !g_ascii_strcasecmp((ask), "unsubscribe")) 
+#define BUD_USUB_TO_PEND(sub, ask) ((!g_strcasecmp((sub), "to") || !g_strcasecmp((sub), "both")) && \
+					(ask) != NULL && !g_strcasecmp((ask), "unsubscribe")) 
 
 /*
  * Unsubscribed to a buddy?
  */
-#define BUD_USUBD_TO(sub, ask) ((!g_ascii_strcasecmp((sub), "none") || !g_ascii_strcasecmp((sub), "from")) && \
-					((ask) == NULL || !g_ascii_strcasecmp((ask), "unsubscribe")))
+#define BUD_USUBD_TO(sub, ask) ((!g_strcasecmp((sub), "none") || !g_strcasecmp((sub), "from")) && \
+					((ask) == NULL || !g_strcasecmp((ask), "unsubscribe")))
 
 /*
  * If a buddy is added or removed from the roster on another resource
@@ -1270,10 +1243,10 @@ static void jabber_handlebuddy(gjconn gjc, xmlnode x)
 			} else if(name != NULL && strcmp(b->show, name)) {
 				strncpy(b->show, name, BUDDY_ALIAS_MAXLEN);
 				b->show[BUDDY_ALIAS_MAXLEN - 1] = '\0';	/* cheap safety feature */
-				handle_buddy_rename(b, buddyname);
+				serv_buddy_rename(GJ_GC(gjc), buddyname, b->show);
 			}
 		}
-	}  else if (BUD_USUB_TO_PEND(sub, ask) || BUD_USUBD_TO(sub, ask) || !g_ascii_strcasecmp(sub, "remove")) {
+	}  else if (BUD_USUB_TO_PEND(sub, ask) || BUD_USUBD_TO(sub, ask) || !g_strcasecmp(sub, "remove")) {
 		jabber_remove_gaim_buddy(GJ_GC(gjc), buddyname);
 	}
 	g_free(buddyname);
@@ -1507,13 +1480,19 @@ static void jabber_handlepacket(gjconn gjc, jpacket p)
 				jabber_handleroster(gjc, querynode);
 			} else if (NSCHECK(querynode, NS_VCARD)) {
 				jabber_track_queries(gjc->queries, id, TRUE);	/* delete query track */
+                                jabber_handlevcard(gjc, querynode, from);
 			} else if (vcard) {
 				jabber_track_queries(gjc->queries, id, TRUE);	/* delete query track */
+                                jabber_handlevcard(gjc, vcard, from);
 			} else {
 				char *val;
 
 				/* handle "null" query results */
 				if((val = jabber_track_queries(gjc->queries, id, TRUE)) != NULL) {
+					if (!g_strncasecmp(val, "vcard", 5)) {
+						jabber_handlevcard(gjc, NULL, from);
+					}
+
 					/* No-op */
 				}
 			}
@@ -1532,7 +1511,7 @@ static void jabber_handlepacket(gjconn gjc, jpacket p)
 			}
 
 			from = g_strdup_printf("Error %d (%s)", errcode, from);
-			do_error_dialog(errmsg, from);
+			do_error_dialog(GJ_GC(gjc), errmsg, from);
 			g_free(from);
 
 		}
@@ -1575,7 +1554,7 @@ static void jabber_login(struct aim_user *user)
 {
 	struct gaim_connection *gc = new_gaim_conn(user);
 	struct jabber_data *jd = gc->proto_data = g_new0(struct jabber_data, 1);
-	char *loginname = create_valid_jid(user->username, DEFAULT_SERVER, "GAIM");
+	char *loginname = create_valid_jid(user->username, DEFAULT_SERVER, "BitlBee");
 
 	jd->hash = g_hash_table_new(g_str_hash, g_str_equal);
 	jd->chats = NULL;	/* we have no chats yet */
@@ -1777,7 +1756,7 @@ static void jabber_add_buddy(struct gaim_connection *gc, char *name)
 		
 		if((who = jid_new(gjc->p, name)) == NULL) {
 			char *msg = g_strdup_printf("%s: \"%s\"", _("Invalid Jabber I.D."), name);
-			do_error_dialog(msg, _("Jabber Error"));
+			do_error_dialog(GJ_GC(gjc), msg, _("Jabber Error"));
 			g_free(msg);
 			jabber_remove_gaim_buddy(gc, name);
 			return;
@@ -1821,256 +1800,6 @@ static void jabber_remove_buddy(struct gaim_connection *gc, char *name, char *gr
 	g_free(realwho);
 	xmlnode_free(x);
 }
-
-/* **Chats not yet enabled - Bitlbee** ** NOTE! comments disabled **
-static GList *jabber_chat_info(struct gaim_connection *gc)
-{
-	gjconn gjc = ((struct jabber_data *)gc->proto_data)->gjc;
-
-	static char *confserv = NULL;	/#* this pointer must be persistent *#/
-	gchar *server;
-
-	GList *m = NULL;
-	struct proto_chat_entry *pce;
-
-	/#* This is a scientific wild-ass guess...
-	 *
-	 * If there are more than two "components" to the current server name,
-	 * lop-off the left-most component and replace with "conference."
-	 *#/
-	if(confserv != NULL) {
-		g_free(confserv);	/#* dispose of the old value *#/
-	}
-
-	if((server = g_strdup(gjc->user->server)) == NULL) {
-		confserv = g_strdup(DEFAULT_GROUPCHAT);
-	} else {
-		gchar **splits, **index;
-		gchar *tmp;
-		int cnt = 0;
-
-
-		index = splits = g_strsplit(server, ".", -1);	/#* split the connected server *#/
-
-		while(*(index++))	/#* index to the end--counting the parts *#/
-			++cnt;
-
-		/#*
-		 * If we've more than two parts, point to the second part.  Else point
-		 * to the start.
-		 *#/
-		if(cnt > 2) {
-			index -= cnt;
-		} else {
-			index = splits;
-		}
-
-		/#* Put it together *#/
-		confserv = g_strjoin(".", "conference", (tmp = g_strjoinv(".", index)), NULL);
-
-		g_free(server);		/#* we don't need this stuff no more *#/
-		g_free(tmp);
-		g_strfreev(splits);
-	}
-
-	pce = g_new0(struct proto_chat_entry, 1);
-	pce->label = _("Room:");
-	m = g_list_append(m, pce);
-
-	pce = g_new0(struct proto_chat_entry, 1);
-	pce->label = _("Server:");
-	pce->def = confserv;
-	m = g_list_append(m, pce);
-
-	pce = g_new0(struct proto_chat_entry, 1);
-	pce->label = _("Handle:");
-	pce->def = gjc->user->user;
-	m = g_list_append(m, pce);
-
-	return m;
-}
-
-static void jabber_join_chat(struct gaim_connection *gc, GList *data)
-{
-	xmlnode x;
-	char *realwho;
-	gjconn gjc = ((struct jabber_data *)gc->proto_data)->gjc;
-	GSList *jcs = ((struct jabber_data *)gc->proto_data)->chats;
-	struct jabber_chat *jc;
-	jid Jid;
-
-	if (!data || !data->next || !data->next->next)
-		return;
-
-	realwho = create_valid_jid(data->data, data->next->data,
-			data->next->next->data);
-
-	if((Jid = jid_new(gjc->p, realwho)) == NULL) {
-		char *msg = g_strdup_printf("%s: \"%s\"", _("Invalid Jabber I.D."), realwho);
-		do_error_dialog(msg, _("Jabber Error"));
-		g_free(msg);
-		return;
-	}
-
-	if((jc = find_any_chat(gc, Jid)) != NULL) {
-		free(Jid);	/#* don't need it, after all *#/
-		switch(jc->state) {
-			case JCS_PENDING:
-				g_free(realwho);	/#* yuck! *#/
-				return;
-			case JCS_ACTIVE:
-				g_free(realwho);	/#* yuck! *#/
-				return;
-			case JCS_CLOSED:
-				break;
-			default:
-				g_free(realwho);	/#* yuck! *#/
-				return;
-		}
-	} else {
-		jc = g_new0(struct jabber_chat, 1);
-		jc->Jid = Jid;
-		jc->gc = gc;
-		((struct jabber_data *)gc->proto_data)->chats = g_slist_append(jcs, jc);
-	}
-
-	jc->state = JCS_PENDING;
-
-	x = jutil_presnew(0, realwho, NULL);
-	gjab_send(gjc, x);
-	xmlnode_free(x);
-	g_free(realwho);
-}
-
-static void jabber_chat_invite(struct gaim_connection *gc, int id, char *message, char *name)
-{
-	xmlnode x, y;
-	struct jabber_data *jd = gc->proto_data;
-	gjconn gjc = jd->gjc;
-	struct jabber_chat *jc = NULL;
-	char *realwho, *subject;
-
-	if (!name)
-		return;
-
-	/#* find which chat we're inviting to *#/
-	if(jabber_find_chat_by_convo_id(gc, id, &jc) != 0)
-		return;
-
-	x = xmlnode_new_tag("message");
-	if (!strchr(name, '@'))
-		realwho = g_strdup_printf("%s@%s", name, gjc->user->server);
-	else
-		realwho = g_strdup(name);
-	xmlnode_put_attrib(x, "to", realwho);
-	g_free(realwho);
-
-	y = xmlnode_insert_tag(x, "x");
-	xmlnode_put_attrib(y, "xmlns", "jabber:x:conference");
-	subject = g_strdup_printf("%s@%s", jc->Jid->user, jc->Jid->server);
-	xmlnode_put_attrib(y, "jid", subject);
-	g_free(subject);
-
-	if (message && strlen(message)) {
-		char *utf8 = str_to_utf8(message);
-		y = xmlnode_insert_tag(x, "body");
-		xmlnode_insert_cdata(y, utf8, -1);
-		g_free(utf8);
-	}
-
-	gjab_send(((struct jabber_data *)gc->proto_data)->gjc, x);
-	xmlnode_free(x);
-}
-
-static void jabber_chat_leave(struct gaim_connection *gc, int id)
-{
-	struct jabber_data *jd = gc->proto_data;
-	gjconn gjc = jd->gjc;
-	struct jabber_chat *jc = NULL;
-	char *realwho;
-	xmlnode x;
-
-	/#* Find out which chat we're leaving *#/
-	if(jabber_find_chat_by_convo_id(gc, id, &jc) != 0)
-		return;
-
-	realwho = g_strdup_printf("%s@%s", jc->Jid->user, jc->Jid->server);
-	x = jutil_presnew(0, realwho, NULL);
-	g_free(realwho);
-	xmlnode_put_attrib(x, "type", "unavailable");
-	gjab_send(gjc, x);
-	xmlnode_free(x);
-	jc->b = NULL;
-}
-
-static int jabber_chat_send(struct gaim_connection *gc, int id, char *message)
-{
-	xmlnode x, y;
-	struct jabber_chat *jc = NULL;
-	char *chatname;
-	int retval = 0;
-
-	/#* Find out which chat we're sending to *#/
-	if((retval = jabber_find_chat_by_convo_id(gc, id, &jc)) != 0)
-		return(retval);
-
-	x = xmlnode_new_tag("message");
-	xmlnode_put_attrib(x, "from", jid_full(jc->Jid));
-	chatname = g_strdup_printf("%s@%s", jc->Jid->user, jc->Jid->server);
-	xmlnode_put_attrib(x, "to", chatname);
-	g_free(chatname);
-	xmlnode_put_attrib(x, "type", "groupchat");
-
-	if (message && strlen(message) > strlen("/topic ") &&
-			!g_strncasecmp(message, "/topic ", strlen("/topic "))) {
-		char buf[8192];
-		char *utf8 = str_to_utf8(message + strlen("/topic "));
-		y = xmlnode_insert_tag(x, "subject");
-		xmlnode_insert_cdata(y, utf8, -1);
-		y = xmlnode_insert_tag(x, "body");
-		g_snprintf(buf, sizeof(buf), "/me has changed the subject to: %s", utf8);
-		xmlnode_insert_cdata(y, buf, -1);
-		g_free(utf8);
-	} else if (message && strlen(message)) {
-		char *utf8 = str_to_utf8(message);
-		y = xmlnode_insert_tag(x, "body");
-		xmlnode_insert_cdata(y, utf8, -1);
-		g_free(utf8);
-	}
-
-	gjab_send(((struct jabber_data *)gc->proto_data)->gjc, x);
-	xmlnode_free(x);
-	return 0;
-}
-
-static void jabber_chat_whisper(struct gaim_connection *gc, int id, char *who, char *message)
-{
-	xmlnode x, y;
-	struct jabber_chat *jc = NULL;
-	char *chatname;
-
-	/#* Find out which chat we're whispering to *#/
-	if(jabber_find_chat_by_convo_id(gc, id, &jc) != 0)
-		return;
-
-	x = xmlnode_new_tag("message");
-	xmlnode_put_attrib(x, "from", jid_full(jc->Jid));
-	chatname = g_strdup_printf("%s@%s/%s", jc->Jid->user, jc->Jid->server, who);
-	xmlnode_put_attrib(x, "to", chatname);
-	g_free(chatname);
-	xmlnode_put_attrib(x, "type", "normal");
-
-	if (message && strlen(message)) {
-		char *utf8 = str_to_utf8(message);
-		y = xmlnode_insert_tag(x, "body");
-		xmlnode_insert_cdata(y, utf8, -1);
-		g_free(utf8);
-	}
-
-	gjab_send(((struct jabber_data *)gc->proto_data)->gjc, x);
-	xmlnode_free(x);
-}
-** End of chat - Bitlbee ** */
 
 static void jabber_get_info(struct gaim_connection *gc, char *who) {
 	xmlnode x;
@@ -2133,38 +1862,6 @@ static void jabber_get_away_msg(struct gaim_connection *gc, char *who) {
 	
 }
 
-/* ** Ooooh... What's this button do? - Bitlbee **
-static void jabber_get_cb_info(struct gaim_connection *gc, int cid, char *who) {
-	struct jabber_chat *jc = NULL;
-	char *realwho;
-
-	/#* Find out which chat *#/
-	if(jabber_find_chat_by_convo_id(gc, cid, &jc) != 0)
-		return;
-
-	realwho = g_strdup_printf("%s@%s/%s", jc->Jid->user, jc->Jid->server, who);
-
-	jabber_get_info(gc, realwho);
-	g_free(realwho);
-}
-
-static void jabber_get_cb_away_msg(struct gaim_connection *gc, int cid, char *who) {
-	struct jabber_chat *jc = NULL;
-	char *realwho;
-
-	/#* Find out which chat *#/
-	if(jabber_find_chat_by_convo_id(gc, cid, &jc) != 0)
-		return;
-
-	realwho = g_strdup_printf("%s@%s/%s", jc->Jid->user, jc->Jid->server, who);
-
-	jabber_get_away_msg(gc, realwho);
-
-	g_free(realwho);
-
-}
-** End - Bitlbee ** */
-
 static GList *jabber_away_states(struct gaim_connection *gc) {
 	GList *m = NULL;
 
@@ -2206,20 +1903,20 @@ static void jabber_set_away(struct gaim_connection *gc, char *state, char *messa
 		}
 	} else {
 		/* state is one of our own strings. it won't be NULL. */
-		if (!g_ascii_strcasecmp(state, "Online")) {
+		if (!g_strcasecmp(state, "Online")) {
 			/* once again, we don't have to put anything here */
-		} else if (!g_ascii_strcasecmp(state, "Chatty")) {
+		} else if (!g_strcasecmp(state, "Chatty")) {
 			y = xmlnode_insert_tag(x, "show");
 			xmlnode_insert_cdata(y, "chat", -1);
-		} else if (!g_ascii_strcasecmp(state, "Away")) {
+		} else if (!g_strcasecmp(state, "Away")) {
 			y = xmlnode_insert_tag(x, "show");
 			xmlnode_insert_cdata(y, "away", -1);
 			gc->away = "";
-		} else if (!g_ascii_strcasecmp(state, "Extended Away")) {
+		} else if (!g_strcasecmp(state, "Extended Away")) {
 			y = xmlnode_insert_tag(x, "show");
 			xmlnode_insert_cdata(y, "xa", -1);
 			gc->away = "";
-		} else if (!g_ascii_strcasecmp(state, "Do Not Disturb")) {
+		} else if (!g_strcasecmp(state, "Do Not Disturb")) {
 			y = xmlnode_insert_tag(x, "show");
 			xmlnode_insert_cdata(y, "dnd", -1);
 			gc->away = "";
@@ -2239,22 +1936,6 @@ static void jabber_keepalive(struct gaim_connection *gc) {
 	struct jabber_data *jd = (struct jabber_data *)gc->proto_data;
 	gjab_send_raw(jd->gjc, "  \t  ");
 }
-
-/* ** Bitlbee **
-static GList *jabber_user_opts()
-{
-	GList *m = NULL;
-	struct proto_user_opt *puo;
-
-	puo = g_new0(struct proto_user_opt, 1);
-	puo->label = "Port:";
-	puo->def = "5222";
-	puo->pos = USEROPT_PORT;
-	m = g_list_append(m, puo);
-
-	return m;
-}
-** End - Bitlbee ** */
 
 static void jabber_buddy_free(struct buddy *b)
 {
@@ -2368,15 +2049,6 @@ static struct vcard_template {
 	{"", NULL, TRUE, TRUE, "ORG",   NULL, NULL},
 	{NULL, NULL, 0, 0, NULL, NULL, NULL}
 };
-
-/*
- * V-Card user instructions
- */
-/* ** BitlBee ** Not needed now
-static char *multi_entry_instructions =
-	N_("All items below are optional. Enter only the information with which you feel comfortable");
-static char *entries_title = N_("User Identity");
-** End of BitlBee ** */
 
 /*
  * Used by routines to parse an XML-encoded string into an xmlnode tree
@@ -2527,28 +2199,6 @@ static xmlnode insert_tag_to_parent_tag(xmlnode start, const char *parent_tag, c
 }
 
 /*
- * Find the tag name for a label
- *
- * Returns NULL on not found
- */
-/* ** BitlBee ** Not needed now
-static char *tag_for_label(const char *label)
-{
-	struct vcard_template *vc_tp = vcard_template_data;
-	char *p = NULL;
-
-	for(vc_tp = vcard_template_data; vc_tp->label != NULL; ++vc_tp) {
-		if(strcmp(label, vc_tp->label) == 0) {
-			p = vc_tp->tag;
-			break;
-		}
-	}
-
-	return(p);
-}
-** End of BitlBee ** */
-
-/*
  * Send vCard info to Jabber server
  */
 static void jabber_set_info(struct gaim_connection *gc, char *info)
@@ -2578,180 +2228,158 @@ static void jabber_set_info(struct gaim_connection *gc, char *info)
 }
 
 /*
- * This is the callback from the "ok clicked" for "set vCard"
- *
- * Formats GSList data into XML-encoded string and returns a pointer
- * to said string.
- *
- * g_free()'ing the returned string space is the responsibility of
- * the caller.
+ * displays a Jabber vCard
  */
-/** Bitlbee **
-static gchar *jabber_format_info (MultiEntryDlg *b)
+static void jabber_handlevcard(gjconn gjc, xmlnode querynode, char *from)
 {
-	xmlnode vc_node;
-	GSList *list;
-	MultiEntryData *med;
-	MultiTextData *mtd;
-	char *p;
+	struct jabber_data *jd = GJ_GC(gjc)->proto_data;
+	jid who = jid_new(gjc->p, from);
+	char *status = NULL, *text = NULL;
+	GString *str = g_string_sized_new(100);
+	xmlnode child;
 
-	struct tag_attr *tag_attr;
-
-	vc_node = xmlnode_new_tag("vCard");
-
-	for(tag_attr = vcard_tag_attr_list; tag_attr->attr != NULL; ++tag_attr)
-		xmlnode_put_attrib(vc_node, tag_attr->attr, tag_attr->value);
-
-	for(list = b->multi_entry_items; list != NULL; list = list->next) {
-		med = (MultiEntryData *) list->data;
-		if(med->label != NULL && med->text != NULL && (med->text)[0] != '\0') {
-			if((p = tag_for_label(med->label)) != NULL) {
-				xmlnode xp;
-				if((xp = insert_tag_to_parent_tag(vc_node, NULL, p)) != NULL) {
-					xmlnode_insert_cdata(xp, med->text, -1);
-				}
-			}
-		}
+	gchar *buddy = NULL;
+	
+	if(querynode == NULL) {
+		serv_got_crap(GJ_GC(gjc), "%s - Received empty info reply from %s", _("User Info"), from);
+		return;
 	}
 
-	for(list = b->multi_text_items; list != NULL; list = list->next) {
-		mtd = (MultiTextData *) list->data;
-		if(mtd->label != NULL && mtd->text != NULL && (mtd->text)[0] != '\0') {
-			if((p = tag_for_label(mtd->label)) != NULL) {
-				xmlnode xp;
-				if((xp = insert_tag_to_parent_tag(vc_node, NULL, p)) != NULL) {
-					xmlnode_insert_cdata(xp, mtd->text, -1);
-				}
-			}
-		}
-	}
-
-
-	p = g_strdup(xmlnode2str(vc_node));
-	xmlnode_free(vc_node);
-
-	return(p);
-}
-
-/#*
- * This gets executed by the proto action
- *
- * Creates a new MultiEntryDlg struct, gets the XML-formatted user_info
- * string (if any) into GSLists for the (multi-entry) edit dialog and
- * calls the set_vcard dialog.
- *#/
-static void jabber_setup_set_info(struct gaim_connection *gc)
-{
-	MultiEntryData *data;
-	const struct vcard_template *vc_tp;
-	char *user_info;
-	MultiEntryDlg *b = multi_entry_dialog_new();
-	char *cdata;
-	xmlnode x_vc_data = NULL;
-	struct aim_user *tmp = gc->user;
-	b->user = tmp;
-
-
-	/#*
-	 * Get existing, XML-formatted, user info
-	 *#/
-	if((user_info = g_malloc(strlen(tmp->user_info) + 1)) != NULL) {
-		strcpy(user_info, tmp->user_info);
-		x_vc_data = xmlstr2xmlnode(user_info);
-	}
-
-	/#*
-	 * Set up GSLists for edit with labels from "template," data from user info
-	 *#/
-	for(vc_tp = vcard_template_data; vc_tp->label != NULL; ++vc_tp) {
-		if((vc_tp->label)[0] == '\0')
-			continue;
-		if(vc_tp->ptag == NULL) {
-			cdata = xmlnode_get_tag_data(x_vc_data, vc_tp->tag);
-		} else {
-			gchar *tag = g_strdup_printf("%s/%s", vc_tp->ptag, vc_tp->tag);
-			cdata = xmlnode_get_tag_data(x_vc_data, tag);
-			g_free(tag);
-		}
-		if(strcmp(vc_tp->tag, "DESC") == 0) {
-			multi_text_list_update(&(b->multi_text_items),
-				vc_tp->label, cdata, TRUE);
-		} else {
-			data = multi_entry_list_update(&(b->multi_entry_items),
-				vc_tp->label, cdata, TRUE);
-			data->visible = vc_tp->visible;
-			data->editable = vc_tp->editable;
-		}
-	}
-
-
-	if(x_vc_data != NULL) {
-		xmlnode_free(x_vc_data);
+	if(who->resource != NULL && (who->resource)[0] != '\0') {
+		buddy = g_strdup_printf("%s@%s/%s", who->user, who->server, who->resource);
 	} else {
-		/#*
-		 * Early Beta versions had a different user_info storage format--let's
-		 * see if that works.
-		 *
-		 * This goes away RSN.
-		 *#/
-		const char *record_separator = "<BR>";
-		const char *field_separator = ": ";
-		gchar **str_list, **str_list_ptr, **str_list2;
+		buddy = g_strdup_printf("%s@%s", who->user, who->server);
+	}
 
-		if((str_list = g_strsplit(user_info, record_separator, 0)) != NULL) {
-			for(str_list_ptr = str_list; *str_list_ptr != NULL; ++str_list_ptr) {
-				str_list2 = g_strsplit(*str_list_ptr, field_separator, 2);
-				if(str_list2[0] != NULL && str_list2[1] != NULL) {
-					g_strstrip(str_list2[0]);
-					g_strstrip(str_list2[1]);
-					/#* this is ugly--so far *#/
-					if(strcmp(str_list2[0], "Description") == 0) {
-						multi_text_list_update(&(b->multi_text_items),
-							str_list2[0], str_list2[1], FALSE);
-					} else {
-						multi_entry_list_update(&(b->multi_entry_items),
-							str_list2[0], str_list2[1], FALSE);
-					}
+	if((status = g_hash_table_lookup(jd->hash, buddy)) == NULL) {
+		status = _("Unknown");
+	}
+
+	g_string_sprintfa(str, "%s: %s - %s: %s", _("Jabber ID"), buddy, _("Status"),
+	                       status);
+
+	for(child = querynode->firstchild; child; child = child->next)
+	{
+		xmlnode child2;
+
+		if(child->type != NTYPE_TAG)
+			continue;
+
+		text = xmlnode_get_data(child);
+		if(text && !strcmp(child->name, "FN")) {
+			info_string_append(str, "\n", _("Full Name"), text);
+		} else if (!strcmp(child->name, "N")) {
+			for (child2 = child->firstchild; child2; child2 = child2->next) {
+				char *text2 = NULL;
+
+				if (child2->type != NTYPE_TAG)
+					continue;
+
+				text2 = xmlnode_get_data(child2);
+				if (text2 && !strcmp(child2->name, "FAMILY")) {
+					info_string_append(str, "\n", _("Family Name"), text2);
+				} else if (text2 && !strcmp(child2->name, "GIVEN")) {
+					info_string_append(str, "\n", _("Given Name"), text2);
+				} else if (text2 && !strcmp(child2->name, "MIDDLE")) {
+					info_string_append(str, "\n", _("Middle Name"), text2);
 				}
-				g_strfreev(str_list2);
 			}
-			g_strfreev(str_list);
+		} else if (text && !strcmp(child->name, "NICKNAME")) {
+			info_string_append(str, "\n", _("Nickname"), text);
+		} else if (text && !strcmp(child->name, "BDAY")) {
+			info_string_append(str, "\n", _("Birthday"), text);
+		} else if (!strcmp(child->name, "ADR")) {
+			/* show wich address it is */
+			/* Just for the beauty of bitlbee 
+			if (child->firstchild)
+				g_string_sprintfa(str, "%s:\n", _("Address"));
+			*/
+			for(child2 = child->firstchild; child2; child2 = child2->next) {
+				char *text2 = NULL;
+
+				if(child2->type != NTYPE_TAG)
+					continue;
+
+				text2 = xmlnode_get_data(child2);
+				if(text2 && !strcmp(child2->name, "POBOX")) {
+					info_string_append(str, "\n",
+							_("P.O. Box"), text2);
+				} else if(text2 && !strcmp(child2->name, "EXTADR")) {
+					info_string_append(str, "\n",
+							_("Extended Address"), text2);
+				} else if(text2 && !strcmp(child2->name, "STREET")) {
+					info_string_append(str, "\n",
+							_("Street Address"), text2);
+				} else if(text2 && !strcmp(child2->name, "LOCALITY")) {
+					info_string_append(str, "\n",
+							_("Locality"), text2);
+				} else if(text2 && !strcmp(child2->name, "REGION")) {
+					info_string_append(str, "\n",
+							_("Region"), text2);
+				} else if(text2 && !strcmp(child2->name, "PCODE")) {
+					info_string_append(str, "\n",
+							_("Postal Code"), text2);
+				} else if(text2 && (!strcmp(child2->name, "CTRY")
+							|| !strcmp(child2->name, "COUNTRY"))) {
+					info_string_append(str, "\n", _("Country"), text2);
+				}
+			}
+		} else if(!strcmp(child->name, "TEL")) {
+			char *number = NULL;
+			if ((child2 = xmlnode_get_tag(child, "NUMBER"))) {
+				/* show what kind of number it is */
+				number = xmlnode_get_data(child2);
+				if(number) {
+					info_string_append(str, "\n", _("Telephone"), number);
+				}
+			} else if((number = xmlnode_get_data(child))) {
+				/* lots of clients (including gaim) do this,
+				 * but it's out of spec */
+				info_string_append(str, "\n", _("Telephone"), number);
+			}
+		} else if(!strcmp(child->name, "EMAIL")) {
+			char *userid = NULL;
+			if((child2 = xmlnode_get_tag(child, "USERID"))) {
+				/* show what kind of email it is */
+				userid = xmlnode_get_data(child2);
+				if(userid) {
+					info_string_append(str, "\n", _("Email"), userid);
+				}
+			} else if((userid = xmlnode_get_data(child))) {
+				/* lots of clients (including gaim) do this,
+				 * but it's out of spec */
+				info_string_append(str, "\n", _("Email"), userid);
+			}
+		} else if(!strcmp(child->name, "ORG")) {
+			for(child2 = child->firstchild; child2; child2 = child2->next) {
+				char *text2 = NULL;
+
+				if(child2->type != NTYPE_TAG)
+					continue;
+
+				text2 = xmlnode_get_data(child2);
+				if(text2 && !strcmp(child2->name, "ORGNAME")) {
+					info_string_append(str, "\n", _("Organization Name"), text2);
+				} else if(text2 && !strcmp(child2->name, "ORGUNIT")) {
+					info_string_append(str, "\n", _("Organization Unit"), text2);
+				}
+			}
+		} else if(text && !strcmp(child->name, "TITLE")) {
+			info_string_append(str, "\n", _("Title"), text);
+		} else if(text && !strcmp(child->name, "ROLE")) {
+			info_string_append(str, "\n", _("Role"), text);
+		} else if(text && !strcmp(child->name, "DESC")) {
+			g_string_sprintfa(str, "\n%s:\n%s\n%s", _("Description"), 
+					text, _("End of Description"));
 		}
 	}
 
-	if(user_info != NULL) {
-		g_free(user_info);
-	}
+	serv_got_crap(GJ_GC(gjc), "%s\n%s", _("User Info"), str->str);
 
-	b->title = _("Gaim - Edit Jabber vCard");
-	b->wmclass_name = "set_info";
-	b->wmclass_class = "Gaim";
-	b->instructions->text = g_strdup(multi_entry_instructions);
-	b->entries_title = g_strdup(entries_title);
-
-	b->custom = (void *) jabber_format_info;
-
-	show_set_vcard(b);
+	g_free(buddy);
+	g_string_free(str, TRUE);
 }
-** End - Bitlbee ** */
-/*---------------------------------------*/
-/* End Jabber "set info" (vCard) support */
-/*---------------------------------------*/
 
-/* ** Bitlbee **
-static void jabber_do_action(struct gaim_connection *gc, char *act)
-{
-	if (!strcmp(act, _("Set User Info"))) {
-		jabber_setup_set_info(gc);
-	/#*
-	} else if (!strcmp(act, _("Set Dir Info"))) {
-		show_set_dir(gc);
-	} else if (!strcmp(act, _("Change Password"))) {
-		show_change_passwd(gc);
-	 *#/
-	}
-}
-** End - Bitlbee ** */
 
 static GList *jabber_actions()
 {
@@ -2772,36 +2400,17 @@ void jabber_init(struct prpl *ret)
 {
 	/* the NULL's aren't required but they're nice to have */
 	ret->protocol = PROTO_JABBER;
-/* ** Bitlbee **
-	ret->options = OPT_PROTO_UNIQUE_CHATNAME | OPT_PROTO_CHAT_TOPIC;
-** End - Bitlbee ** */
 	ret->name = jabber_name;
 	ret->away_states = jabber_away_states;
 	ret->actions = jabber_actions;
-/* ** Bitlbee **
-	ret->do_action = jabber_do_action;
-	ret->user_opts = jabber_user_opts;
-** End - Bitlbee ** */
 	ret->login = jabber_login;
 	ret->close = jabber_close;
 	ret->send_im = jabber_send_im;
 	ret->set_info = jabber_set_info;
 	ret->get_info = jabber_get_info;
-/* ** Hmmm? - Bitlbee **
-	ret->get_cb_info = jabber_get_cb_info;
-	ret->get_cb_away = jabber_get_cb_away_msg;
-** End - Bitlbee ** */
 	ret->set_away = jabber_set_away;
 	ret->get_away = jabber_get_away_msg;
-/* ** Bitlbee **
-	ret->set_dir = NULL;
-	ret->get_dir = NULL;
-	ret->dir_search = NULL;
-** End - Bitlbee ** */
 	ret->set_idle = jabber_set_idle;
-/* ** Bitlbee **
-	ret->change_passwd = NULL;
-** End - Bitlbee ** */
 	ret->add_buddy = jabber_add_buddy;
 	ret->remove_buddy = jabber_remove_buddy;
 	ret->add_permit = NULL;
@@ -2809,19 +2418,7 @@ void jabber_init(struct prpl *ret)
 	ret->rem_permit = NULL;
 	ret->rem_deny = NULL;
 	ret->set_permit_deny = NULL;
-/* ** Bitlbee **
-	ret->warn = NULL;
-** End - Bitlbee ** */
-/* ** Chat not yet implemented - Bitlbee **
-	ret->chat_info = jabber_chat_info;
-	ret->join_chat = jabber_join_chat;
-	ret->chat_invite = jabber_chat_invite;
-	ret->chat_leave = jabber_chat_leave;
-	ret->chat_whisper = jabber_chat_whisper;
-	ret->chat_send = jabber_chat_send;
-** End of chat stuff - Bitlbee ** */
 	ret->keepalive = jabber_keepalive;
-//	ret->normalize = jabber_normalize;
 	ret->buddy_free = jabber_buddy_free;
 	ret->alias_buddy = jabber_roster_update;
 	ret->group_buddy = jabber_group_change;

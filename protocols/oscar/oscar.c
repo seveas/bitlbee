@@ -59,8 +59,11 @@
 
 #define OSCAR_GROUP "Friends"
 
-static int gaim_caps = 0;
-static fu8_t gaim_features[] = {0x01, 0x01, 0x01, 0x02};
+/* Don't know if support for UTF8 is really working. For now it's UTF16 here.
+   static int gaim_caps = AIM_CAPS_UTF8; */
+
+static int gaim_caps = AIM_CAPS_INTEROP | AIM_CAPS_ICHAT;
+static guint8 gaim_features[] = {0x01, 0x01, 0x01, 0x02};
 
 struct oscar_data {
 	aim_session_t *sess;
@@ -105,8 +108,8 @@ struct create_room {
 struct chat_connection {
 	char *name;
 	char *show; /* AOL did something funny to us */
-	fu16_t exchange;
-	fu16_t instance;
+	guint16 exchange;
+	guint16 instance;
 	int fd; /* this is redundant since we have the conn below */
 	aim_conn_t *conn;
 	int inpa;
@@ -121,12 +124,12 @@ struct ask_direct {
 	struct gaim_connection *gc;
 	char *sn;
 	char ip[64];
-	fu8_t cookie[8];
+	guint8 cookie[8];
 };
 
 struct icq_auth {
 	struct gaim_connection *gc;
-	fu32_t uin;
+	guint32 uin;
 };
 
 static char *extract_name(const char *name) {
@@ -189,25 +192,17 @@ static struct chat_connection *find_oscar_chat_by_conn(struct gaim_connection *g
 static int gaim_parse_auth_resp  (aim_session_t *, aim_frame_t *, ...);
 static int gaim_parse_login      (aim_session_t *, aim_frame_t *, ...);
 static int gaim_handle_redirect  (aim_session_t *, aim_frame_t *, ...);
-//static int gaim_info_change      (aim_session_t *, aim_frame_t *, ...);
-//static int gaim_account_confirm  (aim_session_t *, aim_frame_t *, ...);
 static int gaim_parse_oncoming   (aim_session_t *, aim_frame_t *, ...);
 static int gaim_parse_offgoing   (aim_session_t *, aim_frame_t *, ...);
 static int gaim_parse_incoming_im(aim_session_t *, aim_frame_t *, ...);
 static int gaim_parse_misses     (aim_session_t *, aim_frame_t *, ...);
-static int gaim_parse_clientauto (aim_session_t *, aim_frame_t *, ...);
-//static int gaim_parse_user_info  (aim_session_t *, aim_frame_t *, ...);
 static int gaim_parse_motd       (aim_session_t *, aim_frame_t *, ...);
 static int gaim_chatnav_info     (aim_session_t *, aim_frame_t *, ...);
 static int gaim_chat_join        (aim_session_t *, aim_frame_t *, ...);
 static int gaim_chat_leave       (aim_session_t *, aim_frame_t *, ...);
 static int gaim_chat_info_update (aim_session_t *, aim_frame_t *, ...);
 static int gaim_chat_incoming_msg(aim_session_t *, aim_frame_t *, ...);
-static int gaim_parse_msgack     (aim_session_t *, aim_frame_t *, ...);
 static int gaim_parse_ratechange (aim_session_t *, aim_frame_t *, ...);
-//static int gaim_parse_evilnotify (aim_session_t *, aim_frame_t *, ...);
-//static int gaim_parse_searcherror(aim_session_t *, aim_frame_t *, ...);
-//static int gaim_parse_searchreply(aim_session_t *, aim_frame_t *, ...);
 static int gaim_bosrights        (aim_session_t *, aim_frame_t *, ...);
 static int conninitdone_bos      (aim_session_t *, aim_frame_t *, ...);
 static int conninitdone_admin    (aim_session_t *, aim_frame_t *, ...);
@@ -223,13 +218,11 @@ static int gaim_memrequest       (aim_session_t *, aim_frame_t *, ...);
 static int gaim_selfinfo         (aim_session_t *, aim_frame_t *, ...);
 static int gaim_offlinemsg       (aim_session_t *, aim_frame_t *, ...);
 static int gaim_offlinemsgdone   (aim_session_t *, aim_frame_t *, ...);
-//static int gaim_popup            (aim_session_t *, aim_frame_t *, ...);
 static int gaim_ssi_parserights  (aim_session_t *, aim_frame_t *, ...);
 static int gaim_ssi_parselist    (aim_session_t *, aim_frame_t *, ...);
+static int gaim_ssi_parseack     (aim_session_t *, aim_frame_t *, ...);
 
-static int gaim_simpleinfo       (aim_session_t *, aim_frame_t *, struct aim_icq_simpleinfo *info );
-
-//static int gaim_update_ui       (aim_session_t *, aim_frame_t *, ...);
+static int gaim_icqinfo          (aim_session_t *, aim_frame_t *, ...);
 
 static char *msgerrreason[] = {
 	"Invalid error",
@@ -272,13 +265,13 @@ static void oscar_callback(gpointer data, gint source,
 		return;
 	}
       
-	odata = (struct oscar_data *)gc->proto_data;
-
 	if (!g_slist_find(get_connections(), gc)) {
 		/* oh boy. this is probably bad. i guess the only thing we 
 		 * can really do is return? */
 		return;
 	}
+
+	odata = (struct oscar_data *)gc->proto_data;
 
 	if (condition & GAIM_INPUT_READ) {
 		if (conn->type == AIM_CONN_TYPE_RENDEZVOUS_OUT) {
@@ -305,7 +298,7 @@ static void oscar_callback(gpointer data, gint source,
 					c->fd = -1;
 					aim_conn_kill(odata->sess, &conn);
 					sprintf(buf, _("You have been disconnected from chat room %s."), c->name);
-					do_error_dialog(buf, _("Chat Error!"));
+					do_error_dialog(sess->aux_data, buf, _("Chat Error!"));
 				} else if (conn->type == AIM_CONN_TYPE_CHATNAV) {
 					if (odata->cnpa > 0)
 						gaim_input_remove(odata->cnpa);
@@ -316,7 +309,7 @@ static void oscar_callback(gpointer data, gint source,
 						odata->create_rooms =
 							g_slist_remove(odata->create_rooms, cr);
 						g_free(cr);
-						do_error_dialog(_("Chat is currently unavailable"),
+						do_error_dialog(sess->aux_data, _("Chat is currently unavailable"),
 								_("Gaim - Chat"));
 					}
 					aim_conn_kill(odata->sess, &conn);
@@ -331,18 +324,6 @@ static void oscar_callback(gpointer data, gint source,
 			}
 		}
 	}
-}
-
-static void oscar_debug(aim_session_t *sess, int level, const char *format, va_list va) {
-	char *s = g_strdup_vprintf(format, va);
-	char buf[256];
-	char *t;
-	struct gaim_connection *gc = sess->aux_data;
-
-	g_snprintf(buf, sizeof(buf), "%s %d: ", gc->username, level);
-	t = g_strconcat(buf, s, NULL);
-	g_free(t);
-	g_free(s);
 }
 
 static void oscar_login_connect(gpointer data, gint source, GaimInputCondition cond)
@@ -392,7 +373,6 @@ static void oscar_login(struct aim_user *user) {
 	sess = g_new0(aim_session_t, 1);
 
 	aim_session_init(sess, AIM_SESS_FLAGS_NONBLOCKCONNECT, 0);
-	aim_setdebuggingcb(sess, oscar_debug);
 
 	/* we need an immediate queue because we don't use a while-loop to
 	 * see if things need to be sent. */
@@ -406,7 +386,12 @@ static void oscar_login(struct aim_user *user) {
 		signoff(gc);
 		return;
 	}
-
+	
+	if (g_strcasecmp(user->proto_opt[USEROPT_AUTH], "login.icq.com") != 0 &&
+	    g_strcasecmp(user->proto_opt[USEROPT_AUTH], "login.oscar.aol.com") != 0) {
+		serv_got_crap(gc, "Warning: Unknown OSCAR server: `%s'. Please review your configuration if the connection fails.");
+	}
+	
 	g_snprintf(buf, sizeof(buf), _("Signon: %s"), gc->username);
 	set_login_progress(gc, 2, buf);
 
@@ -546,7 +531,7 @@ static int gaim_parse_auth_resp(aim_session_t *sess, aim_frame_t *fr, ...) {
 	}
 
 	aim_conn_addhandler(sess, bosconn, AIM_CB_FAM_SPECIAL, AIM_CB_SPECIAL_CONNINITDONE, conninitdone_bos, 0);
-	aim_conn_addhandler(sess, bosconn, 0x0009, 0x0003, gaim_bosrights, 0);
+	aim_conn_addhandler(sess, bosconn, AIM_CB_FAM_BOS, AIM_CB_BOS_RIGHTS, gaim_bosrights, 0);
 	aim_conn_addhandler(sess, bosconn, AIM_CB_FAM_ACK, AIM_CB_ACK_ACK, NULL, 0);
 	aim_conn_addhandler(sess, bosconn, AIM_CB_FAM_GEN, AIM_CB_GEN_REDIRECT, gaim_handle_redirect, 0);
 	aim_conn_addhandler(sess, bosconn, AIM_CB_FAM_LOC, AIM_CB_LOC_RIGHTSINFO, gaim_parse_locaterights, 0);
@@ -556,28 +541,21 @@ static int gaim_parse_auth_resp(aim_session_t *sess, aim_frame_t *fr, ...) {
 	aim_conn_addhandler(sess, bosconn, AIM_CB_FAM_MSG, AIM_CB_MSG_INCOMING, gaim_parse_incoming_im, 0);
 	aim_conn_addhandler(sess, bosconn, AIM_CB_FAM_LOC, AIM_CB_LOC_ERROR, gaim_parse_locerr, 0);
 	aim_conn_addhandler(sess, bosconn, AIM_CB_FAM_MSG, AIM_CB_MSG_MISSEDCALL, gaim_parse_misses, 0);
-	aim_conn_addhandler(sess, bosconn, AIM_CB_FAM_MSG, AIM_CB_MSG_CLIENTAUTORESP, gaim_parse_clientauto, 0);
 	aim_conn_addhandler(sess, bosconn, AIM_CB_FAM_GEN, AIM_CB_GEN_RATECHANGE, gaim_parse_ratechange, 0);
-//	aim_conn_addhandler(sess, bosconn, AIM_CB_FAM_GEN, AIM_CB_GEN_EVIL, gaim_parse_evilnotify, 0);
-//	aim_conn_addhandler(sess, bosconn, AIM_CB_FAM_LOK, AIM_CB_LOK_ERROR, gaim_parse_searcherror, 0);
-//	aim_conn_addhandler(sess, bosconn, AIM_CB_FAM_LOK, 0x0003, gaim_parse_searchreply, 0);
 	aim_conn_addhandler(sess, bosconn, AIM_CB_FAM_MSG, AIM_CB_MSG_ERROR, gaim_parse_msgerr, 0);
-//	aim_conn_addhandler(sess, bosconn, AIM_CB_FAM_LOC, AIM_CB_LOC_USERINFO, gaim_parse_user_info, 0);
-	aim_conn_addhandler(sess, bosconn, AIM_CB_FAM_MSG, AIM_CB_MSG_ACK, gaim_parse_msgack, 0);
 	aim_conn_addhandler(sess, bosconn, AIM_CB_FAM_GEN, AIM_CB_GEN_MOTD, gaim_parse_motd, 0);
-	aim_conn_addhandler(sess, bosconn, 0x0004, 0x0005, gaim_icbm_param_info, 0);
-	aim_conn_addhandler(sess, bosconn, 0x0001, 0x0001, gaim_parse_genericerr, 0);
-	aim_conn_addhandler(sess, bosconn, 0x0003, 0x0001, gaim_parse_genericerr, 0);
-	aim_conn_addhandler(sess, bosconn, 0x0009, 0x0001, gaim_parse_genericerr, 0);
-	aim_conn_addhandler(sess, bosconn, 0x0001, 0x001f, gaim_memrequest, 0);
-	aim_conn_addhandler(sess, bosconn, 0x0001, 0x000f, gaim_selfinfo, 0);
+	aim_conn_addhandler(sess, bosconn, AIM_CB_FAM_MSG, AIM_CB_MSG_PARAMINFO, gaim_icbm_param_info, 0);
+	aim_conn_addhandler(sess, bosconn, AIM_CB_FAM_GEN, AIM_CB_GEN_ERROR, gaim_parse_genericerr, 0);
+	aim_conn_addhandler(sess, bosconn, AIM_CB_FAM_BUD, AIM_CB_BUD_ERROR, gaim_parse_genericerr, 0);
+	aim_conn_addhandler(sess, bosconn, AIM_CB_FAM_BOS, AIM_CB_BOS_ERROR, gaim_parse_genericerr, 0);
+	aim_conn_addhandler(sess, bosconn, AIM_CB_FAM_GEN, 0x1f, gaim_memrequest, 0);
+	aim_conn_addhandler(sess, bosconn, AIM_CB_FAM_GEN, AIM_CB_GEN_SELFINFO, gaim_selfinfo, 0);
 	aim_conn_addhandler(sess, bosconn, AIM_CB_FAM_ICQ, AIM_CB_ICQ_OFFLINEMSG, gaim_offlinemsg, 0);
 	aim_conn_addhandler(sess, bosconn, AIM_CB_FAM_ICQ, AIM_CB_ICQ_OFFLINEMSGCOMPLETE, gaim_offlinemsgdone, 0);
-//	aim_conn_addhandler(sess, bosconn, AIM_CB_FAM_POP, 0x0002, gaim_popup, 0);
-	aim_conn_addhandler(sess, bosconn, AIM_CB_FAM_ICQ, AIM_CB_ICQ_SIMPLEINFO, (aim_rxcallback_t) gaim_simpleinfo, 0);
+	aim_conn_addhandler(sess, bosconn, AIM_CB_FAM_ICQ, AIM_CB_ICQ_INFO, gaim_icqinfo, 0);
 	aim_conn_addhandler(sess, bosconn, AIM_CB_FAM_SSI, AIM_CB_SSI_RIGHTSINFO, gaim_ssi_parserights, 0);
 	aim_conn_addhandler(sess, bosconn, AIM_CB_FAM_SSI, AIM_CB_SSI_LIST, gaim_ssi_parselist, 0);
-	aim_conn_addhandler(sess, bosconn, AIM_CB_FAM_SSI, AIM_CB_SSI_NOLIST, gaim_ssi_parselist, 0);
+	aim_conn_addhandler(sess, bosconn, AIM_CB_FAM_SSI, AIM_CB_SSI_SRVACK, gaim_ssi_parseack, 0);
 
 	((struct oscar_data *)gc->proto_data)->conn = bosconn;
 	for (i = 0; i < (int)strlen(info->bosip); i++) {
@@ -629,7 +607,7 @@ static void damn_you(gpointer data, gint source, GaimInputCondition c)
 		in = '\0';
 	}
 	if (in != '\n') {
-		do_error_dialog("Gaim was unable to get a valid hash for logging into AIM."
+		do_error_dialog(pos->gc, "Gaim was unable to get a valid hash for logging into AIM."
 				" You may be disconnected shortly.", "Login Error");
 		gaim_input_remove(pos->inpa);
 		closesocket(pos->fd);
@@ -649,7 +627,7 @@ static void straight_to_hell(gpointer data, gint source, GaimInputCondition cond
 	char buf[BUF_LONG];
 
 	if (source < 0) {
-		do_error_dialog("Gaim was unable to get a valid hash for logging into AIM."
+		do_error_dialog(pos->gc, "Gaim was unable to get a valid hash for logging into AIM."
 				" You may be disconnected shortly.", "Login Error");
 		if (pos->modname)
 			g_free(pos->modname);
@@ -673,13 +651,13 @@ static void straight_to_hell(gpointer data, gint source, GaimInputCondition cond
 int gaim_memrequest(aim_session_t *sess, aim_frame_t *fr, ...) {
 	va_list ap;
 	struct pieceofcrap *pos;
-	fu32_t offset, len;
+	guint32 offset, len;
 	char *modname;
 	int fd;
 
 	va_start(ap, fr);
-	offset = (fu32_t)va_arg(ap, unsigned long);
-	len = (fu32_t)va_arg(ap, unsigned long);
+	offset = (guint32)va_arg(ap, unsigned long);
+	len = (guint32)va_arg(ap, unsigned long);
 	modname = va_arg(ap, char *);
 	va_end(ap);
 
@@ -727,7 +705,7 @@ int gaim_memrequest(aim_session_t *sess, aim_frame_t *fr, ...) {
 		if (pos->modname)
 			g_free(pos->modname);
 		g_free(pos);
-		do_error_dialog("Gaim was unable to get a valid hash for logging into AIM."
+		do_error_dialog(sess->aux_data, "Gaim was unable to get a valid hash for logging into AIM."
 				" You may be disconnected shortly.", "Login Error");
 	}
 	pos->fd = fd;
@@ -776,7 +754,7 @@ static int conninitdone_chat(aim_session_t *sess, aim_frame_t *fr, ...) {
 
 static int conninitdone_chatnav(aim_session_t *sess, aim_frame_t *fr, ...) {
 
-	aim_conn_addhandler(sess, fr->conn, 0x000d, 0x0001, gaim_parse_genericerr, 0);
+	aim_conn_addhandler(sess, fr->conn, AIM_CB_FAM_CTN, AIM_CB_CTN_ERROR, gaim_parse_genericerr, 0);
 	aim_conn_addhandler(sess, fr->conn, AIM_CB_FAM_CTN, AIM_CB_CTN_INFO, gaim_chatnav_info, 0);
 
 	aim_clientready(sess, fr->conn);
@@ -1056,41 +1034,48 @@ static int gaim_parse_offgoing(aim_session_t *sess, aim_frame_t *fr, ...) {
 }
 
 static int incomingim_chan1(aim_session_t *sess, aim_conn_t *conn, aim_userinfo_t *userinfo, struct aim_incomingim_ch1_args *args) {
-	char *tmp = g_malloc(BUF_LONG);
+	char *tmp = g_malloc(BUF_LONG + 1);
 	struct gaim_connection *gc = sess->aux_data;
 	int flags = 0;
-
+	
 	if (args->icbmflags & AIM_IMFLAGS_AWAY)
 		flags |= IM_FLAG_AWAY;
-
-	/*
-	 * Quickly convert it to eight bit format, replacing 
-	 * non-ASCII UNICODE characters with their equivelent 
-	 * HTML entity.
-	 */
-	if (args->icbmflags & AIM_IMFLAGS_UNICODE) {
-		int i;
+	
+	if ((args->icbmflags & AIM_IMFLAGS_UNICODE) || (args->icbmflags & AIM_IMFLAGS_ISO_8859_1)) {
+		char *src;
 		
-		for (i = 0, tmp[0] = '\0'; i < args->msglen; i += 2) {
-			unsigned short uni;
+		if (args->icbmflags & AIM_IMFLAGS_UNICODE)
+			src = "UNICODEBIG";
+		else
+			src = "ISO8859-1";
+		
+		/* Try to use iconv first to convert the message to UTF8 - which is what BitlBee expects */
+		if (do_iconv(src, "UTF-8", args->msg, tmp, args->msglen, BUF_LONG) >= 0) {
+			// Successfully converted!
+		} else if (args->icbmflags & AIM_IMFLAGS_UNICODE) {
+			int i;
 			
-			uni = ((args->msg[i] & 0xff) << 8) | (args->msg[i+1] & 0xff);
-
-			if ((uni < 128) || ((uni >= 160) && (uni <= 255))) { /* ISO 8859-1 */
+			for (i = 0, tmp[0] = '\0'; i < args->msglen; i += 2) {
+				unsigned short uni;
 				
-				g_snprintf(tmp+strlen(tmp), BUF_LONG-strlen(tmp), "%c", uni);
-				
-			} else { /* something else, do UNICODE entity */
-				g_snprintf(tmp+strlen(tmp), BUF_LONG-strlen(tmp), "&#%04x;", uni);
+				uni = ((args->msg[i] & 0xff) << 8) | (args->msg[i+1] & 0xff);
+	
+				if ((uni < 128) || ((uni >= 160) && (uni <= 255))) { /* ISO 8859-1 */
+					g_snprintf(tmp+strlen(tmp), BUF_LONG-strlen(tmp), "%c", uni);
+				} else { /* something else, do UNICODE entity */
+					g_snprintf(tmp+strlen(tmp), BUF_LONG-strlen(tmp), "&#%04x;", uni);
+				}
 			}
+		} else {
+			g_snprintf(tmp, BUF_LONG, "%s", args->msg);
 		}
 	} else
 		g_snprintf(tmp, BUF_LONG, "%s", args->msg);
-
+	
 	strip_linefeed(tmp);
 	serv_got_im(gc, userinfo->sn, tmp, flags, time(NULL), -1);
 	g_free(tmp);
-
+	
 	return 1;
 }
 
@@ -1125,9 +1110,10 @@ static void gaim_icq_authgrant(gpointer w, struct icq_auth *data) {
 	char *uin, message;
 	struct oscar_data *od = (struct oscar_data *)data->gc->proto_data;
 	
-	uin = g_strdup_printf("%lu", data->uin);
+	uin = g_strdup_printf("%u", data->uin);
 	message = 0;
-	aim_send_im_ch4(od->sess, uin, AIM_ICQMSG_AUTHGRANTED, &message);
+	aim_ssi_auth_reply(od->sess, od->conn, uin, 1, "");
+	// aim_send_im_ch4(od->sess, uin, AIM_ICQMSG_AUTHGRANTED, &message);
 	show_got_added(data->gc, NULL, uin, NULL, NULL);
 	
 	g_free(uin);
@@ -1138,9 +1124,10 @@ static void gaim_icq_authdeny(gpointer w, struct icq_auth *data) {
 	char *uin, *message;
 	struct oscar_data *od = (struct oscar_data *)data->gc->proto_data;
 	
-	uin = g_strdup_printf("%lu", data->uin);
+	uin = g_strdup_printf("%u", data->uin);
 	message = g_strdup_printf("No reason given.");
-	aim_send_im_ch4(od->sess, uin, AIM_ICQMSG_AUTHDENIED, message);
+	aim_ssi_auth_reply(od->sess, od->conn, uin, 0, "");
+	// aim_send_im_ch4(od->sess, uin, AIM_ICQMSG_AUTHDENIED, message);
 	g_free(message);
 	
 	g_free(uin);
@@ -1150,7 +1137,7 @@ static void gaim_icq_authdeny(gpointer w, struct icq_auth *data) {
 /*
  * For when other people ask you for authorization
  */
-static void gaim_icq_authask(struct gaim_connection *gc, fu32_t uin, char *msg) {
+static void gaim_icq_authask(struct gaim_connection *gc, guint32 uin, char *msg) {
 	struct icq_auth *data = g_new(struct icq_auth, 1);
 	char *reason = NULL;
 	char *dialog_msg;
@@ -1158,7 +1145,7 @@ static void gaim_icq_authask(struct gaim_connection *gc, fu32_t uin, char *msg) 
 	if (strlen(msg) > 6)
 		reason = msg + 6;
 	
-	dialog_msg = g_strdup_printf("The user %lu wants to add you to their buddy list for the following reason:\n\n%s", uin, reason ? reason : "No reason given.");
+	dialog_msg = g_strdup_printf("The user %u wants to add you to their buddy list for the following reason:\n\n%s", uin, reason ? reason : "No reason given.");
 	data->gc = gc;
 	data->uin = uin;
 	do_ask_dialog(gc, dialog_msg, data, gaim_icq_authgrant, gaim_icq_authdeny);
@@ -1171,7 +1158,7 @@ static int incomingim_chan4(aim_session_t *sess, aim_conn_t *conn, aim_userinfo_
 	switch (args->type) {
 		case 0x0001: { /* An almost-normal instant message.  Mac ICQ sends this.  It's peculiar. */
 			char *uin, *message;
-			uin = g_strdup_printf("%lu", args->uin);
+			uin = g_strdup_printf("%u", args->uin);
 			message = g_strdup(args->msg);
 			strip_linefeed(message);
 			serv_got_im(gc, uin, message, 0, time(NULL), -1);
@@ -1183,7 +1170,7 @@ static int incomingim_chan4(aim_session_t *sess, aim_conn_t *conn, aim_userinfo_
 		  	char *uin, *message;
 			char **m;
 	
-			uin = g_strdup_printf("%lu", args->uin);
+			uin = g_strdup_printf("%u", args->uin);
 			m = g_strsplit(args->msg, "\376", 2);
 
 			if ((strlen(m[0]) != 0)) {
@@ -1204,17 +1191,11 @@ static int incomingim_chan4(aim_session_t *sess, aim_conn_t *conn, aim_userinfo_
 		} break;
 
 		case 0x0007: { /* Someone has denied you authorization */
-			char *dialog_msg;
-			dialog_msg = g_strdup_printf(_("The user %lu has denied your request to add them to your contact list for the following reason:\n%s"), args->uin, args->msg ? args->msg : _("No reason given."));
-			do_error_dialog(dialog_msg, _("Gaim - ICQ Authorization Denied"));
-			g_free(dialog_msg);
+			serv_got_crap(sess->aux_data, "The user %u has denied your request to add them to your contact list for the following reason:\n%s", args->uin, args->msg ? args->msg : _("No reason given.") );
 		} break;
 
 		case 0x0008: { /* Someone has granted you authorization */
-			char *dialog_msg;
-			dialog_msg = g_strdup_printf(_("The user %lu has granted your request to add them to your contact list."), args->uin);
-			do_error_dialog(dialog_msg, _("Gaim - ICQ Authorization Granted"));
-			g_free(dialog_msg);
+			serv_got_crap(sess->aux_data, "The user %u has granted your request to add them to your contact list for the following reason:\n%s", args->uin, args->msg ? args->msg : _("No reason given.") );
 		} break;
 
 		case 0x0012: {
@@ -1267,15 +1248,15 @@ static int gaim_parse_incoming_im(aim_session_t *sess, aim_frame_t *fr, ...) {
 
 static int gaim_parse_misses(aim_session_t *sess, aim_frame_t *fr, ...) {
 	va_list ap;
-	fu16_t chan, nummissed, reason;
+	guint16 chan, nummissed, reason;
 	aim_userinfo_t *userinfo;
 	char buf[1024];
 
 	va_start(ap, fr);
-	chan = (fu16_t)va_arg(ap, unsigned int);
+	chan = (guint16)va_arg(ap, unsigned int);
 	userinfo = va_arg(ap, aim_userinfo_t *);
-	nummissed = (fu16_t)va_arg(ap, unsigned int);
-	reason = (fu16_t)va_arg(ap, unsigned int);
+	nummissed = (guint16)va_arg(ap, unsigned int);
+	reason = (guint16)va_arg(ap, unsigned int);
 	va_end(ap);
 
 	switch(reason) {
@@ -1339,79 +1320,23 @@ static int gaim_parse_misses(aim_session_t *sess, aim_frame_t *fr, ...) {
 				   userinfo->sn);
 			break;
 	}
-	do_error_dialog(buf, _("Gaim - Error"));
-
-	return 1;
-}
-
-static int gaim_parse_clientauto(aim_session_t *sess, aim_frame_t *fr, ...) {
-	struct gaim_connection *gc = sess->aux_data;
-	va_list ap;
-	fu16_t chan, reason;
-	char *who;
-
-	va_start(ap, fr);
-	chan = (fu16_t)va_arg(ap, unsigned int);
-	who = va_arg(ap, char *);
-	reason = (fu16_t)va_arg(ap, unsigned int);
-
-	switch(reason) {
-		case 0x0003: { /* Reply from an ICQ status message request */
-//			int state = (int)va_arg(ap, fu32_t);
-			char *msg = va_arg(ap, char *);
-			char *status_msg = "";
-			char *dialog_msg, **splitmsg;
-			struct oscar_data *od = gc->proto_data;
-			GSList *l = od->evilhack;
-			gboolean evilhack = FALSE;
-
-			/* Split at (carriage return/newline)'s, then rejoin later with BRs between. */
-			splitmsg = g_strsplit(msg, "\r\n", 0);
-
-			/* If who is in od->evilhack, then we're just getting the away message, otherwise this 
-			 * will just get appended to the info box (which is already showing). */
-			while (l) {
-				char *x = l->data;
-				if (!strcmp(x, normalize(who))) {
-					evilhack = TRUE;
-					g_free(x);
-					od->evilhack = g_slist_remove(od->evilhack, x);
-					break;
-				}
-				l = l->next;
-			}
-
-			if (evilhack)
-				dialog_msg = g_strdup_printf(_("<B>UIN:</B> %s<BR><B>Status:</B> %s<BR><HR><BR>%s<BR>"), who, status_msg, g_strjoinv("<BR>", splitmsg));
-			else
-				dialog_msg = g_strdup_printf(_("<B>Status:</B> %s<BR><HR><BR>%s<BR>"), status_msg, g_strjoinv("<BR>", splitmsg));
-//			g_show_info_text(gc, who, 2, dialog_msg, NULL);
-
-			g_free(status_msg);
-			g_free(dialog_msg);
-			g_strfreev(splitmsg);
-		} break;
-
-		default: {;
-		} break;
-	}
-	va_end(ap);
+	do_error_dialog(sess->aux_data, buf, _("Gaim - Error"));
 
 	return 1;
 }
 
 static int gaim_parse_genericerr(aim_session_t *sess, aim_frame_t *fr, ...) {
 	va_list ap;
-	fu16_t reason;
+	guint16 reason;
 	char *m;
 
 	va_start(ap, fr);
-	reason = (fu16_t)va_arg(ap, unsigned int);
+	reason = (guint16)va_arg(ap, unsigned int);
 	va_end(ap);
 
 	m = g_strdup_printf(_("SNAC threw error: %s\n"),
 			reason < msgerrreasonlen ? msgerrreason[reason] : "Unknown error");
-	do_error_dialog(m, _("Gaim - Oscar SNAC Error"));
+	do_error_dialog(sess->aux_data, m, _("Gaim - Oscar SNAC Error"));
 	g_free(m);
 
 	return 1;
@@ -1420,17 +1345,17 @@ static int gaim_parse_genericerr(aim_session_t *sess, aim_frame_t *fr, ...) {
 static int gaim_parse_msgerr(aim_session_t *sess, aim_frame_t *fr, ...) {
 	va_list ap;
 	char *destn;
-	fu16_t reason;
+	guint16 reason;
 	char buf[1024];
 
 	va_start(ap, fr);
-	reason = (fu16_t)va_arg(ap, unsigned int);
+	reason = (guint16)va_arg(ap, unsigned int);
 	destn = va_arg(ap, char *);
 	va_end(ap);
 
 	sprintf(buf, _("Your message to %s did not get sent: %s"), destn,
 			(reason < msgerrreasonlen) ? msgerrreason[reason] : _("Reason unknown"));
-	do_error_dialog(buf, _("Gaim - Error"));
+	do_error_dialog(sess->aux_data, buf, _("Gaim - Error"));
 
 	return 1;
 }
@@ -1438,36 +1363,33 @@ static int gaim_parse_msgerr(aim_session_t *sess, aim_frame_t *fr, ...) {
 static int gaim_parse_locerr(aim_session_t *sess, aim_frame_t *fr, ...) {
 	va_list ap;
 	char *destn;
-	fu16_t reason;
+	guint16 reason;
 	char buf[1024];
 
 	va_start(ap, fr);
-	reason = (fu16_t)va_arg(ap, unsigned int);
+	reason = (guint16)va_arg(ap, unsigned int);
 	destn = va_arg(ap, char *);
 	va_end(ap);
 
 	sprintf(buf, _("User information for %s unavailable: %s"), destn,
 			(reason < msgerrreasonlen) ? msgerrreason[reason] : _("Reason unknown"));
-	do_error_dialog(buf, _("Gaim - Error"));
+	do_error_dialog(sess->aux_data, buf, _("Gaim - Error"));
 
 	return 1;
 }
 
 static int gaim_parse_motd(aim_session_t *sess, aim_frame_t *fr, ...) {
 	char *msg;
-	fu16_t id;
+	guint16 id;
 	va_list ap;
-	char buildbuf[150];
 
 	va_start(ap, fr);
-	id  = (fu16_t)va_arg(ap, unsigned int);
+	id  = (guint16)va_arg(ap, unsigned int);
 	msg = va_arg(ap, char *);
 	va_end(ap);
 
-	aim_getbuildstring(buildbuf, sizeof(buildbuf));
-
 	if (id < 4)
-		do_error_dialog(_("Your connection may be lost."),
+		do_error_dialog(sess->aux_data, _("Your connection may be lost."),
 				_("AOL error"));
 
 	return 1;
@@ -1475,20 +1397,20 @@ static int gaim_parse_motd(aim_session_t *sess, aim_frame_t *fr, ...) {
 
 static int gaim_chatnav_info(aim_session_t *sess, aim_frame_t *fr, ...) {
 	va_list ap;
-	fu16_t type;
+	guint16 type;
 	struct gaim_connection *gc = sess->aux_data;
 	struct oscar_data *odata = (struct oscar_data *)gc->proto_data;
 
 	va_start(ap, fr);
-	type = (fu16_t)va_arg(ap, unsigned int);
+	type = (guint16)va_arg(ap, unsigned int);
 
 	switch(type) {
 		case 0x0002: {
-			fu8_t maxrooms;
+			guint8 maxrooms;
 			struct aim_chat_exchangeinfo *exchanges;
 			int exchangecount; // i;
 
-			maxrooms = (fu8_t)va_arg(ap, unsigned int);
+			maxrooms = (guint8)va_arg(ap, unsigned int);
 			exchangecount = va_arg(ap, int);
 			exchanges = va_arg(ap, struct aim_chat_exchangeinfo *);
 			va_end(ap);
@@ -1504,19 +1426,19 @@ static int gaim_chatnav_info(aim_session_t *sess, aim_frame_t *fr, ...) {
 			break;
 		case 0x0008: {
 			char *fqcn, *name, *ck;
-			fu16_t instance, flags, maxmsglen, maxoccupancy, unknown, exchange;
-			fu8_t createperms;
-			fu32_t createtime;
+			guint16 instance, flags, maxmsglen, maxoccupancy, unknown, exchange;
+			guint8 createperms;
+			guint32 createtime;
 
 			fqcn = va_arg(ap, char *);
-			instance = (fu16_t)va_arg(ap, unsigned int);
-			exchange = (fu16_t)va_arg(ap, unsigned int);
-			flags = (fu16_t)va_arg(ap, unsigned int);
-			createtime = va_arg(ap, fu32_t);
-			maxmsglen = (fu16_t)va_arg(ap, unsigned int);
-			maxoccupancy = (fu16_t)va_arg(ap, unsigned int);
-			createperms = (fu8_t)va_arg(ap, int);
-			unknown = (fu16_t)va_arg(ap, unsigned int);
+			instance = (guint16)va_arg(ap, unsigned int);
+			exchange = (guint16)va_arg(ap, unsigned int);
+			flags = (guint16)va_arg(ap, unsigned int);
+			createtime = va_arg(ap, guint32);
+			maxmsglen = (guint16)va_arg(ap, unsigned int);
+			maxoccupancy = (guint16)va_arg(ap, unsigned int);
+			createperms = (guint8)va_arg(ap, int);
+			unknown = (guint16)va_arg(ap, unsigned int);
 			name = va_arg(ap, char *);
 			ck = va_arg(ap, char *);
 			va_end(ap);
@@ -1584,8 +1506,8 @@ static int gaim_chat_info_update(aim_session_t *sess, aim_frame_t *fr, ...) {
 	char *roomname;
 	int usercount;
 	char *roomdesc;
-	fu16_t unknown_c9, unknown_d2, unknown_d5, maxmsglen, maxvisiblemsglen;
-	fu32_t creationtime;
+	guint16 unknown_c9, unknown_d2, unknown_d5, maxmsglen, maxvisiblemsglen;
+	guint32 creationtime;
 	struct gaim_connection *gc = sess->aux_data;
 	struct chat_connection *ccon = find_oscar_chat_by_conn(gc, fr->conn);
 
@@ -1595,12 +1517,12 @@ static int gaim_chat_info_update(aim_session_t *sess, aim_frame_t *fr, ...) {
 	usercount= va_arg(ap, int);
 	userinfo = va_arg(ap, aim_userinfo_t *);
 	roomdesc = va_arg(ap, char *);
-	unknown_c9 = (fu16_t)va_arg(ap, int);
-	creationtime = (fu32_t)va_arg(ap, unsigned long);
-	maxmsglen = (fu16_t)va_arg(ap, int);
-	unknown_d2 = (fu16_t)va_arg(ap, int);
-	unknown_d5 = (fu16_t)va_arg(ap, int);
-	maxvisiblemsglen = (fu16_t)va_arg(ap, int);
+	unknown_c9 = (guint16)va_arg(ap, int);
+	creationtime = (guint32)va_arg(ap, unsigned long);
+	maxmsglen = (guint16)va_arg(ap, int);
+	unknown_d2 = (guint16)va_arg(ap, int);
+	unknown_d5 = (guint16)va_arg(ap, int);
+	maxvisiblemsglen = (guint16)va_arg(ap, int);
 	va_end(ap);
 
 	ccon->maxlen = maxmsglen;
@@ -1629,22 +1551,6 @@ static int gaim_chat_incoming_msg(aim_session_t *sess, aim_frame_t *fr, ...) {
 	return 1;
 }
 
-/*
- * Recieved in response to an IM sent with the AIM_IMFLAGS_ACK option.
- */
-static int gaim_parse_msgack(aim_session_t *sess, aim_frame_t *fr, ...) {
-	va_list ap;
-	fu16_t type;
-	char *sn;
-
-	va_start(ap, fr);
-	type = (fu16_t)va_arg(ap, unsigned int);
-	sn = va_arg(ap, char *);
-	va_end(ap);
-
-	return 1;
-}
-
 static int gaim_parse_ratechange(aim_session_t *sess, aim_frame_t *fr, ...) {
 #if 0
 	static const char *codes[5] = {
@@ -1656,19 +1562,19 @@ static int gaim_parse_ratechange(aim_session_t *sess, aim_frame_t *fr, ...) {
 	};
 #endif
 	va_list ap;
-	fu16_t code, rateclass;
-	fu32_t windowsize, clear, alert, limit, disconnect, currentavg, maxavg;
+	guint16 code, rateclass;
+	guint32 windowsize, clear, alert, limit, disconnect, currentavg, maxavg;
 
 	va_start(ap, fr); 
-	code = (fu16_t)va_arg(ap, unsigned int);
-	rateclass= (fu16_t)va_arg(ap, unsigned int);
-	windowsize = (fu32_t)va_arg(ap, unsigned long);
-	clear = (fu32_t)va_arg(ap, unsigned long);
-	alert = (fu32_t)va_arg(ap, unsigned long);
-	limit = (fu32_t)va_arg(ap, unsigned long);
-	disconnect = (fu32_t)va_arg(ap, unsigned long);
-	currentavg = (fu32_t)va_arg(ap, unsigned long);
-	maxavg = (fu32_t)va_arg(ap, unsigned long);
+	code = (guint16)va_arg(ap, unsigned int);
+	rateclass= (guint16)va_arg(ap, unsigned int);
+	windowsize = (guint32)va_arg(ap, unsigned long);
+	clear = (guint32)va_arg(ap, unsigned long);
+	alert = (guint32)va_arg(ap, unsigned long);
+	limit = (guint32)va_arg(ap, unsigned long);
+	disconnect = (guint32)va_arg(ap, unsigned long);
+	currentavg = (guint32)va_arg(ap, unsigned long);
+	maxavg = (guint32)va_arg(ap, unsigned long);
 	va_end(ap);
 
 	/* XXX fix these values */
@@ -1678,7 +1584,7 @@ static int gaim_parse_ratechange(aim_session_t *sess, aim_frame_t *fr, ...) {
 	} else if (code == AIM_RATE_CODE_WARNING) {
 		aim_conn_setlatency(fr->conn, windowsize/4);
 	} else if (code == AIM_RATE_CODE_LIMIT) {
-		do_error_dialog(_("The last message was not sent because you are over the rate limit. "
+		do_error_dialog(sess->aux_data, _("The last message was not sent because you are over the rate limit. "
 				  "Please wait 10 seconds and try again."), _("Gaim - Error"));
 		aim_conn_setlatency(fr->conn, windowsize/2);
 	} else if (code == AIM_RATE_CODE_CLEARLIMIT) {
@@ -1776,7 +1682,7 @@ static int gaim_icbm_param_info(aim_session_t *sess, aim_frame_t *fr, ...) {
 static int gaim_parse_locaterights(aim_session_t *sess, aim_frame_t *fr, ...)
 {
 	va_list ap;
-	fu16_t maxsiglen;
+	guint16 maxsiglen;
 	struct gaim_connection *gc = sess->aux_data;
 	struct oscar_data *odata = (struct oscar_data *)gc->proto_data;
 
@@ -1793,13 +1699,13 @@ static int gaim_parse_locaterights(aim_session_t *sess, aim_frame_t *fr, ...)
 
 static int gaim_parse_buddyrights(aim_session_t *sess, aim_frame_t *fr, ...) {
 	va_list ap;
-	fu16_t maxbuddies, maxwatchers;
+	guint16 maxbuddies, maxwatchers;
 	struct gaim_connection *gc = sess->aux_data;
 	struct oscar_data *odata = (struct oscar_data *)gc->proto_data;
 
 	va_start(ap, fr);
-	maxbuddies = (fu16_t)va_arg(ap, unsigned int);
-	maxwatchers = (fu16_t)va_arg(ap, unsigned int);
+	maxbuddies = (guint16)va_arg(ap, unsigned int);
+	maxwatchers = (guint16)va_arg(ap, unsigned int);
 	va_end(ap);
 
 	odata->rights.maxbuddies = (guint)maxbuddies;
@@ -1809,14 +1715,14 @@ static int gaim_parse_buddyrights(aim_session_t *sess, aim_frame_t *fr, ...) {
 }
 
 static int gaim_bosrights(aim_session_t *sess, aim_frame_t *fr, ...) {
-	fu16_t maxpermits, maxdenies;
+	guint16 maxpermits, maxdenies;
 	va_list ap;
 	struct gaim_connection *gc = sess->aux_data;
 	struct oscar_data *odata = (struct oscar_data *)gc->proto_data;
 
 	va_start(ap, fr);
-	maxpermits = (fu16_t)va_arg(ap, unsigned int);
-	maxdenies = (fu16_t)va_arg(ap, unsigned int);
+	maxpermits = (guint16)va_arg(ap, unsigned int);
+	maxdenies = (guint16)va_arg(ap, unsigned int);
 	va_end(ap);
 
 	odata->rights.maxpermits = (guint)maxpermits;
@@ -1834,10 +1740,8 @@ static int gaim_bosrights(aim_session_t *sess, aim_frame_t *fr, ...) {
 
 	aim_reqservice(sess, fr->conn, AIM_CONN_TYPE_CHATNAV);
 
-	if (!odata->icq) {
-		aim_ssi_reqrights(sess, fr->conn);
-		aim_ssi_reqdata(sess, fr->conn, sess->ssi.timestamp, sess->ssi.revision);
-	}
+	aim_ssi_reqrights(sess, fr->conn);
+	aim_ssi_reqalldata(sess, fr->conn);
 
 	return 1;
 }
@@ -1856,7 +1760,7 @@ static int gaim_offlinemsg(aim_session_t *sess, aim_frame_t *fr, ...) {
 			char sender[32];
 			char *dialog_msg = g_strdup(msg->msg);
 			time_t t = get_time(msg->year, msg->month, msg->day, msg->hour, msg->minute, 0);
-			g_snprintf(sender, sizeof(sender), "%lu", msg->sender);
+			g_snprintf(sender, sizeof(sender), "%u", msg->sender);
 			strip_linefeed(dialog_msg);
 			serv_got_im(gc, sender, dialog_msg, 0, t, -1);
 			g_free(dialog_msg);
@@ -1868,7 +1772,7 @@ static int gaim_offlinemsg(aim_session_t *sess, aim_frame_t *fr, ...) {
 			char **m;
 
 			time_t t = get_time(msg->year, msg->month, msg->day, msg->hour, msg->minute, 0);
-			g_snprintf(sender, sizeof(sender), "%lu", msg->sender);
+			g_snprintf(sender, sizeof(sender), "%u", msg->sender);
 
 			m = g_strsplit(msg->msg, "\376", 2);
 
@@ -1889,17 +1793,11 @@ static int gaim_offlinemsg(aim_session_t *sess, aim_frame_t *fr, ...) {
 		} break;
 
 		case 0x0007: { /* Someone has denied you authorization */
-			char *dialog_msg;
-			dialog_msg = g_strdup_printf(_("The user %lu has denied your request to add them to your contact list for the following reason:\n%s"), msg->sender, msg->msg ? msg->msg : _("No reason given."));
-			do_error_dialog(dialog_msg, _("Gaim - ICQ Authorization Denied"));
-			g_free(dialog_msg);
+			serv_got_crap(sess->aux_data, "The user %u has denied your request to add them to your contact list for the following reason:\n%s", msg->sender, msg->msg ? msg->msg : _("No reason given.") );
 		} break;
 
 		case 0x0008: { /* Someone has granted you authorization */
-			char *dialog_msg;
-			dialog_msg = g_strdup_printf(_("The user %lu has granted your request to add them to your contact list."), msg->sender);
-			do_error_dialog(dialog_msg, _("Gaim - ICQ Authorization Granted"));
-			g_free(dialog_msg);
+			serv_got_crap(sess->aux_data, "The user %u has granted your request to add them to your contact list for the following reason:\n%s", msg->sender, msg->msg ? msg->msg : _("No reason given.") );
 		} break;
 
 		case 0x0012: {
@@ -1931,22 +1829,47 @@ static int oscar_send_im(struct gaim_connection *gc, char *name, char *message, 
 		ret = aim_send_im(odata->sess, name, AIM_IMFLAGS_AWAY, message);
 	} else {
 		struct aim_sendimext_args args;
-//		char *who = normalize(name);
-//		struct stat st;
+		char *s;
 		
 		args.flags = AIM_IMFLAGS_ACK;
 		if (odata->icq)
 			args.flags |= AIM_IMFLAGS_OFFLINE;
+		for (s = message; *s; s++)
+			if (*s & 128)
+				break;
+		
+		/* Message contains high ASCII chars, time for some translation! */
+		if (*s) {
+			s = g_malloc(BUF_LONG);
+			/* Try if we can put it in an ISO8859-1 string first.
+			   If we can't, fall back to UTF16. */
+			if ((ret = do_iconv("UTF-8", "ISO8859-1", message, s, len, BUF_LONG)) >= 0) {
+				args.flags |= AIM_IMFLAGS_ISO_8859_1;
+				len = ret;
+			} else if ((ret = do_iconv("UTF-8", "UNICODEBIG", message, s, len, BUF_LONG)) >= 0) {
+				args.flags |= AIM_IMFLAGS_UNICODE;
+				len = ret;
+			} else {
+				/* OOF, translation failed... Oh well.. */
+				g_free( s );
+				s = message;
+			}
+		} else {
+			s = message;
+		}
 		
 		args.features = gaim_features;
 		args.featureslen = sizeof(gaim_features);
 		
 		args.destsn = name;
-		args.msg    = message;
-		args.msglen = strlen(message);
+		args.msg    = s;
+		args.msglen = len;
 		
 		ret = aim_send_im_ext(odata->sess, &args);
 		
+		if (s != message) {
+			g_free(s);
+		}
 	}
 	if (ret >= 0)
 		return 1;
@@ -1956,7 +1879,7 @@ static int oscar_send_im(struct gaim_connection *gc, char *name, char *message, 
 static void oscar_get_info(struct gaim_connection *g, char *name) {
 	struct oscar_data *odata = (struct oscar_data *)g->proto_data;
 	if (odata->icq)
-		aim_icq_getsimpleinfo(odata->sess, name);
+		aim_icq_getallinfo(odata->sess, name);
 	else
 		/* people want the away message on the top, so we get the away message
 		 * first and then get the regular info, since it's too difficult to
@@ -1976,20 +1899,11 @@ static void oscar_get_away(struct gaim_connection *g, char *who) {
 		aim_getinfo(odata->sess, odata->conn, who, AIM_GETINFO_GENERALINFO);
 }
 
-/* [SH] Not needed now */
-#if 0
-static void oscar_set_idle(struct gaim_connection *g, int time) {
-	struct oscar_data *odata = (struct oscar_data *)g->proto_data;
-	aim_bos_setidle(odata->sess, odata->conn, time);
-}
-#endif
-/* [SH] Till here */
-
 static void oscar_set_away_aim(struct gaim_connection *gc, struct oscar_data *od, const char *message)
 {
 
 	if (od->rights.maxawaymsglen == 0)
-		do_error_dialog("oscar_set_away_aim called before locate rights received", "Protocol Error");
+		do_error_dialog(gc, "oscar_set_away_aim called before locate rights received", "Protocol Error");
 
 	if (gc->away)
 		g_free(gc->away);
@@ -2005,7 +1919,7 @@ static void oscar_set_away_aim(struct gaim_connection *gc, struct oscar_data *od
 
 		errstr = g_strdup_printf("Maximum away message length of %d bytes exceeded, truncating", od->rights.maxawaymsglen);
 
-		do_error_dialog(errstr, "Away Message Too Long");
+		do_error_dialog(gc, errstr, "Away Message Too Long");
 
 		g_free(errstr);
 	}
@@ -2022,33 +1936,32 @@ static void oscar_set_away_icq(struct gaim_connection *gc, struct oscar_data *od
 	if (gc->away)
 		gc->away = NULL;
 
-	if (!g_ascii_strcasecmp(state, "Online"))
-		aim_setextstatus(od->sess, od->conn, AIM_ICQ_STATE_NORMAL);
-	else if (!g_ascii_strcasecmp(state, "Away")) {
-		aim_setextstatus(od->sess, od->conn, AIM_ICQ_STATE_AWAY);
+	if (!g_strcasecmp(state, "Online"))
+		aim_setextstatus(od->sess, od->conn, AIM_ICQ_STATE_NORMAL, "");
+	else if (!g_strcasecmp(state, "Away")) {
+		aim_setextstatus(od->sess, od->conn, AIM_ICQ_STATE_AWAY, "");
 		gc->away = "";
-	} else if (!g_ascii_strcasecmp(state, "Do Not Disturb")) {
-		aim_setextstatus(od->sess, od->conn, AIM_ICQ_STATE_AWAY | AIM_ICQ_STATE_DND | AIM_ICQ_STATE_BUSY);
+	} else if (!g_strcasecmp(state, "Do Not Disturb")) {
+		aim_setextstatus(od->sess, od->conn, AIM_ICQ_STATE_AWAY | AIM_ICQ_STATE_DND | AIM_ICQ_STATE_BUSY, "");
 		gc->away = "";
-	} else if (!g_ascii_strcasecmp(state, "Not Available")) {
-		aim_setextstatus(od->sess, od->conn, AIM_ICQ_STATE_OUT | AIM_ICQ_STATE_AWAY);
+	} else if (!g_strcasecmp(state, "Not Available")) {
+		aim_setextstatus(od->sess, od->conn, AIM_ICQ_STATE_OUT | AIM_ICQ_STATE_AWAY, "");
 		gc->away = "";
-	} else if (!g_ascii_strcasecmp(state, "Occupied")) {
-		aim_setextstatus(od->sess, od->conn, AIM_ICQ_STATE_AWAY | AIM_ICQ_STATE_BUSY);
+	} else if (!g_strcasecmp(state, "Occupied")) {
+		aim_setextstatus(od->sess, od->conn, AIM_ICQ_STATE_AWAY | AIM_ICQ_STATE_BUSY, "");
 		gc->away = "";
-	} else if (!g_ascii_strcasecmp(state, "Free For Chat")) {
-		aim_setextstatus(od->sess, od->conn, AIM_ICQ_STATE_CHAT);
+	} else if (!g_strcasecmp(state, "Free For Chat")) {
+		aim_setextstatus(od->sess, od->conn, AIM_ICQ_STATE_CHAT, "");
 		gc->away = "";
-	} else if (!g_ascii_strcasecmp(state, "Invisible")) {
-		aim_setextstatus(od->sess, od->conn, AIM_ICQ_STATE_INVISIBLE);
+	} else if (!g_strcasecmp(state, "Invisible")) {
+		aim_setextstatus(od->sess, od->conn, AIM_ICQ_STATE_INVISIBLE, "");
 		gc->away = "";
-	} else if (!g_ascii_strcasecmp(state, GAIM_AWAY_CUSTOM)) {
+	} else if (!g_strcasecmp(state, GAIM_AWAY_CUSTOM)) {
 	 	if (message) {
-			aim_setextstatus(od->sess, od->conn, AIM_ICQ_STATE_OUT | AIM_ICQ_STATE_AWAY);
+			aim_setextstatus(od->sess, od->conn, AIM_ICQ_STATE_OUT | AIM_ICQ_STATE_AWAY, "");
 			gc->away = "";
 		} else {
-		  
-			aim_setextstatus(od->sess, od->conn, AIM_ICQ_STATE_NORMAL);
+			aim_setextstatus(od->sess, od->conn, AIM_ICQ_STATE_NORMAL, "");
 		}
 	}
 
@@ -2067,53 +1980,15 @@ static void oscar_set_away(struct gaim_connection *gc, char *state, char *messag
 	return;
 }
 
-/* [SH] Not needed now */
-#if 0
-static void oscar_warn(struct gaim_connection *g, char *name, int anon) {
-	struct oscar_data *odata = (struct oscar_data *)g->proto_data;
-	aim_send_warning(odata->sess, odata->conn, name, anon ? AIM_WARN_ANON : 0);
-}
-#endif
-/* [SH] Till here */
-
 static void oscar_add_buddy(struct gaim_connection *g, char *name) {
 	struct oscar_data *odata = (struct oscar_data *)g->proto_data;
-	if (odata->icq) {
-		aim_add_buddy(odata->sess, odata->conn, name);
-	} else {
-		if ((odata->sess->ssi.received_data) && !(aim_ssi_itemlist_finditem(odata->sess->ssi.items, NULL, name, 0x0000))) {
-			aim_ssi_addbuddies(odata->sess, odata->conn, OSCAR_GROUP, &name, 1);
-		}
-	}
-}
-
-static void oscar_add_buddies(struct gaim_connection *g, GList *buddies) {
-	struct oscar_data *odata = (struct oscar_data *)g->proto_data;
-	if (odata->icq) {
-		char buf[MSG_LEN];
-		int n=0;
-		while (buddies) {
-			if (n > MSG_LEN - 18) {
-				aim_bos_setbuddylist(odata->sess, odata->conn, buf);
-				n = 0;
-			}
-			n += g_snprintf(buf + n, sizeof(buf) - n, "%s&", (char *)buddies->data);
-			buddies = buddies->next;
-		}
-		aim_bos_setbuddylist(odata->sess, odata->conn, buf);
-	}
+	aim_ssi_addbuddies(odata->sess, odata->conn, OSCAR_GROUP, &name, 1, 0);
 }
 
 static void oscar_remove_buddy(struct gaim_connection *g, char *name, char *group) {
 	struct oscar_data *odata = (struct oscar_data *)g->proto_data;
-	if (odata->icq) {
-		aim_remove_buddy(odata->sess, odata->conn, name);
-	} else {
-		if (odata->sess->ssi.received_data) {
-			struct aim_ssi_item *ssigroup;
-			while (aim_ssi_itemlist_finditem(odata->sess->ssi.items, NULL, name, 0x0000) && (ssigroup = aim_ssi_itemlist_findparent(odata->sess->ssi.items, name)) && !aim_ssi_delbuddies(odata->sess, odata->conn, ssigroup->name, &name, 1));
-		}
-	}
+	struct aim_ssi_item *ssigroup;
+	while ((ssigroup = aim_ssi_itemlist_findparent(odata->sess->ssi.items, name)) && !aim_ssi_delbuddies(odata->sess, odata->conn, ssigroup->name, &name, 1));
 }
 
 static int gaim_ssi_parserights(aim_session_t *sess, aim_frame_t *fr, ...) {
@@ -2122,19 +1997,8 @@ static int gaim_ssi_parserights(aim_session_t *sess, aim_frame_t *fr, ...) {
 
 static int gaim_ssi_parselist(aim_session_t *sess, aim_frame_t *fr, ...) {
 	struct gaim_connection *gc = sess->aux_data;
-	struct oscar_data *odata = (struct oscar_data *)gc->proto_data;
 	struct aim_ssi_item *curitem;
 	int tmp;
-//	char **sns;
-
-	if (odata->icq)
-		return 1;
-
-	/* Activate SSI */
-	aim_ssi_enable(sess, fr->conn);
-
-	/* Clean the buddy list */
-	aim_ssi_cleanlist(sess, fr->conn);
 
 	/* Add from server list to local list */
 	tmp = 0;
@@ -2142,14 +2006,15 @@ static int gaim_ssi_parselist(aim_session_t *sess, aim_frame_t *fr, ...) {
 		switch (curitem->type) {
 			case 0x0000: /* Buddy */
 				if ((curitem->name) && (!find_buddy(gc, curitem->name))) {
-					struct aim_ssi_item *curgroup = sess->ssi.items;
-					while (curgroup) {
-						if ((curgroup->type == 0x0001) && (curgroup->gid == curitem->gid) && (curgroup->name)) {
-							add_buddy(gc, curgroup->name, curitem->name, 0);
-							tmp++;
-						}
-						curgroup = curgroup->next;
-					}
+					char *realname = NULL;
+
+					if (curitem->data && aim_gettlv(curitem->data, 0x0131, 1))
+						    realname = aim_gettlv_str(curitem->data, 0x0131, 1);
+						
+					add_buddy(gc, NULL, curitem->name, realname);
+					
+					if (realname)
+					    g_free(realname);
 				}
 				break;
 
@@ -2183,7 +2048,7 @@ static int gaim_ssi_parselist(aim_session_t *sess, aim_frame_t *fr, ...) {
 
 			case 0x0004: /* Permit/deny setting */
 				if (curitem->data) {
-					fu8_t permdeny;
+					guint8 permdeny;
 					if ((permdeny = aim_ssi_getpermdeny(sess->ssi.items)) && (permdeny != gc->permdeny)) {
 						gc->permdeny = permdeny;
 						tmp++;
@@ -2196,228 +2061,53 @@ static int gaim_ssi_parselist(aim_session_t *sess, aim_frame_t *fr, ...) {
 				break;
 		} /* End of switch on curitem->type */
 	} /* End of for loop */
+
 	if (tmp)
 		do_export(gc);
-
-#if 0
-	/* Add from local list to server list */
-	if (gc) {
-		GSList *cur;
-
-		/* Buddies */
-		cur = gc->groups;
-		while (cur) {
-			GSList *curbud;
-			tmp = 0;
-			for (curbud=((struct group*)cur->data)->members; curbud; curbud=curbud->next)
-				if (!aim_ssi_itemlist_finditem(sess->ssi.items, NULL, ((struct buddy*)curbud->data)->name, 0x0000))
-					tmp++;
-			if (tmp) {
-				sns = (char **)malloc(tmp*sizeof(char*));
-				tmp = 0;
-				for (curbud=((struct group*)cur->data)->members; curbud; curbud=curbud->next)
-					if (!aim_ssi_itemlist_finditem(sess->ssi.items, NULL, ((struct buddy*)curbud->data)->name, 0x0000)) {
-						sns[tmp] = ((char *)((struct buddy*)curbud->data)->name);
-						tmp++;
-					}
-				aim_ssi_addbuddies(sess, fr->conn, ((struct group*)cur->data)->name, sns, tmp);
-				free(sns);
-			}
-			cur = g_slist_next(cur);
-		}
-
-		/* Permit list */
-		if (gc->permit) {
-			tmp = 0;
-			for (cur=gc->permit; cur; cur=cur->next)
-				if (!aim_ssi_itemlist_finditem(sess->ssi.items, NULL, cur->data, 0x0002))
-					tmp++;
-			if (tmp) {
-				sns = (char **)malloc(tmp*sizeof(char*));
-				tmp = 0;
-				for (cur=gc->permit; cur; cur=cur->next)
-					if (!aim_ssi_itemlist_finditem(sess->ssi.items, NULL, cur->data, 0x0002)) {
-						sns[tmp] = cur->data;
-						tmp++;
-					}
-				aim_ssi_addpord(sess, fr->conn, sns, tmp, AIM_SSI_TYPE_PERMIT);
-				free(sns);
-			}
-		}
-
-		/* Deny list */
-		if (gc->deny) {
-			tmp = 0;
-			for (cur=gc->deny; cur; cur=cur->next)
-				if (!aim_ssi_itemlist_finditem(sess->ssi.items, NULL, cur->data, 0x0003))
-					tmp++;
-			if (tmp) {
-				sns = (char **)malloc(tmp*sizeof(char*));
-				tmp = 0;
-				for (cur=gc->deny; cur; cur=cur->next)
-					if (!aim_ssi_itemlist_finditem(sess->ssi.items, NULL, cur->data, 0x0003)) {
-						sns[tmp] = cur->data;
-						tmp++;
-					}
-				aim_ssi_addpord(sess, fr->conn, sns, tmp, AIM_SSI_TYPE_DENY);
-				free(sns);
-			}
-		}
-
-		/* Presence settings (idle time visibility) */
-		if ((tmp = aim_ssi_getpresence(sess->ssi.items)) != 0xFFFFFFFF)
-			if (report_idle && !(tmp & 0x400))
-				aim_ssi_setpresence(sess, fr->conn, tmp | 0x400);
-
-		/* Check for maximum number of buddies */
-		for (cur=gc->groups, tmp=0; cur; cur=g_slist_next(cur)) {
-			struct group* gr = (struct group*)cur->data;
-			tmp = tmp + g_slist_length(gr->members);
-		}
-		if (tmp > odata->rights.maxbuddies) {
-			char *dialog_msg = g_strdup_printf(_("The maximum number of buddies allowed in your buddy list is %d, and you have %d."
-							     "  Until you are below the limit, some buddies will not show up as online."), 
-							   odata->rights.maxbuddies, tmp);
-			do_error_dialog(dialog_msg, _("Gaim - Warning"));
-			g_free(dialog_msg);
-		}
-		
-	} /* end if (gc) */
-#endif
+	aim_ssi_enable(sess, fr->conn);
 
 	return 1;
 }
 
-#if 0
-static void oscar_join_chat(struct gaim_connection *g, GList *data) {
-	struct oscar_data *odata = (struct oscar_data *)g->proto_data;
-	aim_conn_t *cur;
-	char *name;
-	int *exchange;
+static int gaim_ssi_parseack( aim_session_t *sess, aim_frame_t *fr, ... )
+{
+	aim_snac_t *origsnac;
+	va_list ap;
 
-	if (!data || !data->next)
-		return;
-
-	name = data->data;
-	exchange = data->next->data;
-
-	if ((cur = aim_getconn_type(odata->sess, AIM_CONN_TYPE_CHATNAV))) {
-		aim_chatnav_createroom(odata->sess, cur, name, *exchange);
-	} else {
-		/* this gets tricky */
-		struct create_room *cr = g_new0(struct create_room, 1);
-		cr->exchange = *exchange;
-		cr->name = g_strdup(name);
-		odata->create_rooms = g_slist_append(odata->create_rooms, cr);
-		aim_reqservice(odata->sess, odata->conn, AIM_CONN_TYPE_CHATNAV);
-	}
-}
-
-static void oscar_chat_invite(struct gaim_connection *g, int id, char *message, char *name) {
-	struct oscar_data *odata = (struct oscar_data *)g->proto_data;
-	struct chat_connection *ccon = find_oscar_chat(g, id);
+	va_start( ap, fr );
+	origsnac = va_arg( ap, aim_snac_t * );
+	va_end( ap );
 	
-	if (!ccon)
-		return;
-	
-	aim_chat_invite(odata->sess, odata->conn, name, message ? message : "",
-			ccon->exchange, ccon->name, 0x0);
-}
-
-static void oscar_chat_leave(struct gaim_connection *g, int id) {
-	struct oscar_data *odata = g ? (struct oscar_data *)g->proto_data : NULL;
-	GSList *bcs = g->buddy_chats;
-	struct conversation *b = NULL;
-	struct chat_connection *c = NULL;
-	int count = 0;
-
-	while (bcs) {
-		count++;
-		b = (struct conversation *)bcs->data;
-		if (id == b->id)
-			break;
-		bcs = bcs->next;
-		b = NULL;
-	}
-
-	if (!b)
-		return;
-
-	c = find_oscar_chat(g, b->id);
-	if (c != NULL) {
-		if (odata)
-			odata->oscar_chats = g_slist_remove(odata->oscar_chats, c);
-		if (c->inpa > 0)
-			gaim_input_remove(c->inpa);
-		if (g && odata->sess)
-			aim_conn_kill(odata->sess, &c->conn);
-		g_free(c->name);
-		g_free(c->show);
-		g_free(c);
-	}
-	/* we do this because with Oscar it doesn't tell us we left */
-	serv_got_chat_left(g, b->id);
-}
-
-static int oscar_chat_send(struct gaim_connection *g, int id, char *message) {
-	struct oscar_data *odata = (struct oscar_data *)g->proto_data;
-	GSList *bcs = g->buddy_chats;
-	struct conversation *b = NULL;
-	struct chat_connection *c = NULL;
-	char *buf; // *buf2;
-	int i, j;
-
-	while (bcs) {
-		b = (struct conversation *)bcs->data;
-		if (id == b->id)
-			break;
-		bcs = bcs->next;
-		b = NULL;
-	}
-	if (!b)
-		return -EINVAL;
-
-	bcs = odata->oscar_chats;
-	while (bcs) {
-		c = (struct chat_connection *)bcs->data;
-		if (b == c->cnv)
-			break;
-		bcs = bcs->next;
-		c = NULL;
-	}
-	if (!c)
-		return -EINVAL;
-
-	buf = g_malloc(strlen(message) * 4 + 1);
-	for (i = 0, j = 0; i < strlen(message); i++) {
-		if (message[i] == '\n') {
-			buf[j++] = '<';
-			buf[j++] = 'B';
-			buf[j++] = 'R';
-			buf[j++] = '>';
-		} else {
-			buf[j++] = message[i];
+	if( origsnac && origsnac->family == AIM_CB_FAM_SSI && origsnac->type == AIM_CB_SSI_ADD && origsnac->data )
+	{
+		int i, st, count = aim_bstream_empty( &fr->data );
+		char *list;
+		
+		if( count & 1 )
+		{
+			/* Hmm, the length should be even... */
+			do_error_dialog( sess->aux_data, "Received SSI ACK package with non-even length", "Gaim - Error" );
+			return( 0 );
+		}
+		count >>= 1;
+		
+		list = (char *) origsnac->data;
+		for( i = 0; i < count; i ++ )
+		{
+			st = aimbs_get16( &fr->data );
+			if( st == 0x0E )
+			{
+				serv_got_crap( sess->aux_data, "Buddy %s can't be added without authorization, requesting authorization", list );
+				
+				aim_ssi_auth_request( sess, fr->conn, list, "" );
+				aim_ssi_addbuddies( sess, fr->conn, OSCAR_GROUP, &list, 1, 1 );
+			}
+			list += strlen( list ) + 1;
 		}
 	}
-	buf[j] = '\0';
-
-	if (strlen(buf) > c->maxlen)
-		return -E2BIG;
-
-/*	(WTF?)
-	buf2 = strip_html(buf);
-	if (strlen(buf2) > c->maxvis) {
-		g_free(buf2);
-		return -E2BIG;
-	}
-	g_free(buf2);
-*/
-
-	aim_chat_send_im(odata->sess, c->conn, 0, buf, strlen(buf));
-	g_free(buf);
-	return 0;
+	
+	return( 1 );
 }
-#endif
 
 static void oscar_set_permit_deny(struct gaim_connection *gc) {
 	struct oscar_data *od = (struct oscar_data *)gc->proto_data;
@@ -2464,8 +2154,7 @@ static void oscar_set_permit_deny(struct gaim_connection *gc) {
 static void oscar_add_permit(struct gaim_connection *gc, char *who) {
 	struct oscar_data *od = (struct oscar_data *)gc->proto_data;
 	if (od->icq) {
-		if (gc->permdeny != 3) return;
-		oscar_set_permit_deny(gc);
+		aim_ssi_auth_reply(od->sess, od->conn, who, 1, "");
 	} else {
 		if (od->sess->ssi.received_data)
 			aim_ssi_addpord(od->sess, od->conn, &who, 1, AIM_SSI_TYPE_PERMIT);
@@ -2475,8 +2164,7 @@ static void oscar_add_permit(struct gaim_connection *gc, char *who) {
 static void oscar_add_deny(struct gaim_connection *gc, char *who) {
 	struct oscar_data *od = (struct oscar_data *)gc->proto_data;
 	if (od->icq) {
-		if (gc->permdeny != 4) return;
-		oscar_set_permit_deny(gc);
+		aim_ssi_auth_reply(od->sess, od->conn, who, 0, "");
 	} else {
 		if (od->sess->ssi.received_data)
 			aim_ssi_addpord(od->sess, od->conn, &who, 1, AIM_SSI_TYPE_DENY);
@@ -2485,10 +2173,7 @@ static void oscar_add_deny(struct gaim_connection *gc, char *who) {
 
 static void oscar_rem_permit(struct gaim_connection *gc, char *who) {
 	struct oscar_data *od = (struct oscar_data *)gc->proto_data;
-	if (od->icq) {
-		if (gc->permdeny != 3) return;
-		oscar_set_permit_deny(gc);
-	} else {
+	if (!od->icq) {
 		if (od->sess->ssi.received_data)
 			aim_ssi_delpord(od->sess, od->conn, &who, 1, AIM_SSI_TYPE_PERMIT);
 	}
@@ -2496,10 +2181,7 @@ static void oscar_rem_permit(struct gaim_connection *gc, char *who) {
 
 static void oscar_rem_deny(struct gaim_connection *gc, char *who) {
 	struct oscar_data *od = (struct oscar_data *)gc->proto_data;
-	if (od->icq) {
-		if (gc->permdeny != 4) return;
-		oscar_set_permit_deny(gc);
-	} else {
+	if (!od->icq) {
 		if (od->sess->ssi.received_data)
 			aim_ssi_delpord(od->sess, od->conn, &who, 1, AIM_SSI_TYPE_DENY);
 	}
@@ -2524,31 +2206,89 @@ static GList *oscar_away_states(struct gaim_connection *gc)
 	return m;
 }
 
-#if 0
-/* ** BitlBee ** Not Used */
-static void oscar_format_screenname(struct gaim_connection *gc, char *nick) {
-	struct oscar_data *od = gc->proto_data;
-	if (!strcmp(normalize(nick), normalize(gc->username))) {
-		if (!aim_getconn_type(od->sess, AIM_CONN_TYPE_AUTH)) {
-			od->setnick = TRUE;
-			od->newsn = g_strdup(nick);
-			aim_reqservice(od->sess, od->conn, AIM_CONN_TYPE_AUTH);
-		} else {
-			aim_admin_setnick(od->sess, aim_getconn_type(od->sess, AIM_CONN_TYPE_AUTH), nick);
-		}
-	} else {
-		do_error_dialog("The new formatting is invalid.", "Gaim");
-	}
-}
-#endif
-
-static int gaim_simpleinfo( aim_session_t *x, aim_frame_t *y, struct aim_icq_simpleinfo *info )
+static int gaim_icqinfo(aim_session_t *sess, aim_frame_t *fr, ...)
 {
-	char s[400];
-	
-	g_snprintf( s, 399, "User info - UIN: %ld   Nick: %s   First/Last name: %s %s   E-mail: %s", info->uin, info->nick, info->first, info->last, info->email );
-	irc_usermsg( get_IRC(), "%s", s );
-	return( 0 );
+        struct gaim_connection *gc = sess->aux_data;
+        gchar who[16];
+        GString *str;
+        va_list ap;
+        struct aim_icq_info *info;
+
+        va_start(ap, fr);
+        info = va_arg(ap, struct aim_icq_info *);
+        va_end(ap);
+
+        if (!info->uin)
+                return 0;
+
+        str = g_string_sized_new(100);
+        g_snprintf(who, sizeof(who), "%u", info->uin);
+
+        g_string_sprintfa(str, "%s: %s - %s: %s", _("UIN"), who, _("Nick"), 
+				info->nick ? info->nick : "-");
+        info_string_append(str, "\n", _("First Name"), info->first);
+        info_string_append(str, "\n", _("Last Name"), info->last);
+		info_string_append(str, "\n", _("Email Address"), info->email);
+        if (info->numaddresses && info->email2) {
+                int i;
+                for (i = 0; i < info->numaddresses; i++) {
+					info_string_append(str, "\n", _("Email Address"), info->email2[i]);
+                }
+        }
+        info_string_append(str, "\n", _("Mobile Phone"), info->mobile);
+        info_string_append(str, "\n", _("Gender"), info->gender==1 ? _("Female") : _("Male"));
+        if (info->birthyear || info->birthmonth || info->birthday) {
+                char date[30];
+                struct tm tm;
+                tm.tm_mday = (int)info->birthday;
+                tm.tm_mon = (int)info->birthmonth-1;
+                tm.tm_year = (int)info->birthyear-1900;
+                strftime(date, sizeof(date), "%Y-%m-%d", &tm);
+                info_string_append(str, "\n", _("Birthday"), date);
+        }
+        if (info->age) {
+                char age[5];
+                g_snprintf(age, sizeof(age), "%hhd", info->age);
+                info_string_append(str, "\n", _("Age"), age);
+        }
+		info_string_append(str, "\n", _("Personal Web Page"), info->personalwebpage);
+        if (info->info && info->info[0]) {
+                g_string_sprintfa(str, "\n%s:\n%s\n%s", _("Additional Information"), 
+						info->info, _("End of Additional Information"));
+        }
+        g_string_sprintfa(str, "\n");
+        if ((info->homeaddr && (info->homeaddr[0])) || (info->homecity && info->homecity[0]) || (info->homestate && info->homestate[0]) || (info->homezip && info->homezip[0])) {
+                g_string_sprintfa(str, "%s:", _("Home Address"));
+                info_string_append(str, "\n", _("Address"), info->homeaddr);
+                info_string_append(str, "\n", _("City"), info->homecity);
+                info_string_append(str, "\n", _("State"), info->homestate); 
+				info_string_append(str, "\n", _("Zip Code"), info->homezip);
+                g_string_sprintfa(str, "\n");
+        }
+        if ((info->workaddr && info->workaddr[0]) || (info->workcity && info->workcity[0]) || (info->workstate && info->workstate[0]) || (info->workzip && info->workzip[0])) {
+                g_string_sprintfa(str, "%s:", _("Work Address"));
+                info_string_append(str, "\n", _("Address"), info->workaddr);
+                info_string_append(str, "\n", _("City"), info->workcity);
+                info_string_append(str, "\n", _("State"), info->workstate);
+				info_string_append(str, "\n", _("Zip Code"), info->workzip);
+                g_string_sprintfa(str, "\n");
+        }
+        if ((info->workcompany && info->workcompany[0]) || (info->workdivision && info->workdivision[0]) || (info->workposition && info->workposition[0]) || (info->workwebpage && info->workwebpage[0])) {
+                g_string_sprintfa(str, "%s:", _("Work Information"));
+                info_string_append(str, "\n", _("Company"), info->workcompany);
+                info_string_append(str, "\n", _("Division"), info->workdivision);
+                info_string_append(str, "\n", _("Position"), info->workposition);
+                if (info->workwebpage && info->workwebpage[0]) {
+                        info_string_append(str, "\n", _("Web Page"), info->workwebpage);
+                }
+                g_string_sprintfa(str, "\n");
+        }
+
+		serv_got_crap(gc, "%s\n%s", _("User Info"), str->str);
+        g_string_free(str, TRUE);
+
+        return 1;
+
 }
 
 static char *oscar_get_status_string( struct gaim_connection *gc, int number )
@@ -2583,28 +2323,20 @@ static struct prpl *my_protocol = NULL;
 
 void oscar_init(struct prpl *ret) {
 	ret->protocol = PROTO_OSCAR;
-//	ret->options = OPT_PROTO_BUDDY_ICON | OPT_PROTO_IM_IMAGE;
 	ret->away_states = oscar_away_states;
 	ret->login = oscar_login;
 	ret->close = oscar_close;
 	ret->send_im = oscar_send_im;
-//	ret->set_info = oscar_set_info;
 	ret->get_info = oscar_get_info;
 	ret->set_away = oscar_set_away;
 	ret->get_away = oscar_get_away;
-//	ret->set_idle = oscar_set_idle;
 	ret->add_buddy = oscar_add_buddy;
-	ret->add_buddies = oscar_add_buddies;
 	ret->remove_buddy = oscar_remove_buddy;
 	ret->add_permit = oscar_add_permit;
 	ret->add_deny = oscar_add_deny;
 	ret->rem_permit = oscar_rem_permit;
 	ret->rem_deny = oscar_rem_deny;
 	ret->set_permit_deny = oscar_set_permit_deny;
-//	ret->join_chat = oscar_join_chat;
-//	ret->chat_invite = oscar_chat_invite;
-//	ret->chat_leave = oscar_chat_leave;
-//	ret->chat_send = oscar_chat_send;
 	ret->keepalive = oscar_keepalive;
 	ret->get_status_string = oscar_get_status_string;
 

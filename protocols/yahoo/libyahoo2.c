@@ -600,21 +600,33 @@ static void yahoo_packet_read(struct yahoo_packet *pkt, unsigned char *data, int
 		pos += 2;
 		pair->key = strtol(key, NULL, 10);
 		free(key);
-
-		accept = x; 
-		/* if x is 0 there was no key, so don't accept it */
-		if (accept)
-			value = malloc(len - pos + 1);
-		x = 0;
-		while (pos + 1 < len) {
-			if (data[pos] == 0xc0 && data[pos + 1] == 0x80)
-				break;
+		
+		/* Libyahoo2 developer(s) don't seem to have the time to fix
+		   this problem, so for now try to work around it:
+		   
+		   Sometimes we receive an invalid packet with not any more
+		   data at this point. I don't know how to handle this in a
+		   clean way, but let's hope this is clean enough: */
+		
+		if (pos + 1 < len) {
+			accept = x; 
+			/* if x is 0 there was no key, so don't accept it */
 			if (accept)
-				value[x++] = data[pos++];
+				value = malloc(len - pos + 1);
+			x = 0;
+			while (pos + 1 < len) {
+				if (data[pos] == 0xc0 && data[pos + 1] == 0x80)
+					break;
+				if (accept)
+					value[x++] = data[pos++];
+			}
+			if (accept)
+				value[x] = 0;
+			pos += 2;
+		} else {
+			accept = 0;
 		}
-		if (accept)
-			value[x] = 0;
-		pos += 2;
+		
 		if (accept) {
 			pair->value = strdup(value);
 			FREE(value);
@@ -1897,6 +1909,8 @@ static void yahoo_process_auth_0x0b(struct yahoo_input_data *yid, const char *se
 	 * challenge. */
 
 	shaUpdate(&ctx1, pass_hash_xor1, 64);
+	if (j >= 3 )
+		ctx1.sizeLo = 0x1ff;
 	shaUpdate(&ctx1, magic_key_char, 4);
 	shaFinal(&ctx1, digest1);
 
@@ -1986,6 +2000,8 @@ static void yahoo_process_auth_0x0b(struct yahoo_input_data *yid, const char *se
 	 * challenge. */
 
 	shaUpdate(&ctx1, crypt_hash_xor1, 64);
+	if (j >= 3 )
+		ctx1.sizeLo = 0x1ff;
 	shaUpdate(&ctx1, magic_key_char, 4);
 	shaFinal(&ctx1, digest1);
 

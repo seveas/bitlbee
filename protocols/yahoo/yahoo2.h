@@ -43,9 +43,9 @@ extern "C" {
 #undef snprintf
 // #define snprintf( x... )	g_snprintf( x )
 #undef strcasecmp
-#define strcasecmp( x,y )	g_ascii_strcasecmp( x,y )
+#define strcasecmp( x,y )	g_strcasecmp( x,y )
 #undef strncasecmp
-#define strncasecmp( x,y,z )	g_ascii_strncasecmp( x,y,z )
+#define strncasecmp( x,y,z )	g_strncasecmp( x,y,z )
 
 
 #include "yahoo2_types.h"

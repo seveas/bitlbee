@@ -151,8 +151,18 @@ static void byahoo_close( struct gaim_connection *gc )
 	
 	if( yd->logged_in )
 		yahoo_logoff( yd->y2_id );
+	else
+		yahoo_close( yd->y2_id );
 	
 	g_free( yd );
+}
+
+static void byahoo_get_info(struct gaim_connection *gc, char *who) 
+{
+	/* Just make an URL and let the user fetch the info */
+	serv_got_crap(gc, "%s\n%s: %s%s", _("User Info"), 
+			_("For now, fetch yourself"), yahoo_get_profile_url(),
+			who);
 }
 
 static int byahoo_send_im( struct gaim_connection *gc, char *who, char *what, int len, int flags )
@@ -178,32 +188,32 @@ static void byahoo_set_away( struct gaim_connection *gc, char *state, char *msg 
 	else if (state)
 	{
 		gc->away = "";
-		if( g_ascii_strcasecmp(state, "Available" ) == 0 )
+		if( g_strcasecmp(state, "Available" ) == 0 )
 		{
 			yd->current_status = YAHOO_STATUS_AVAILABLE;
 			gc->away = NULL;
 		}
-		else if( g_ascii_strcasecmp( state, "Be Right Back" ) == 0 )
+		else if( g_strcasecmp( state, "Be Right Back" ) == 0 )
 			yd->current_status = YAHOO_STATUS_BRB;
-		else if( g_ascii_strcasecmp( state, "Busy" ) == 0 )
+		else if( g_strcasecmp( state, "Busy" ) == 0 )
 			yd->current_status = YAHOO_STATUS_BUSY;
-		else if( g_ascii_strcasecmp( state, "Not At Home" ) == 0 )
+		else if( g_strcasecmp( state, "Not At Home" ) == 0 )
 			yd->current_status = YAHOO_STATUS_NOTATHOME;
-		else if( g_ascii_strcasecmp( state, "Not At Desk" ) == 0 )
+		else if( g_strcasecmp( state, "Not At Desk" ) == 0 )
 			yd->current_status = YAHOO_STATUS_NOTATDESK;
-		else if( g_ascii_strcasecmp( state, "Not In Office" ) == 0 )
+		else if( g_strcasecmp( state, "Not In Office" ) == 0 )
 			yd->current_status = YAHOO_STATUS_NOTINOFFICE;
-		else if( g_ascii_strcasecmp( state, "On Phone" ) == 0 )
+		else if( g_strcasecmp( state, "On Phone" ) == 0 )
 			yd->current_status = YAHOO_STATUS_ONPHONE;
-		else if( g_ascii_strcasecmp( state, "On Vacation" ) == 0 )
+		else if( g_strcasecmp( state, "On Vacation" ) == 0 )
 			yd->current_status = YAHOO_STATUS_ONVACATION;
-		else if( g_ascii_strcasecmp( state, "Out To Lunch" ) == 0 )
+		else if( g_strcasecmp( state, "Out To Lunch" ) == 0 )
 			yd->current_status = YAHOO_STATUS_OUTTOLUNCH;
-		else if( g_ascii_strcasecmp( state, "Stepped Out" ) == 0 )
+		else if( g_strcasecmp( state, "Stepped Out" ) == 0 )
 			yd->current_status = YAHOO_STATUS_STEPPEDOUT;
-		else if( g_ascii_strcasecmp( state, "Invisible" ) == 0 )
+		else if( g_strcasecmp( state, "Invisible" ) == 0 )
 			yd->current_status = YAHOO_STATUS_INVISIBLE;
-		else if( g_ascii_strcasecmp( state, GAIM_AWAY_CUSTOM ) == 0 )
+		else if( g_strcasecmp( state, GAIM_AWAY_CUSTOM ) == 0 )
 		{
 			if (gc->is_idle)
 				yd->current_status = YAHOO_STATUS_IDLE;
@@ -266,7 +276,7 @@ static void byahoo_remove_buddy( struct gaim_connection *gc, char *who, char *gr
 	{
 		struct byahoo_buddygroups *bg = bgl->data;
 		
-		if( g_ascii_strcasecmp( bg->buddy, who ) == 0 )
+		if( g_strcasecmp( bg->buddy, who ) == 0 )
 			yahoo_remove_buddy( yd->y2_id, who, bg->group );
 	}
 }
@@ -376,6 +386,7 @@ void byahoo_init( struct prpl *ret )
 	ret->login = byahoo_login;
 	ret->close = byahoo_close;
 	ret->send_im = byahoo_send_im;
+	ret->get_info = byahoo_get_info;
 	ret->away_states = byahoo_away_states;
 	ret->set_away = byahoo_set_away;
 	ret->keepalive = byahoo_keepalive;
@@ -417,11 +428,18 @@ struct byahoo_connect_callback_data
 	int fd;
 	yahoo_connect_callback callback;
 	gpointer data;
+	int id;
 };
 
 void byahoo_connect_callback( gpointer data, gint source, GaimInputCondition cond )
 {
 	struct byahoo_connect_callback_data *d = data;
+	
+	if( !byahoo_get_gc_by_id( d->id ) )
+	{
+		g_free( d );
+		return;
+	}
 	
 	d->callback( d->fd, 0, d->data );
 	g_free( d );
@@ -438,6 +456,9 @@ void byahoo_read_ready_callback( gpointer data, gint source, GaimInputCondition 
 {
 	struct byahoo_read_ready_data *d = data;
 	
+	if( !byahoo_get_gc_by_id( d->id ) )
+		return;
+	
 	yahoo_read_ready( d->id, d->fd, d->data );
 }
 
@@ -451,6 +472,9 @@ struct byahoo_write_ready_data
 void byahoo_write_ready_callback( gpointer data, gint source, GaimInputCondition cond )
 {
 	struct byahoo_write_ready_data *d = data;
+	
+	if( !byahoo_get_gc_by_id( d->id ) )
+		return;
 	
 	yahoo_write_ready( d->id, d->fd, d->data );
 }
@@ -616,7 +640,7 @@ void ext_yahoo_error( int id, char *err, int fatal )
 	}
 	else
 	{
-		do_error_dialog( err, "Yahoo! error" );
+		do_error_dialog( gc, err, "Yahoo! error" );
 	}
 }
 
@@ -692,21 +716,23 @@ int ext_yahoo_connect_async( int id, char *host, int port, yahoo_connect_callbac
 	d->fd = fd;
 	d->callback = callback;
 	d->data = data;
+	d->id = id;
 	
 	return( fd );
 }
 
-/* FIXME: Stolen from sample_client.c, no support for proxy servers. This
-          one shouldn't be used anyway... */
+/* Because we don't want asynchronous connects in BitlBee, and because
+   libyahoo doesn't seem to use this one anyway, this one is now defunct. */
 int ext_yahoo_connect(char *host, int port)
 {
+#if 0
 	struct sockaddr_in serv_addr;
 	static struct hostent *server;
 	static char last_host[256];
 	int servfd;
 	char **p;
 
-	if(last_host[0] || g_ascii_strcasecmp(last_host, host)!=0) {
+	if(last_host[0] || g_strcasecmp(last_host, host)!=0) {
 		if(!(server = gethostbyname(host))) {
 			return -1;
 		}
@@ -733,6 +759,7 @@ int ext_yahoo_connect(char *host, int port)
 	}
 
 	closesocket(servfd);
+#endif
 	return -1;
 }
 
@@ -769,7 +796,7 @@ void ext_yahoo_got_conf_invite( int id, char *who, char *room, char *msg, YList 
 	inv->gc = gc;
 	
 	for( m = members; m; m = m->next )
-		if( g_ascii_strcasecmp( m->data, gc->username ) != 0 )
+		if( g_strcasecmp( m->data, gc->username ) != 0 )
 			add_chat_buddy( inv->c, m->data );
 	
 	g_snprintf( txt, 1024, "Got an invitation to chatroom %s from %s: %s", room, who, msg );

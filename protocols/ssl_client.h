@@ -28,8 +28,8 @@
 
 typedef void (*SslInputFunction)(gpointer, void*, GaimInputCondition);
 
-void *ssl_connect( char *host, int port, SslInputFunction func, gpointer data );
-int ssl_read( void *conn, char *buf, int len );
-int ssl_write( void *conn, char *buf, int len );
-void ssl_disconnect( void *conn_ );
-int ssl_getfd( void *conn );
+G_MODULE_EXPORT void *ssl_connect( char *host, int port, SslInputFunction func, gpointer data );
+G_MODULE_EXPORT int ssl_read( void *conn, char *buf, int len );
+G_MODULE_EXPORT int ssl_write( void *conn, const char *buf, int len );
+G_MODULE_EXPORT void ssl_disconnect( void *conn_ );
+G_MODULE_EXPORT int ssl_getfd( void *conn );

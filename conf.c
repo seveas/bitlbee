@@ -28,7 +28,6 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-#include <getopt.h>
 #include "conf.h"
 #include "ini.h"
 #include "url.h"
@@ -116,7 +115,7 @@ conf_t *conf_load( int argc, char *argv[] )
 			        "An IRC-to-other-chat-networks gateway\n"
 			        "\n"
 			        "  -I  Classic/InetD mode. (Default)\n"
-			        "  -D  Daemon mode. (Experimental!)\n"
+			        "  -D  Daemon mode. (Still EXPERIMENTAL!)\n"
 			        "  -i  Specify the interface (by IP address) to listen on.\n"
 			        "      (Default: 0.0.0.0 (any interface))\n"
 			        "  -p  Port number to listen on. (Default: 6667)\n"
@@ -150,20 +149,20 @@ static int conf_loadini( conf_t *conf, char *file )
 	if( ini == NULL ) return( -1 );
 	while( ini_read( ini ) )
 	{
-		if( g_ascii_strcasecmp( ini->section, "settings" ) == 0 )
+		if( g_strcasecmp( ini->section, "settings" ) == 0 )
 		{
-			if( g_ascii_strcasecmp( ini->key, "runmode" ) == 0 )
+			if( g_strcasecmp( ini->key, "runmode" ) == 0 )
 			{
-				if( g_ascii_strcasecmp( ini->value, "daemon" ) == 0 )
+				if( g_strcasecmp( ini->value, "daemon" ) == 0 )
 					conf->runmode = RUNMODE_DAEMON;
 				else
 					conf->runmode = RUNMODE_INETD;
 			}
-			else if( g_ascii_strcasecmp( ini->key, "daemoninterface" ) == 0 )
+			else if( g_strcasecmp( ini->key, "daemoninterface" ) == 0 )
 			{
 				conf->iface = g_strdup( ini->value );
 			}
-			else if( g_ascii_strcasecmp( ini->key, "daemonport" ) == 0 )
+			else if( g_strcasecmp( ini->key, "daemonport" ) == 0 )
 			{
 				if( ( sscanf( ini->value, "%d", &i ) != 1 ) || ( i <= 0 ) || ( i > 65535 ) )
 				{
@@ -172,34 +171,34 @@ static int conf_loadini( conf_t *conf, char *file )
 				}
 				conf->port = i;
 			}
-			else if( g_ascii_strcasecmp( ini->key, "authmode" ) == 0 )
+			else if( g_strcasecmp( ini->key, "authmode" ) == 0 )
 			{
-				if( g_ascii_strcasecmp( ini->value, "registered" ) == 0 )
+				if( g_strcasecmp( ini->value, "registered" ) == 0 )
 					conf->authmode = AUTHMODE_REGISTERED;
-				else if( g_ascii_strcasecmp( ini->value, "closed" ) == 0 )
+				else if( g_strcasecmp( ini->value, "closed" ) == 0 )
 					conf->authmode = AUTHMODE_CLOSED;
 				else
 					conf->authmode = AUTHMODE_OPEN;
 			}
-			else if( g_ascii_strcasecmp( ini->key, "authpassword" ) == 0 )
+			else if( g_strcasecmp( ini->key, "authpassword" ) == 0 )
 			{
 				conf->password = g_strdup( ini->value );
 			}
-			else if( g_ascii_strcasecmp( ini->key, "hostname" ) == 0 )
+			else if( g_strcasecmp( ini->key, "hostname" ) == 0 )
 			{
 				conf->hostname = g_strdup( ini->value );
 			}
-			else if( g_ascii_strcasecmp( ini->key, "configdir" ) == 0 )
+			else if( g_strcasecmp( ini->key, "configdir" ) == 0 )
 			{
 				g_free( conf->configdir );
 				conf->configdir = g_strdup( ini->value );
 			}
-			else if( g_ascii_strcasecmp( ini->key, "motdfile" ) == 0 )
+			else if( g_strcasecmp( ini->key, "motdfile" ) == 0 )
 			{
 				g_free( conf->motdfile );
 				conf->motdfile = g_strdup( ini->value );
 			}
-			else if( g_ascii_strcasecmp( ini->key, "pinginterval" ) == 0 )
+			else if( g_strcasecmp( ini->key, "pinginterval" ) == 0 )
 			{
 				if( sscanf( ini->value, "%d", &i ) != 1 )
 				{
@@ -208,7 +207,7 @@ static int conf_loadini( conf_t *conf, char *file )
 				}
 				conf->ping_interval = i;
 			}
-			else if( g_ascii_strcasecmp( ini->key, "pingtimeout" ) == 0 )
+			else if( g_strcasecmp( ini->key, "pingtimeout" ) == 0 )
 			{
 				if( sscanf( ini->value, "%d", &i ) != 1 )
 				{
@@ -217,7 +216,7 @@ static int conf_loadini( conf_t *conf, char *file )
 				}
 				conf->ping_timeout = i;
 			}
-			else if( g_ascii_strcasecmp( ini->key, "proxy" ) == 0 )
+			else if( g_strcasecmp( ini->key, "proxy" ) == 0 )
 			{
 				url_t *url = g_new0( url_t, 1 );
 				
@@ -248,7 +247,7 @@ static int conf_loadini( conf_t *conf, char *file )
 				/* For now just ignore unknown keys... */
 			}
 		}
-		else if( g_ascii_strcasecmp( ini->section, "defaults" ) != 0 )
+		else if( g_strcasecmp( ini->section, "defaults" ) != 0 )
 		{
 			fprintf( stderr, "Error: Unknown section [%s] in configuration file. "
 			                 "BitlBee configuration must be put in a [settings] section!\n", ini->section );
@@ -268,7 +267,7 @@ void conf_loaddefaults( irc_t *irc )
 	if( ini == NULL ) return;
 	while( ini_read( ini ) )
 	{
-		if( g_ascii_strcasecmp( ini->section, "defaults" ) == 0 )
+		if( g_strcasecmp( ini->section, "defaults" ) == 0 )
 		{
 			set_t *s = set_find( irc, ini->key );
 			

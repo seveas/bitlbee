@@ -5,18 +5,17 @@
  *
  */
 
-#define FAIM_INTERNAL
 #include <aim.h> 
 #include <glib.h>
 
 /* Stored in the ->priv of chat connections */
 struct chatconnpriv {
-	fu16_t exchange;
+	guint16 exchange;
 	char *name;
-	fu16_t instance;
+	guint16 instance;
 };
 
-faim_internal void aim_conn_kill_chat(aim_session_t *sess, aim_conn_t *conn)
+void aim_conn_kill_chat(aim_session_t *sess, aim_conn_t *conn)
 {
 	struct chatconnpriv *ccp = (struct chatconnpriv *)conn->priv;
 
@@ -27,7 +26,7 @@ faim_internal void aim_conn_kill_chat(aim_session_t *sess, aim_conn_t *conn)
 	return;
 }
 
-faim_export char *aim_chat_getname(aim_conn_t *conn)
+char *aim_chat_getname(aim_conn_t *conn)
 {
 	struct chatconnpriv *ccp;
 
@@ -43,7 +42,7 @@ faim_export char *aim_chat_getname(aim_conn_t *conn)
 }
 
 /* XXX get this into conn.c -- evil!! */
-faim_export aim_conn_t *aim_chat_getconn(aim_session_t *sess, const char *name)
+aim_conn_t *aim_chat_getconn(aim_session_t *sess, const char *name)
 {
 	aim_conn_t *cur;
 
@@ -53,7 +52,7 @@ faim_export aim_conn_t *aim_chat_getconn(aim_session_t *sess, const char *name)
 		if (cur->type != AIM_CONN_TYPE_CHAT)
 			continue;
 		if (!cur->priv) {
-			faimdprintf(sess, 0, "faim: chat: chat connection with no name! (fd = %d)\n", cur->fd);
+			do_error_dialog(sess->aux_data, "chat connection with no name!", "Gaim");
 			continue;
 		}
 
@@ -64,7 +63,7 @@ faim_export aim_conn_t *aim_chat_getconn(aim_session_t *sess, const char *name)
 	return cur;
 }
 
-faim_export int aim_chat_attachname(aim_conn_t *conn, fu16_t exchange, const char *roomname, fu16_t instance)
+int aim_chat_attachname(aim_conn_t *conn, guint16 exchange, const char *roomname, guint16 instance)
 {
 	struct chatconnpriv *ccp;
 
@@ -98,13 +97,13 @@ faim_export int aim_chat_attachname(aim_conn_t *conn, fu16_t exchange, const cha
  *
  * XXX convert this to use tlvchains 
  */
-faim_export int aim_chat_send_im(aim_session_t *sess, aim_conn_t *conn, fu16_t flags, const char *msg, int msglen)
+int aim_chat_send_im(aim_session_t *sess, aim_conn_t *conn, guint16 flags, const char *msg, int msglen)
 {   
 	int i;
 	aim_frame_t *fr;
 	aim_msgcookie_t *cookie;
 	aim_snacid_t snacid;
-	fu8_t ckstr[8];
+	guint8 ckstr[8];
 	aim_tlvlist_t *otl = NULL, *itl = NULL;
 
 	if (!sess || !conn || !msg || (msglen <= 0))
@@ -125,7 +124,7 @@ faim_export int aim_chat_send_im(aim_session_t *sess, aim_conn_t *conn, fu16_t f
 	 *
 	 */
 	for (i = 0; i < sizeof(ckstr); i++)
-		aimutil_put8(ckstr+i, (fu8_t) rand());
+		aimutil_put8(ckstr+i, (guint8) rand());
 
 	cookie = aim_mkcookie(ckstr, AIM_COOKIETYPE_CHAT, NULL);
 	cookie->data = NULL; /* XXX store something useful here */
@@ -183,9 +182,9 @@ faim_export int aim_chat_send_im(aim_session_t *sess, aim_conn_t *conn, fu16_t f
 	return 0;
 }
 
-static int aim_addtlvtochain_chatroom(aim_tlvlist_t **list, fu16_t type, fu16_t exchange, const char *roomname, fu16_t instance)
+static int aim_addtlvtochain_chatroom(aim_tlvlist_t **list, guint16 type, guint16 exchange, const char *roomname, guint16 instance)
 {
-	fu8_t *buf;
+	guint8 *buf;
 	int buflen;
 	aim_bstream_t bs;
 
@@ -214,7 +213,7 @@ static int aim_addtlvtochain_chatroom(aim_tlvlist_t **list, fu16_t type, fu16_t 
  * family 0x000e, with a little added on to specify the exchange and room 
  * name.
  */
-faim_export int aim_chat_join(aim_session_t *sess, aim_conn_t *conn, fu16_t exchange, const char *roomname, fu16_t instance)
+int aim_chat_join(aim_session_t *sess, aim_conn_t *conn, guint16 exchange, const char *roomname, guint16 instance)
 {
 	aim_frame_t *fr;
 	aim_snacid_t snacid;
@@ -249,7 +248,7 @@ faim_export int aim_chat_join(aim_session_t *sess, aim_conn_t *conn, fu16_t exch
 	return 0; 
 }
 
-faim_internal int aim_chat_readroominfo(aim_bstream_t *bs, struct aim_chat_roominfo *outinfo)
+int aim_chat_readroominfo(aim_bstream_t *bs, struct aim_chat_roominfo *outinfo)
 {
 	int namelen;
 
@@ -264,7 +263,7 @@ faim_internal int aim_chat_readroominfo(aim_bstream_t *bs, struct aim_chat_roomi
 	return 0;
 }
 
-faim_export int aim_chat_leaveroom(aim_session_t *sess, const char *name)
+int aim_chat_leaveroom(aim_session_t *sess, const char *name)
 {
 	aim_conn_t *conn;
 
@@ -279,16 +278,16 @@ faim_export int aim_chat_leaveroom(aim_session_t *sess, const char *name)
 /*
  * conn must be a BOS connection!
  */
-faim_export int aim_chat_invite(aim_session_t *sess, aim_conn_t *conn, const char *sn, const char *msg, fu16_t exchange, const char *roomname, fu16_t instance)
+int aim_chat_invite(aim_session_t *sess, aim_conn_t *conn, const char *sn, const char *msg, guint16 exchange, const char *roomname, guint16 instance)
 {
 	int i;
 	aim_frame_t *fr;
 	aim_msgcookie_t *cookie;
 	struct aim_invite_priv *priv;
-	fu8_t ckstr[8];
+	guint8 ckstr[8];
 	aim_snacid_t snacid;
 	aim_tlvlist_t *otl = NULL, *itl = NULL;
-	fu8_t *hdr;
+	guint8 *hdr;
 	int hdrlen;
 	aim_bstream_t hdrbs;
 	
@@ -309,7 +308,7 @@ faim_export int aim_chat_invite(aim_session_t *sess, aim_conn_t *conn, const cha
 	 * Cookie
 	 */
 	for (i = 0; i < sizeof(ckstr); i++)
-		aimutil_put8(ckstr, (fu8_t) rand());
+		aimutil_put8(ckstr, (guint8) rand());
 
 	/* XXX should be uncached by an unwritten 'invite accept' handler */
 	if ((priv = g_malloc(sizeof(struct aim_invite_priv)))) {
@@ -391,23 +390,23 @@ static int infoupdate(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, a
 	aim_rxcallback_t userfunc;
 	int ret = 0;
 	int usercount = 0;
-	fu8_t detaillevel = 0;
+	guint8 detaillevel = 0;
 	char *roomname = NULL;
 	struct aim_chat_roominfo roominfo;
-	fu16_t tlvcount = 0;
+	guint16 tlvcount = 0;
 	aim_tlvlist_t *tlvlist;
 	char *roomdesc = NULL;
-	fu16_t flags = 0;
-	fu32_t creationtime = 0;
-	fu16_t maxmsglen = 0, maxvisiblemsglen = 0;
-	fu16_t unknown_d2 = 0, unknown_d5 = 0;
+	guint16 flags = 0;
+	guint32 creationtime = 0;
+	guint16 maxmsglen = 0, maxvisiblemsglen = 0;
+	guint16 unknown_d2 = 0, unknown_d5 = 0;
 
 	aim_chat_readroominfo(bs, &roominfo);
 
 	detaillevel = aimbs_get8(bs);
 
 	if (detaillevel != 0x02) {
-		faimdprintf(sess, 0, "faim: chat_roomupdateinfo: detail level %d not supported\n", detaillevel);
+		do_error_dialog(sess->aux_data, "Only detaillevel 0x2 is support at the moment", "Gaim");
 		return 1;
 	}
 
@@ -595,8 +594,8 @@ static int incomingmsg(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, 
 	aim_userinfo_t userinfo;
 	aim_rxcallback_t userfunc;	
 	int ret = 0;
-	fu8_t *cookie;
-	fu16_t channel;
+	guint8 *cookie;
+	guint16 channel;
 	aim_tlvlist_t *otl;
 	char *msg = NULL;
 	aim_msgcookie_t *ck;
@@ -625,7 +624,7 @@ static int incomingmsg(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, 
 	channel = aimbs_get16(bs);
 
 	if (channel != 0x0003) {
-		faimdprintf(sess, 0, "faim: chat_incoming: unknown channel! (0x%04x)\n", channel);
+		do_error_dialog(sess->aux_data, "unknown channel!", "Gaim");
 		return 0;
 	}
 
@@ -698,13 +697,13 @@ static int snachandler(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, 
 	return 0;
 }
 
-faim_internal int chat_modfirst(aim_session_t *sess, aim_module_t *mod)
+int chat_modfirst(aim_session_t *sess, aim_module_t *mod)
 {
 
 	mod->family = 0x000e;
 	mod->version = 0x0001;
-	mod->toolid = 0x0004; /* XXX this doesn't look right */
-	mod->toolversion = 0x0001; /* nor does this */
+	mod->toolid = 0x0010;
+	mod->toolversion = 0x0629;
 	mod->flags = 0;
 	strncpy(mod->name, "chat", sizeof(mod->name));
 	mod->snachandler = snachandler;

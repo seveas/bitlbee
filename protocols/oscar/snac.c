@@ -12,13 +12,12 @@
  *
  */
 
-#define FAIM_INTERNAL
 #include <aim.h>
 
 /*
  * Called from aim_session_init() to initialize the hash.
  */
-faim_internal void aim_initsnachash(aim_session_t *sess)
+void aim_initsnachash(aim_session_t *sess)
 {
 	int i;
 
@@ -28,7 +27,7 @@ faim_internal void aim_initsnachash(aim_session_t *sess)
 	return;
 }
 
-faim_internal aim_snacid_t aim_cachesnac(aim_session_t *sess, const fu16_t family, const fu16_t type, const fu16_t flags, const void *data, const int datalen)
+aim_snacid_t aim_cachesnac(aim_session_t *sess, const guint16 family, const guint16 type, const guint16 flags, const void *data, const int datalen)
 {
 	aim_snac_t snac;
 
@@ -51,7 +50,7 @@ faim_internal aim_snacid_t aim_cachesnac(aim_session_t *sess, const fu16_t famil
  * Clones the passed snac structure and caches it in the
  * list/hash.
  */
-faim_internal aim_snacid_t aim_newsnac(aim_session_t *sess, aim_snac_t *newsnac)
+aim_snacid_t aim_newsnac(aim_session_t *sess, aim_snac_t *newsnac)
 {
 	aim_snac_t *snac;
 	int index;
@@ -79,7 +78,7 @@ faim_internal aim_snacid_t aim_newsnac(aim_session_t *sess, aim_snac_t *newsnac)
  * The returned structure must be freed by the caller.
  *
  */
-faim_internal aim_snac_t *aim_remsnac(aim_session_t *sess, aim_snacid_t id) 
+aim_snac_t *aim_remsnac(aim_session_t *sess, aim_snacid_t id) 
 {
 	aim_snac_t *cur, **prev;
 	int index;
@@ -104,7 +103,7 @@ faim_internal aim_snac_t *aim_remsnac(aim_session_t *sess, aim_snacid_t id)
  * maxage is the _minimum_ age in seconds to keep SNACs.
  *
  */
-faim_internal void aim_cleansnacs(aim_session_t *sess, int maxage)
+void aim_cleansnacs(aim_session_t *sess, int maxage)
 {
 	int i;
 
@@ -134,7 +133,7 @@ faim_internal void aim_cleansnacs(aim_session_t *sess, int maxage)
 	return;
 }
 
-faim_internal int aim_putsnac(aim_bstream_t *bs, fu16_t family, fu16_t subtype, fu16_t flags, aim_snacid_t snacid)
+int aim_putsnac(aim_bstream_t *bs, guint16 family, guint16 subtype, guint16 flags, aim_snacid_t snacid)
 {
 
 	aimbs_put16(bs, family);

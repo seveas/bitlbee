@@ -23,12 +23,12 @@
   Suite 330, Boston, MA  02111-1307  USA
 */
 
-typedef struct
+typedef struct __NICK
 {
 	char *handle;
 	int proto;
 	char *nick;
-	void *next;
+	struct __NICK *next;
 } nick_t;
 
 void nick_set( irc_t *irc, char *handle, int proto, char *nick );

@@ -514,7 +514,7 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 	}
 	else if( strcmp( cmd[0], "IPG" ) == 0 )
 	{
-		do_error_dialog( "Received IPG command, we don't handle them yet.", "MSN" );
+		do_error_dialog(gc, "Received IPG command, we don't handle them yet.", "MSN" );
 		
 		md->handler->msglen = atoi( cmd[1] );
 		
@@ -531,7 +531,7 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 		struct msn_status_code *err = msn_status_by_number( num );
 		
 		g_snprintf( buf, sizeof( buf ), "Error reported by MSN server: %s", err->text );
-		do_error_dialog( buf, "MSN" );
+		do_error_dialog( gc, buf, "MSN" );
 		
 		if( err->flags & STATUS_FATAL )
 		{

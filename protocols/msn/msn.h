@@ -42,6 +42,7 @@
                             "X-MMS-IM-Format: FN=MS%20Shell%20Dlg; EF=; CO=0; CS=0; PF=0\r\n" \
                             "\r\n"
 
+#define PROFILE_URL "http://members.msn.com/"
 
 struct msn_data
 {

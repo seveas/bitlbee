@@ -26,7 +26,7 @@ my $bitlbee_channel = '#bitlbee';
 my $getting_completions = '0';
 
 my @commands = ('account','allow','block','blist','help','identify','info','nick','qlist','register','remove','rename','save','set');
-my @setlist = ('auto_connect','auto_reconnect','auto_reconnect_delay','away_devoice','buddy_sendbuffer','buddy_sendbuffer_delay','charset','debug','handle_unknown','html','ops','private','save_on_quit','typing_notice','to_char');
+my @setlist = ('auto_connect','auto_reconnect','auto_reconnect_delay','away_devoice','buddy_sendbuffer','buddy_sendbuffer_delay','charset','debug','handle_unknown','html','lcnicks','ops','private','save_on_quit','typing_notice','to_char');
 my @helplist = ('away','commands','groupchats','groupchats2','groupchats3','index','quickstart','quickstart2','quickstart3','quickstart4','quickstart5','smileys');
 
 my @accountlist = ('add','del','list','on','off');
@@ -156,7 +156,7 @@ signal_add_last 'complete word' => sub {
 					push @$complist, $account;
 				}
 			}
-		}elsif($linestart eq 'set away_devoice' || $linestart eq 'set auto_connect' || $linestart eq 'set auto_reconnect' || $linestart eq 'set buddy_sendbuffer' || $linestart eq 'set debug' || $linestart eq 'set private' || $linestart eq 'set save_on_quit' || $linestart eq 'set typing_notice')
+		}elsif($linestart eq 'set away_devoice' || $linestart eq 'set auto_connect' || $linestart eq 'set auto_reconnect' || $linestart eq 'set buddy_sendbuffer' || $linestart eq 'set debug' || $linestart eq 'set lcnicks' || $linestart eq 'set private' || $linestart eq 'set save_on_quit' || $linestart eq 'set typing_notice')
 		{
 			foreach my $bool(@boolean)
 			{

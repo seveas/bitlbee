@@ -19,7 +19,6 @@
  *
  */
 
-#define FAIM_INTERNAL
 #include <aim.h>
 
 /*
@@ -43,12 +42,12 @@
  * the rest will always be the same.
  *
  */
-faim_export fu16_t aim_fingerprintclient(fu8_t *msghdr, int len)
+guint16 aim_fingerprintclient(guint8 *msghdr, int len)
 {
 	static const struct {
-		fu16_t clientid;
+		guint16 clientid;
 		int len;
-		fu8_t data[10];
+		guint8 data[10];
 	} fingerprints[] = {
 		/* AOL Mobile Communicator, WinAIM 1.0.414 */
 		{ AIM_CLIENTTYPE_MC, 
@@ -84,9 +83,9 @@ faim_export fu16_t aim_fingerprintclient(fu8_t *msghdr, int len)
 }
 
 /* This should be endian-safe now... but who knows... */
-faim_export fu16_t aim_iconsum(const fu8_t *buf, int buflen)
+guint16 aim_iconsum(const guint8 *buf, int buflen)
 {
-	fu32_t sum;
+	guint32 sum;
 	int i;
 
 	for (i = 0, sum = 0; i + 1 < buflen; i += 2)
@@ -96,7 +95,7 @@ faim_export fu16_t aim_iconsum(const fu8_t *buf, int buflen)
 
 	sum = ((sum & 0xffff0000) >> 16) + (sum & 0x0000ffff);
 
-	return (fu16_t)sum;
+	return (guint16)sum;
 }
 
 /*
@@ -146,9 +145,9 @@ faim_export fu16_t aim_iconsum(const fu8_t *buf, int buflen)
  * XXX check SNAC size for multipart
  *
  */
-faim_export int aim_send_im_ext(aim_session_t *sess, struct aim_sendimext_args *args)
+int aim_send_im_ext(aim_session_t *sess, struct aim_sendimext_args *args)
 {
-	static const fu8_t deffeatures[] = {
+	static const guint8 deffeatures[] = {
 		0x01, 0x01, 0x01, 0x02
 	};
 	aim_conn_t *conn;
@@ -212,7 +211,7 @@ faim_export int aim_send_im_ext(aim_session_t *sess, struct aim_sendimext_args *
 	 *
 	 */
 	for (i = 0; i < 8; i++)
-		aimbs_put8(&fr->data, (fu8_t) rand());
+		aimbs_put8(&fr->data, (guint8) rand());
 
 	/*
 	 * Channel ID
@@ -350,7 +349,7 @@ faim_export int aim_send_im_ext(aim_session_t *sess, struct aim_sendimext_args *
  * that requires an explicit message length.  Use aim_send_im_ext().
  *
  */
-faim_export int aim_send_im(aim_session_t *sess, const char *destsn, fu16_t flags, const char *msg)
+int aim_send_im(aim_session_t *sess, const char *destsn, guint16 flags, const char *msg)
 {
 	struct aim_sendimext_args args;
 
@@ -369,11 +368,11 @@ faim_export int aim_send_im(aim_session_t *sess, const char *destsn, fu16_t flag
  * This is also performance sensitive. (If you can believe it...)
  *
  */
-faim_export int aim_send_icon(aim_session_t *sess, const char *sn, const fu8_t *icon, int iconlen, time_t stamp, fu16_t iconsum)
+int aim_send_icon(aim_session_t *sess, const char *sn, const guint8 *icon, int iconlen, time_t stamp, guint16 iconsum)
 {
 	aim_conn_t *conn;
 	int i;
-	fu8_t ck[8];
+	guint8 ck[8];
 	aim_frame_t *fr;
 	aim_snacid_t snacid;
 
@@ -384,7 +383,7 @@ faim_export int aim_send_icon(aim_session_t *sess, const char *sn, const fu8_t *
 		return -EINVAL;
 
 	for (i = 0; i < 8; i++)
-		aimutil_put8(ck+i, (fu8_t) rand());
+		aimutil_put8(ck+i, (guint8) rand());
 
 	if (!(fr = aim_tx_new(sess, conn, AIM_FRAMETYPE_FLAP, 0x02, 10+8+2+1+strlen(sn)+2+2+2+8+16+2+2+2+2+2+2+2+4+4+4+iconlen+strlen(AIM_ICONIDENT)+2+2)))
 		return -ENOMEM;
@@ -461,12 +460,12 @@ faim_export int aim_send_icon(aim_session_t *sess, const char *sn, const fu8_t *
  * make an interface similar to what AOL actually uses.  But I'm not using COM.
  *
  */
-faim_export int aim_send_rtfmsg(aim_session_t *sess, struct aim_sendrtfmsg_args *args)
+int aim_send_rtfmsg(aim_session_t *sess, struct aim_sendrtfmsg_args *args)
 {
 	const char rtfcap[] = {"{97B12751-243C-4334-AD22-D6ABF73F1492}"}; /* AIM_CAPS_ICQRTF capability in string form */
 	aim_conn_t *conn;
 	int i;
-	fu8_t ck[8];
+	guint8 ck[8];
 	aim_frame_t *fr;
 	aim_snacid_t snacid;
 	int servdatalen;
@@ -480,7 +479,7 @@ faim_export int aim_send_rtfmsg(aim_session_t *sess, struct aim_sendrtfmsg_args 
 	servdatalen = 2+2+16+2+4+1+2  +  2+2+4+4+4  +  2+4+2+strlen(args->rtfmsg)+1  +  4+4+4+strlen(rtfcap)+1;
 
 	for (i = 0; i < 8; i++)
-		aimutil_put8(ck+i, (fu8_t) rand());
+		aimutil_put8(ck+i, (guint8) rand());
 
 	if (!(fr = aim_tx_new(sess, conn, AIM_FRAMETYPE_FLAP, 0x02, 10+128+servdatalen)))
 		return -ENOMEM;
@@ -564,15 +563,15 @@ faim_export int aim_send_rtfmsg(aim_session_t *sess, struct aim_sendrtfmsg_args 
 	return 0;
 }
 
-faim_internal int aim_request_directim(aim_session_t *sess, const char *destsn, fu8_t *ip, fu16_t port, fu8_t *ckret)
+int aim_request_directim(aim_session_t *sess, const char *destsn, guint8 *ip, guint16 port, guint8 *ckret)
 {
 	aim_conn_t *conn;
-	fu8_t ck[8];
+	guint8 ck[8];
 	aim_frame_t *fr;
 	aim_snacid_t snacid;
 	aim_tlvlist_t *tl = NULL, *itl = NULL;
 	int hdrlen, i;
-	fu8_t *hdr;
+	guint8 *hdr;
 	aim_bstream_t hdrbs;
 
 	if (!sess || !(conn = aim_conn_findbygroup(sess, 0x0004)))
@@ -594,7 +593,7 @@ faim_internal int aim_request_directim(aim_session_t *sess, const char *destsn, 
 	 *
 	 */
 	for (i = 0; i < 7; i++)
-	       	ck[i] = 0x30 + ((fu8_t) rand() % 10);
+	       	ck[i] = 0x30 + ((guint8) rand() % 10);
 	ck[7] = '\0';
 
 	if (ckret)
@@ -640,11 +639,11 @@ faim_internal int aim_request_directim(aim_session_t *sess, const char *destsn, 
 	return 0;
 }
 
-faim_internal int aim_request_sendfile(aim_session_t *sess, const char *sn, const char *filename, fu16_t numfiles, fu32_t totsize, fu8_t *ip, fu16_t port, fu8_t *ckret)
+int aim_request_sendfile(aim_session_t *sess, const char *sn, const char *filename, guint16 numfiles, guint32 totsize, guint8 *ip, guint16 port, guint8 *ckret)
 {
 	aim_conn_t *conn;
 	int i;
-	fu8_t ck[8];
+	guint8 ck[8];
 	aim_frame_t *fr;
 	aim_snacid_t snacid;
 
@@ -661,7 +660,7 @@ faim_internal int aim_request_sendfile(aim_session_t *sess, const char *sn, cons
 	aim_putsnac(&fr->data, 0x0004, 0x0006, 0x0000, snacid);
 
 	for (i = 0; i < 7; i++)
-		aimutil_put8(ck+i, 0x30 + ((fu8_t) rand() % 10));
+		aimutil_put8(ck+i, 0x30 + ((guint8) rand() % 10));
 	ck[7] = '\0';
 
 	if (ckret)
@@ -741,11 +740,11 @@ faim_internal int aim_request_sendfile(aim_session_t *sess, const char *sn, cons
  *        state of the user, as one of the AIM_ICQ_STATE_* defines.
  * @return Return 0 if no errors, otherwise return the error number.
  */
-faim_export int aim_send_im_ch2_geticqmessage(aim_session_t *sess, const char *sn, int type)
+int aim_send_im_ch2_geticqmessage(aim_session_t *sess, const char *sn, int type)
 {
 	aim_conn_t *conn;
 	int i;
-	fu8_t ck[8];
+	guint8 ck[8];
 	aim_frame_t *fr;
 	aim_snacid_t snacid;
 
@@ -753,7 +752,7 @@ faim_export int aim_send_im_ch2_geticqmessage(aim_session_t *sess, const char *s
 		return -EINVAL;
 
 	for (i = 0; i < 8; i++)
-		aimutil_put8(ck+i, (fu8_t) rand());
+		aimutil_put8(ck+i, (guint8) rand());
 
 	if (!(fr = aim_tx_new(sess, conn, AIM_FRAMETYPE_FLAP, 0x02, 10+8+2+1+strlen(sn) + 4+0x5e + 4)))
 		return -ENOMEM;
@@ -842,97 +841,18 @@ faim_export int aim_send_im_ch2_geticqmessage(aim_session_t *sess, const char *s
 	return 0;
 }
 
-/**
- * This can be used to send an ICQ authorization reply (deny or grant).  It is the "old way."  
- * The new way is to use SSI.  I like the new way a lot better.  This seems like such a hack, 
- * mostly because it's in network byte order.  Figuring this stuff out sometimes takes a while, 
- * but thats ok, because it gives me time to try to figure out what kind of drugs the AOL people 
- * were taking when they merged the two protocols.
- *
- * @param sn The destination screen name.
- * @param type The type of message.  0x0007 for authorization denied.  0x0008 for authorization granted.
- * @param message The message you want to send, it should be null terminated.
- * @return Return 0 if no errors, otherwise return the error number.
- */
-faim_export int aim_send_im_ch4(aim_session_t *sess, char *sn, fu16_t type, fu8_t *message)
-{
-	aim_conn_t *conn;
-	aim_frame_t *fr;
-	aim_snacid_t snacid;
-	int i;
-
-	if (!sess || !(conn = aim_conn_findbygroup(sess, 0x0002)))
-		return -EINVAL;
-
-	if (!sn || !type || !message)
-		return -EINVAL;
-
-	if (!(fr = aim_tx_new(sess, conn, AIM_FRAMETYPE_FLAP, 0x02, 10+8+3+strlen(sn)+12+strlen(message)+1+4)))
-		return -ENOMEM;
-
-	snacid = aim_cachesnac(sess, 0x0004, 0x0006, 0x0000, NULL, 0);
-	aim_putsnac(&fr->data, 0x0004, 0x0006, 0x0000, snacid);
-
-	/*
-	 * Cookie
-	 */
-	for (i=0; i<8; i++)
-		aimbs_put8(&fr->data, (fu8_t)rand());
-
-	/*
-	 * Channel (4)
-	 */
-	aimbs_put16(&fr->data, 0x0004);
-
-	/*
-	 * Dest sn
-	 */
-	aimbs_put8(&fr->data, strlen(sn));
-	aimbs_putraw(&fr->data, sn, strlen(sn));
-
-	/*
-	 * TLV t(0005)
-	 *
-	 * ICQ data (the UIN and the message).
-	 */
-	aimbs_put16(&fr->data, 0x0005);
-	aimbs_put16(&fr->data, 4 + 2+2+strlen(message)+1);
-
-	/*
-	 * Your UIN
-	 */
-	aimbs_putle32(&fr->data, atoi(sess->sn));
-
-	/*
-	 * TLV t(type) l(strlen(message)+1) v(message+NULL)
-	 */
-	aimbs_putle16(&fr->data, type);
-	aimbs_putle16(&fr->data, strlen(message)+1);
-	aimbs_putraw(&fr->data, message, strlen(message)+1);
-
-	/*
-	 * TLV t(0006) l(0000) v()
-	 */
-	aimbs_put16(&fr->data, 0x0006);
-	aimbs_put16(&fr->data, 0x0000);
-
-	aim_tx_enqueue(sess, fr);
-
-	return 0;
-}
-
 static int outgoingim(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, aim_modsnac_t *snac, aim_bstream_t *bs)
 {
 	int i, ret = 0;
 	aim_rxcallback_t userfunc;
-	fu8_t cookie[8];
-	fu16_t channel;
+	guint8 cookie[8];
+	guint16 channel;
 	aim_tlvlist_t *tlvlist;
 	char *sn;
 	int snlen;
-	fu16_t icbmflags = 0;
-	fu8_t flag1 = 0, flag2 = 0;
-	fu8_t *msg = NULL;
+	guint16 icbmflags = 0;
+	guint8 flag1 = 0, flag2 = 0;
+	guint8 *msg = NULL;
 	aim_tlv_t *msgblock;
 
 	/* ICBM Cookie. */
@@ -943,7 +863,7 @@ static int outgoingim(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, a
 	channel = aimbs_get16(bs);
 
 	if (channel != 0x01) {
-		faimdprintf(sess, 0, "icbm: ICBM recieved on unsupported channel.  Ignoring. (chan = %04x)\n", channel);
+		do_error_dialog(sess->aux_data, "icbm: ICBM recieved on unsupported channel.  Ignoring.", "Gaim");
 		return 0;
 	}
 
@@ -1024,7 +944,7 @@ static int outgoingim(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, a
  * know what you are doing, and/or you have something neat to do with it.
  *
  */
-faim_export int aim_mpmsg_init(aim_session_t *sess, aim_mpmsg_t *mpm)
+int aim_mpmsg_init(aim_session_t *sess, aim_mpmsg_t *mpm)
 {
 
 	memset(mpm, 0, sizeof(aim_mpmsg_t));
@@ -1032,7 +952,7 @@ faim_export int aim_mpmsg_init(aim_session_t *sess, aim_mpmsg_t *mpm)
 	return 0;
 }
 
-static int mpmsg_addsection(aim_session_t *sess, aim_mpmsg_t *mpm, fu16_t charset, fu16_t charsubset, fu8_t *data, fu16_t datalen)
+static int mpmsg_addsection(aim_session_t *sess, aim_mpmsg_t *mpm, guint16 charset, guint16 charsubset, guint8 *data, guint16 datalen)
 {
 	aim_mpmsg_section_t *sec; 
 	
@@ -1060,9 +980,9 @@ static int mpmsg_addsection(aim_session_t *sess, aim_mpmsg_t *mpm, fu16_t charse
 	return 0;
 }
 
-faim_export int aim_mpmsg_addraw(aim_session_t *sess, aim_mpmsg_t *mpm, fu16_t charset, fu16_t charsubset, const fu8_t *data, fu16_t datalen)
+int aim_mpmsg_addraw(aim_session_t *sess, aim_mpmsg_t *mpm, guint16 charset, guint16 charsubset, const guint8 *data, guint16 datalen)
 {
-	fu8_t *dup;
+	guint8 *dup;
 
 	if (!(dup = g_malloc(datalen)))
 		return -1;
@@ -1077,9 +997,9 @@ faim_export int aim_mpmsg_addraw(aim_session_t *sess, aim_mpmsg_t *mpm, fu16_t c
 }
 
 /* XXX should provide a way of saying ISO-8859-1 specifically */
-faim_export int aim_mpmsg_addascii(aim_session_t *sess, aim_mpmsg_t *mpm, const char *ascii)
+int aim_mpmsg_addascii(aim_session_t *sess, aim_mpmsg_t *mpm, const char *ascii)
 {
-	fu8_t *dup;
+	guint8 *dup;
 
 	if (!(dup = g_strdup(ascii))) 
 		return -1;
@@ -1092,9 +1012,9 @@ faim_export int aim_mpmsg_addascii(aim_session_t *sess, aim_mpmsg_t *mpm, const 
 	return 0;
 }
 
-faim_export int aim_mpmsg_addunicode(aim_session_t *sess, aim_mpmsg_t *mpm, const fu16_t *unicode, fu16_t unicodelen)
+int aim_mpmsg_addunicode(aim_session_t *sess, aim_mpmsg_t *mpm, const guint16 *unicode, guint16 unicodelen)
 {
-	fu8_t *buf;
+	guint8 *buf;
 	aim_bstream_t bs;
 	int i;
 
@@ -1115,7 +1035,7 @@ faim_export int aim_mpmsg_addunicode(aim_session_t *sess, aim_mpmsg_t *mpm, cons
 	return 0;
 }
 
-faim_export void aim_mpmsg_free(aim_session_t *sess, aim_mpmsg_t *mpm)
+void aim_mpmsg_free(aim_session_t *sess, aim_mpmsg_t *mpm)
 {
 	aim_mpmsg_section_t *cur;
 
@@ -1140,9 +1060,9 @@ faim_export void aim_mpmsg_free(aim_session_t *sess, aim_mpmsg_t *mpm)
  * suspicious.
  *
  */
-static int incomingim_ch1_parsemsgs(aim_session_t *sess, fu8_t *data, int len, struct aim_incomingim_ch1_args *args)
+static int incomingim_ch1_parsemsgs(aim_session_t *sess, guint8 *data, int len, struct aim_incomingim_ch1_args *args)
 {
-	static const fu16_t charsetpri[] = {
+	static const guint16 charsetpri[] = {
 		0x0000, /* ASCII first */
 		0x0003, /* then ISO-8859-1 */
 		0x0002, /* UNICODE as last resort */
@@ -1155,8 +1075,8 @@ static int incomingim_ch1_parsemsgs(aim_session_t *sess, fu8_t *data, int len, s
 	aim_bstream_init(&mbs, data, len);
 
 	while (aim_bstream_empty(&mbs)) {
-		fu16_t msglen, flag1, flag2;
-		fu8_t *msgbuf;
+		guint16 msglen, flag1, flag2;
+		guint8 *msgbuf;
 
 		aimbs_get8(&mbs); /* 01 */
 		aimbs_get8(&mbs); /* 01 */
@@ -1258,9 +1178,9 @@ static int incomingim_ch1_parsemsgs(aim_session_t *sess, fu8_t *data, int len, s
 	return 0;
 }
 
-static int incomingim_ch1(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, aim_modsnac_t *snac, fu16_t channel, aim_userinfo_t *userinfo, aim_bstream_t *bs, fu8_t *cookie)
+static int incomingim_ch1(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, aim_modsnac_t *snac, guint16 channel, aim_userinfo_t *userinfo, aim_bstream_t *bs, guint8 *cookie)
 {
-	fu16_t type, length;
+	guint16 type, length;
 	aim_rxcallback_t userfunc;
 	int ret = 0;
 	struct aim_incomingim_ch1_args args;
@@ -1351,7 +1271,7 @@ static int incomingim_ch1(aim_session_t *sess, aim_module_t *mod, aim_frame_t *r
 			args.extdata = aimbs_getraw(bs, args.extdatalen);
 
 		} else {
-			faimdprintf(sess, 0, "incomingim_ch1: unknown TLV 0x%04x (len %d)\n", type, length);
+			// do_error_dialog(sess->aux_data, "Unknown TLV encountered", "Gaim");
 		}
 
 		/*
@@ -1398,7 +1318,7 @@ static void incomingim_ch2_buddylist(aim_session_t *sess, aim_module_t *mod, aim
 	 *   ...
 	 */
 	while (servdata && aim_bstream_empty(servdata)) {
-		fu16_t gnlen, numb;
+		guint16 gnlen, numb;
 		int i;
 		char *gn;
 
@@ -1407,13 +1327,11 @@ static void incomingim_ch2_buddylist(aim_session_t *sess, aim_module_t *mod, aim
 		numb = aimbs_get16(servdata);
 
 		for (i = 0; i < numb; i++) {
-			fu16_t bnlen;
+			guint16 bnlen;
 			char *bn;
 
 			bnlen = aimbs_get16(servdata);
 			bn = aimbs_getstr(servdata, bnlen);
-
-			faimdprintf(sess, 0, "got a buddy list from %s: group %s, buddy %s\n", userinfo->sn, gn, bn);
 
 			g_free(bn);
 		}
@@ -1488,8 +1406,8 @@ static void incomingim_ch2_icqserverrelay_free(aim_session_t *sess, struct aim_i
  */
 static void incomingim_ch2_icqserverrelay(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, aim_modsnac_t *snac, aim_userinfo_t *userinfo, struct aim_incomingim_ch2_args *args, aim_bstream_t *servdata)
 {
-	fu16_t hdrlen, anslen, msglen;
-	fu16_t msgtype;
+	guint16 hdrlen, anslen, msglen;
+	guint16 msgtype;
 
 	hdrlen = aimbs_getle16(servdata);
 	aim_bstream_advance(servdata, hdrlen);
@@ -1521,14 +1439,14 @@ static void incomingim_ch2_icqserverrelay(aim_session_t *sess, aim_module_t *mod
 
 typedef void (*ch2_args_destructor_t)(aim_session_t *sess, struct aim_incomingim_ch2_args *args);
 
-static int incomingim_ch2(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, aim_modsnac_t *snac, fu16_t channel, aim_userinfo_t *userinfo, aim_tlvlist_t *tlvlist, fu8_t *cookie)
+static int incomingim_ch2(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, aim_modsnac_t *snac, guint16 channel, aim_userinfo_t *userinfo, aim_tlvlist_t *tlvlist, guint8 *cookie)
 {
 	aim_rxcallback_t userfunc;
 	aim_tlv_t *block1, *servdatatlv;
 	aim_tlvlist_t *list2;
 	struct aim_incomingim_ch2_args args;
 	aim_bstream_t bbs, sdbs, *sdbsptr = NULL;
-	fu8_t *cookie2;
+	guint8 *cookie2;
 	int ret = 0;
 
 	char clientip1[30] = {""};
@@ -1555,7 +1473,7 @@ static int incomingim_ch2(aim_session_t *sess, aim_module_t *mod, aim_frame_t *r
 	 */
 	cookie2 = aimbs_getraw(&bbs, 8);
 	if (memcmp(cookie, cookie2, 8) != 0) 
-		faimdprintf(sess, 0, "rend: warning cookies don't match!\n");
+		do_error_dialog(sess->aux_data, "rend: warning cookies don't match!", "Gaim");
 	memcpy(args.cookie, cookie2, 8);
 	g_free(cookie2);
 
@@ -1708,7 +1626,7 @@ static int incomingim_ch2(aim_session_t *sess, aim_module_t *mod, aim_frame_t *r
 	return ret;
 }
 
-static int incomingim_ch4(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, aim_modsnac_t *snac, fu16_t channel, aim_userinfo_t *userinfo, aim_tlvlist_t *tlvlist, fu8_t *cookie)
+static int incomingim_ch4(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, aim_modsnac_t *snac, guint16 channel, aim_userinfo_t *userinfo, aim_tlvlist_t *tlvlist, guint8 *cookie)
 {
 	aim_bstream_t meat;
 	aim_rxcallback_t userfunc;
@@ -1749,8 +1667,8 @@ static int incomingim_ch4(aim_session_t *sess, aim_module_t *mod, aim_frame_t *r
 static int incomingim(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, aim_modsnac_t *snac, aim_bstream_t *bs)
 {
 	int i, ret = 0;
-	fu8_t cookie[8];
-	fu16_t channel;
+	guint8 cookie[8];
+	guint16 channel;
 	aim_userinfo_t userinfo;
 
 	memset(&userinfo, 0x00, sizeof(aim_userinfo_t));
@@ -1830,7 +1748,7 @@ static int incomingim(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, a
 
 	} else {
 
-		faimdprintf(sess, 0, "icbm: ICBM received on an unsupported channel.  Ignoring.\n (chan = %04x)", channel);
+		do_error_dialog(sess->aux_data, "ICBM received on an unsupported channel.  Ignoring.", "Gaim");
 
 		return 0;
 	}
@@ -1845,7 +1763,7 @@ static int incomingim(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, a
  *    AIM_TRANSFER_DENY_NOTACCEPTING -- "client is not accepting transfers"
  * 
  */
-faim_export int aim_denytransfer(aim_session_t *sess, const char *sender, const char *cookie, fu16_t code)
+int aim_denytransfer(aim_session_t *sess, const char *sender, const char *cookie, guint16 code)
 {
 	aim_conn_t *conn;
 	aim_frame_t *fr;
@@ -1882,7 +1800,7 @@ faim_export int aim_denytransfer(aim_session_t *sess, const char *sender, const 
  * Request ICBM parameter information.
  *
  */
-faim_export int aim_reqicbmparams(aim_session_t *sess)
+int aim_reqicbmparams(aim_session_t *sess)
 {
 	aim_conn_t *conn;
 
@@ -1898,7 +1816,7 @@ faim_export int aim_reqicbmparams(aim_session_t *sess)
  * with the rather unreasonable defaults.  You don't want those.  Send this.
  * 
  */
-faim_export int aim_seticbmparam(aim_session_t *sess, struct aim_icbmparameters *params)
+int aim_seticbmparam(aim_session_t *sess, struct aim_icbmparameters *params)
 {
 	aim_conn_t *conn;
 	aim_frame_t *fr;
@@ -1953,7 +1871,7 @@ static int missedcall(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, a
 {
 	int ret = 0;
 	aim_rxcallback_t userfunc;
-	fu16_t channel, nummissed, reason;
+	guint16 channel, nummissed, reason;
 	aim_userinfo_t userinfo;
 
 	while (aim_bstream_empty(bs)) {	
@@ -1978,9 +1896,9 @@ static int clientautoresp(aim_session_t *sess, aim_module_t *mod, aim_frame_t *r
 {
 	int ret = 0;
 	aim_rxcallback_t userfunc;
-	fu16_t channel, reason;
+	guint16 channel, reason;
 	char *sn;
-	fu8_t *ck, snlen;
+	guint8 *ck, snlen;
 
 	ck = aimbs_getraw(bs, 8);
 	channel = aimbs_get16(bs);
@@ -1990,9 +1908,9 @@ static int clientautoresp(aim_session_t *sess, aim_module_t *mod, aim_frame_t *r
 
 	switch (reason) {
 		case 0x0003: { /* ICQ status message.  Maybe other stuff too, you never know with these people. */
-			fu8_t statusmsgtype, *msg;
-			fu16_t len;
-			fu32_t state;
+			guint8 statusmsgtype, *msg;
+			guint16 len;
+			guint32 state;
 
 			len = aimbs_getle16(bs); /* Should be 0x001b */
 			aim_bstream_advance(bs, len); /* Unknown */
@@ -2050,8 +1968,8 @@ static int clientautoresp(aim_session_t *sess, aim_module_t *mod, aim_frame_t *r
 static int msgack(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, aim_modsnac_t *snac, aim_bstream_t *bs)
 {
 	aim_rxcallback_t userfunc;
-	fu16_t type;
-	fu8_t snlen, *ck;
+	guint16 type;
+	guint8 snlen, *ck;
 	char *sn;
 	int ret = 0;
 
@@ -2088,13 +2006,13 @@ static int snachandler(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, 
 	return 0;
 }
 
-faim_internal int msg_modfirst(aim_session_t *sess, aim_module_t *mod)
+int msg_modfirst(aim_session_t *sess, aim_module_t *mod)
 {
 
 	mod->family = 0x0004;
 	mod->version = 0x0001;
 	mod->toolid = 0x0110;
-	mod->toolversion = 0x047b;
+	mod->toolversion = 0x0629;
 	mod->flags = 0;
 	strncpy(mod->name, "messaging", sizeof(mod->name));
 	mod->snachandler = snachandler;

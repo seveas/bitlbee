@@ -6,10 +6,11 @@
  *
  */
 
-#define FAIM_INTERNAL
 #define FAIM_NEED_CONN_INTERNAL
 #include <aim.h> 
 #include "sock.h"
+
+static int aim_logoff(aim_session_t *sess);
 
 /*
  * In OSCAR, every connection has a set of SNAC groups associated
@@ -66,7 +67,7 @@
  * about such inane things.
  *
  */
-faim_internal void aim_conn_addgroup(aim_conn_t *conn, fu16_t group)
+void aim_conn_addgroup(aim_conn_t *conn, guint16 group)
 {
 	aim_conn_inside_t *ins = (aim_conn_inside_t *)conn->inside;
 	struct snacgroup *sg;
@@ -74,7 +75,6 @@ faim_internal void aim_conn_addgroup(aim_conn_t *conn, fu16_t group)
 	if (!(sg = g_malloc(sizeof(struct snacgroup))))
 		return;
 
-	faimdprintf(aim_conn_getsess(conn), 1, "adding group 0x%04x\n", group);
 	sg->group = group;
 
 	sg->next = ins->groups;
@@ -83,7 +83,7 @@ faim_internal void aim_conn_addgroup(aim_conn_t *conn, fu16_t group)
 	return;
 }
 
-faim_export aim_conn_t *aim_conn_findbygroup(aim_session_t *sess, fu16_t group)
+aim_conn_t *aim_conn_findbygroup(aim_session_t *sess, guint16 group)
 {
 	aim_conn_t *cur;
 
@@ -272,7 +272,7 @@ static aim_conn_t *aim_conn_getnext(aim_session_t *sess)
  * called from within libfaim.
  *
  */
-faim_export void aim_conn_kill(aim_session_t *sess, aim_conn_t **deadconn)
+void aim_conn_kill(aim_session_t *sess, aim_conn_t **deadconn)
 {
 	aim_conn_t *cur, **prev;
 
@@ -306,7 +306,7 @@ faim_export void aim_conn_kill(aim_session_t *sess, aim_conn_t **deadconn)
  * dead connections).  It will also remove cookies if necessary.
  *
  */
-faim_export void aim_conn_close(aim_conn_t *deadconn)
+void aim_conn_close(aim_conn_t *deadconn)
 {
 
 	if (deadconn->fd >= 3)
@@ -332,7 +332,7 @@ faim_export void aim_conn_close(aim_conn_t *deadconn)
  * XXX except for RENDEZVOUS, all uses of this should be removed and
  * use aim_conn_findbygroup() instead.
  */
-faim_export aim_conn_t *aim_getconn_type(aim_session_t *sess, int type)
+aim_conn_t *aim_getconn_type(aim_session_t *sess, int type)
 {
 	aim_conn_t *cur;
 
@@ -345,7 +345,7 @@ faim_export aim_conn_t *aim_getconn_type(aim_session_t *sess, int type)
 	return cur;
 }
 
-faim_export aim_conn_t *aim_getconn_type_all(aim_session_t *sess, int type)
+aim_conn_t *aim_getconn_type_all(aim_session_t *sess, int type)
 {
 	aim_conn_t *cur;
 
@@ -355,185 +355,6 @@ faim_export aim_conn_t *aim_getconn_type_all(aim_session_t *sess, int type)
 	}
 
 	return cur;
-}
-
-/**
- * aim_proxyconnect - An extrememly quick and dirty SOCKS5 interface. 
- * @sess: Session to connect
- * @host: Host to connect to
- * @port: Port to connect to
- * @statusret: Return value of the connection
- *
- * Attempts to connect to the specified host via the configured
- * proxy settings, if present.  If no proxy is configured for
- * this session, the connection is done directly.
- *
- * XXX this is really awful.
- *
- */
-static int aim_proxyconnect(aim_session_t *sess, const char *host, fu16_t port, fu32_t *statusret)
-{
-	int fd = -1;
-
-	if (strlen(sess->socksproxy.server)) { /* connecting via proxy */
-		int i;
-		unsigned char buf[512];
-		struct sockaddr_in sa;
-		struct hostent *hp;
-		char *proxy;
-		unsigned short proxyport = 1080;
-
-		for(i=0;i<(int)strlen(sess->socksproxy.server);i++) {
-			if (sess->socksproxy.server[i] == ':') {
-				proxyport = atoi(&(sess->socksproxy.server[i+1]));
-				break;
-			}
-		}
-
-		proxy = (char *)g_malloc(i+1);
-		strncpy(proxy, sess->socksproxy.server, i);
-		proxy[i] = '\0';
-
-		if (!(hp = gethostbyname(proxy))) {
-			faimdprintf(sess, 0, "proxyconnect: unable to resolve proxy name\n");
-			*statusret = (h_errno | AIM_CONN_STATUS_RESOLVERR);
-			return -1;
-		}
-		g_free(proxy);
-
-		memset(&sa.sin_zero, 0, 8);
-		sa.sin_port = htons(proxyport);
-		memcpy(&sa.sin_addr, hp->h_addr, hp->h_length);
-		sa.sin_family = hp->h_addrtype;
-
-		fd = socket(hp->h_addrtype, SOCK_STREAM, 0);
-		if (connect(fd, (struct sockaddr *)&sa, sizeof(struct sockaddr_in)) < 0) {
-			faimdprintf(sess, 0, "proxyconnect: unable to connect to proxy\n");
-			closesocket(fd);
-			return -1;
-		}
-
-		i = 0;
-		buf[0] = 0x05; /* SOCKS version 5 */
-		if (strlen(sess->socksproxy.username)) {
-			buf[1] = 0x02; /* two methods */
-			buf[2] = 0x00; /* no authentication */
-			buf[3] = 0x02; /* username/password authentication */
-			i = 4;
-		} else {
-			buf[1] = 0x01;
-			buf[2] = 0x00;
-			i = 3;
-		}
-
-		if (write(fd, buf, i) < i) {
-			*statusret = errno;
-			closesocket(fd);
-			return -1;
-		}
-
-		if (read(fd, buf, 2) < 2) {
-			*statusret = errno;
-			closesocket(fd);
-			return -1;
-		}
-
-		if ((buf[0] != 0x05) || (buf[1] == 0xff)) {
-			*statusret = EINVAL;
-			closesocket(fd);
-			return -1;
-		}
-
-		/* check if we're doing username authentication */
-		if (buf[1] == 0x02) {
-			i  = aimutil_put8(buf, 0x01); /* version 1 */
-			i += aimutil_put8(buf+i, strlen(sess->socksproxy.username));
-			i += aimutil_putstr(buf+i, sess->socksproxy.username, strlen(sess->socksproxy.username));
-			i += aimutil_put8(buf+i, strlen(sess->socksproxy.password));
-			i += aimutil_putstr(buf+i, sess->socksproxy.password, strlen(sess->socksproxy.password));
-			if (write(fd, buf, i) < i) {
-				*statusret = errno;
-				closesocket(fd);
-				return -1;
-			}
-			if (read(fd, buf, 2) < 2) {
-				*statusret = errno;
-				closesocket(fd);
-				return -1;
-			}
-			if ((buf[0] != 0x01) || (buf[1] != 0x00)) {
-				*statusret = EINVAL;
-				closesocket(fd);
-				return -1;
-			}
-		}
-
-		i  = aimutil_put8(buf, 0x05);
-		i += aimutil_put8(buf+i, 0x01); /* CONNECT */
-		i += aimutil_put8(buf+i, 0x00); /* reserved */
-		i += aimutil_put8(buf+i, 0x03); /* address type: host name */
-		i += aimutil_put8(buf+i, strlen(host));
-		i += aimutil_putstr(buf+i, host, strlen(host));
-		i += aimutil_put16(buf+i, port);
-
-		if (write(fd, buf, i) < i) {
-			*statusret = errno;
-			closesocket(fd);
-			return -1;
-		}
-		if (read(fd, buf, 10) < 10) {
-			*statusret = errno;
-			closesocket(fd);
-			return -1;
-		}
-		if ((buf[0] != 0x05) || (buf[1] != 0x00)) {
-			*statusret = EINVAL;
-			closesocket(fd);
-			return -1;
-		}
-
-	} else { /* connecting directly */
-		struct sockaddr_in sa;
-		struct hostent *hp;
-
-		if (!(hp = gethostbyname(host))) {
-			*statusret = (h_errno | AIM_CONN_STATUS_RESOLVERR);
-			return -1;
-		}
-
-		memset(&sa, 0, sizeof(struct sockaddr_in));
-		sa.sin_port = htons(port);
-		memcpy(&sa.sin_addr, hp->h_addr, hp->h_length);
-		sa.sin_family = hp->h_addrtype;
-
-		fd = socket(hp->h_addrtype, SOCK_STREAM, 0);
-
-		if (sess->flags & AIM_SESS_FLAGS_NONBLOCKCONNECT) {
-#ifdef _WIN32
-			int non_block = 1;
-			ioctlsocket(fd, FIONBIO, &non_block);
-#else
-			fcntl(fd, F_SETFL, O_NONBLOCK); /* XXX save flags */
-#endif
-		}
-
-		if (connect(fd, (struct sockaddr *)&sa, sizeof(struct sockaddr_in)) < 0) {
-			if (sess->flags & AIM_SESS_FLAGS_NONBLOCKCONNECT) {
-#ifdef _WIN32
-				if(WSAGetLastError() == WSAEINPROGRESS) {
-#else
-				if (sockerr_again()) {
-#endif
-					if (statusret)
-						*statusret |= AIM_CONN_STATUS_INPROGRESS;
-					return fd;
-				}
-			}
-			closesocket(fd);
-			fd = -1;
-		}
-	}
-	return fd;
 }
 
 /**
@@ -549,7 +370,7 @@ static int aim_proxyconnect(aim_session_t *sess, const char *host, fu16_t port, 
  * This function returns a pointer to the new aim_conn_t, or %NULL on
  * error
  */
-faim_internal aim_conn_t *aim_cloneconn(aim_session_t *sess, aim_conn_t *src)
+aim_conn_t *aim_cloneconn(aim_session_t *sess, aim_conn_t *src)
 {
 	aim_conn_t *conn;
 
@@ -594,12 +415,12 @@ faim_internal aim_conn_t *aim_cloneconn(aim_session_t *sess, aim_conn_t *src)
  * FIXME: Return errors in a more sane way.
  *
  */
-faim_export aim_conn_t *aim_newconn(aim_session_t *sess, int type, const char *dest)
+aim_conn_t *aim_newconn(aim_session_t *sess, int type, const char *dest)
 {
 	aim_conn_t *connstruct;
-	fu16_t port = FAIM_LOGIN_PORT;
+	guint16 port = FAIM_LOGIN_PORT;
 	char *host;
-	int i, ret;
+	int i;
 
 	if (!(connstruct = aim_conn_getnext(sess)))
 		return NULL;
@@ -633,13 +454,7 @@ faim_export aim_conn_t *aim_newconn(aim_session_t *sess, int type, const char *d
 	strncpy(host, dest, i);
 	host[i] = '\0';
 
-	if ((ret = aim_proxyconnect(sess, host, port, &connstruct->status)) < 0) {
-		connstruct->fd = -1;
-		connstruct->status = (errno | AIM_CONN_STATUS_CONNERR);
-		g_free(host);
-		return connstruct;
-	} else
-		connstruct->fd = ret;
+	connstruct->fd = proxy_connect(host, port, NULL, NULL);
 
 	g_free(host);
 
@@ -660,7 +475,7 @@ faim_export aim_conn_t *aim_newconn(aim_session_t *sess, int type, const char *d
  * backs off like the real rate limiting does.
  *
  */
-faim_export int aim_conn_setlatency(aim_conn_t *conn, int newval)
+int aim_conn_setlatency(aim_conn_t *conn, int newval)
 {
 
 	if (!conn)
@@ -673,47 +488,6 @@ faim_export int aim_conn_setlatency(aim_conn_t *conn, int newval)
 }
 
 /**
- * aim_setupproxy - Configure a proxy for this session
- * @sess: Session to set proxy for
- * @server: SOCKS server
- * @username: SOCKS username
- * @password: SOCKS password
- *
- * Call this with your SOCKS5 proxy server parameters before
- * the first call to aim_newconn().  If called with all %NULL
- * args, it will clear out a previously set proxy.  
- *
- * Set username and password to %NULL if not applicable.
- *
- */
-faim_export void aim_setupproxy(aim_session_t *sess, const char *server, const char *username, const char *password)
-{
-	/* clear out the proxy info */
-	if (!server || !strlen(server)) {
-		memset(sess->socksproxy.server, 0, sizeof(sess->socksproxy.server));
-		memset(sess->socksproxy.username, 0, sizeof(sess->socksproxy.username));
-		memset(sess->socksproxy.password, 0, sizeof(sess->socksproxy.password));
-		return;
-	}
-
-	strncpy(sess->socksproxy.server, server, sizeof(sess->socksproxy.server));
-	if (username && strlen(username)) 
-		strncpy(sess->socksproxy.username, username, sizeof(sess->socksproxy.username));
-	if (password && strlen(password))
-		strncpy(sess->socksproxy.password, password, sizeof(sess->socksproxy.password));
-
-	return;
-}
-
-static void defaultdebugcb(aim_session_t *sess, int level, const char *format, va_list va)
-{
-
-	vfprintf(stderr, format, va);
-
-	return;
-}
-
-/**
  * aim_session_init - Initializes a session structure
  * @sess: Session to initialize
  * @flags: Flags to use. Any of %AIM_SESS_FLAGS %OR'd together.
@@ -722,7 +496,7 @@ static void defaultdebugcb(aim_session_t *sess, int level, const char *format, v
  * Sets up the initial values for a session.
  *
  */
-faim_export void aim_session_init(aim_session_t *sess, fu32_t flags, int debuglevel)
+void aim_session_init(aim_session_t *sess, guint32 flags, int debuglevel)
 {
 
 	if (!sess)
@@ -737,8 +511,6 @@ faim_export void aim_session_init(aim_session_t *sess, fu32_t flags, int debugle
 	sess->snacid_next = 0x00000001;
 
 	sess->flags = 0;
-	sess->debug = debuglevel;
-	sess->debugcb = defaultdebugcb;
 
 	sess->modlistv = NULL;
 
@@ -748,6 +520,17 @@ faim_export void aim_session_init(aim_session_t *sess, fu32_t flags, int debugle
 	sess->ssi.revision = 0;
 	sess->ssi.items = NULL;
 	sess->ssi.timestamp = (time_t)0;
+
+	sess->locate.userinfo = NULL;
+	sess->locate.torequest = NULL;
+	sess->locate.requested = NULL;
+	sess->locate.waiting_for_response = FALSE;
+
+	sess->icq_info = NULL;
+	sess->authinfo = NULL;
+	sess->emailinfo = NULL;
+	sess->oft_info = NULL;
+
 
 	/*
 	 * Default to SNAC login unless XORLOGIN is explicitly set.
@@ -772,7 +555,6 @@ faim_export void aim_session_init(aim_session_t *sess, fu32_t flags, int debugle
 	aim__registermodule(sess, buddylist_modfirst);
 	aim__registermodule(sess, msg_modfirst);
 	aim__registermodule(sess, admin_modfirst);
-	aim__registermodule(sess, popups_modfirst);
 	aim__registermodule(sess, bos_modfirst);
 	aim__registermodule(sess, search_modfirst);
 	aim__registermodule(sess, stats_modfirst);
@@ -793,7 +575,7 @@ faim_export void aim_session_init(aim_session_t *sess, fu32_t flags, int debugle
  * @sess: Session to kill
  *
  */
-faim_export void aim_session_kill(aim_session_t *sess)
+void aim_session_kill(aim_session_t *sess)
 {
 	aim_cleansnacs(sess, -1);
 
@@ -804,31 +586,10 @@ faim_export void aim_session_kill(aim_session_t *sess)
 	return;
 }
 
-/**
- * aim_setdebuggingcb - Set the function to call when outputting debugging info
- * @sess: Session to change
- * @cb: Function to call
- *
- * The function specified is called whenever faimdprintf() is used within
- * libfaim, and the session's debugging level is greater tha nor equal to
- * the value faimdprintf was called with.
- *
- */
-faim_export int aim_setdebuggingcb(aim_session_t *sess, faim_debugging_callback_t cb)
-{
-
-	if (!sess)
-		return -1;
-
-	sess->debugcb = cb;
-
-	return 0;
-}
-
 /*
  * XXX this is nearly as ugly as proxyconnect().
  */
-faim_export int aim_conn_completeconnect(aim_session_t *sess, aim_conn_t *conn)
+int aim_conn_completeconnect(aim_session_t *sess, aim_conn_t *conn)
 {
 	fd_set fds, wfds;
 	struct timeval tv;
@@ -854,7 +615,6 @@ faim_export int aim_conn_completeconnect(aim_session_t *sess, aim_conn_t *conn)
 		errno = error;
 		return -1;
 	} else if (res == 0) {
-		faimdprintf(sess, 0, "aim_conn_completeconnect: false alarm on %d\n", conn->fd);
 		return 0; /* hasn't really completed yet... */
 	} 
 
@@ -886,7 +646,7 @@ faim_export int aim_conn_completeconnect(aim_session_t *sess, aim_conn_t *conn)
 	return 0;
 }
 
-faim_export aim_session_t *aim_conn_getsess(aim_conn_t *conn)
+aim_session_t *aim_conn_getsess(aim_conn_t *conn)
 {
 
 	if (!conn)
@@ -901,7 +661,7 @@ faim_export aim_session_t *aim_conn_getsess(aim_conn_t *conn)
  * Closes -ALL- open connections.
  *
  */
-int aim_logoff(aim_session_t *sess)
+static int aim_logoff(aim_session_t *sess)
 {
 
 	aim_connrst(sess);  /* in case we want to connect again */
@@ -916,7 +676,7 @@ int aim_logoff(aim_session_t *sess)
  * No-op.  WinAIM 4.x sends these _every minute_ to keep
  * the connection alive.  
  */
-faim_export int aim_flap_nop(aim_session_t *sess, aim_conn_t *conn)
+int aim_flap_nop(aim_session_t *sess, aim_conn_t *conn)
 {
 	aim_frame_t *fr;
 

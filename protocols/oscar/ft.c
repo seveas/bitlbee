@@ -3,8 +3,6 @@
  * (OSCAR File Transfer, Oscar Direct Connect(ion?)
  */
 
-#define FAIM_INTERNAL
-
 #ifdef HAVE_CONFIG_H
 #include <config.h>
 #endif
@@ -25,12 +23,12 @@
 */
 
 struct aim_directim_intdata {
-	fu8_t cookie[8];
+	guint8 cookie[8];
 	char sn[MAXSNLEN+1];
 	char ip[22];
 };
 
-static int listenestablish(fu16_t portnum);
+static int listenestablish(guint16 portnum);
  
 /**
  * aim_handlerendconnect - call this to accept OFT connections and set up the required structures
@@ -43,7 +41,7 @@ static int listenestablish(fu16_t portnum);
  * listener conn are both returned to the client in the
  * %AIM_CB_FAM_OFT, %AIM_CB_OFT_<CLASS>INITIATE callback.
  */
-faim_export int aim_handlerendconnect(aim_session_t *sess, aim_conn_t *cur)
+int aim_handlerendconnect(aim_session_t *sess, aim_conn_t *cur)
 { 
 	int acceptfd = 0;
 	struct sockaddr cliaddr;
@@ -99,7 +97,7 @@ faim_export int aim_handlerendconnect(aim_session_t *sess, aim_conn_t *cur)
 			ret = userfunc(sess, NULL, newconn, cur);
 #endif
 	} else { 
-		faimdprintf(sess, 1,"Got a Connection on a listener that's not Rendezvous Closing conn.\n");
+		do_error_dialog(sess->aux_data, "Got a Connection on a listener that's not Rendezvous Closing conn.", "Gaim");
 		aim_conn_close(newconn);
 		ret = -1;
 	}
@@ -115,7 +113,7 @@ faim_export int aim_handlerendconnect(aim_session_t *sess, aim_conn_t *cur)
  *
  * The connection must have been previously established.
  */
-faim_export int aim_send_typing(aim_session_t *sess, aim_conn_t *conn, int typing)
+int aim_send_typing(aim_session_t *sess, aim_conn_t *conn, int typing)
 {
 	
 struct aim_directim_intdata *intdata = (struct aim_directim_intdata *)conn->internal;
@@ -187,7 +185,7 @@ struct aim_directim_intdata *intdata = (struct aim_directim_intdata *)conn->inte
  * Call this just like you would aim_send_im, to send a directim. You
  * _must_ have previously established the directim connection.
  */
-faim_export int aim_send_im_direct(aim_session_t *sess, aim_conn_t *conn, const char *msg, int len)
+int aim_send_im_direct(aim_session_t *sess, aim_conn_t *conn, const char *msg, int len)
 {
 	struct aim_directim_intdata *intdata = (struct aim_directim_intdata *)conn->internal;
 	aim_frame_t *fr;
@@ -260,7 +258,7 @@ faim_export int aim_send_im_direct(aim_session_t *sess, aim_conn_t *conn, const 
 	return 0;
 } 
 
-static int getlocalip(fu8_t *ip)
+static int getlocalip(guint8 *ip)
 {
 	struct hostent *hptr;
 	char localhost[129];
@@ -287,15 +285,15 @@ static int getlocalip(fu8_t *ip)
  * @destsn: the SN to connect to.
  *
  */
-faim_export aim_conn_t *aim_directim_initiate(aim_session_t *sess, const char *destsn)
+aim_conn_t *aim_directim_initiate(aim_session_t *sess, const char *destsn)
 { 
 	aim_conn_t *newconn;
 	aim_msgcookie_t *cookie;
 	struct aim_directim_intdata *priv;
 	int listenfd;
-	fu16_t port = 4443;
-	fu8_t localip[4];
-	fu8_t ck[8];
+	guint16 port = 4443;
+	guint8 localip[4];
+	guint8 ck[8];
 
 	if (getlocalip(localip) == -1)
 		return NULL;
@@ -334,8 +332,6 @@ faim_export aim_conn_t *aim_directim_initiate(aim_session_t *sess, const char *d
 	newconn->internal = priv;
 	newconn->lastactivity = time(NULL);
 
-	faimdprintf(sess, 2,"faim: listening (fd = %d, unconnected)\n", newconn->fd);
-
 	return newconn;
 }
 
@@ -347,15 +343,15 @@ faim_export aim_conn_t *aim_directim_initiate(aim_session_t *sess, const char *d
  * @filename: the name of the files you want to send
  *
  */
-faim_export aim_conn_t *aim_sendfile_initiate(aim_session_t *sess, const char *destsn, const char *filename, fu16_t numfiles, fu32_t totsize)
+aim_conn_t *aim_sendfile_initiate(aim_session_t *sess, const char *destsn, const char *filename, guint16 numfiles, guint32 totsize)
 { 
 	aim_conn_t *newconn;
 	aim_msgcookie_t *cookie;
 	struct aim_directim_intdata *priv;
 	int listenfd;
-	fu16_t port = 4443;
-	fu8_t localip[4];
-	fu8_t ck[8];
+	guint16 port = 4443;
+	guint8 localip[4];
+	guint8 ck[8];
 
 	if (getlocalip(localip) == -1)
 		return NULL;
@@ -394,8 +390,6 @@ faim_export aim_conn_t *aim_sendfile_initiate(aim_session_t *sess, const char *d
 	newconn->internal = priv;
 	newconn->lastactivity = time(NULL);
 
-	faimdprintf(sess, 2,"faim: listening (fd = %d, unconnected)\n", newconn->fd);
-
 	return newconn;
 }
 
@@ -407,7 +401,7 @@ faim_export aim_conn_t *aim_sendfile_initiate(aim_session_t *sess, const char *d
  *
  * returns number closed, -1 on error.
  */
-faim_export unsigned int aim_oft_listener_clean(struct aim_session_t *sess, time_t age) 
+unsigned int aim_oft_listener_clean(struct aim_session_t *sess, time_t age) 
 { 
   struct aim_conn_t *cur;
   time_t now;
@@ -432,7 +426,7 @@ faim_export unsigned int aim_oft_listener_clean(struct aim_session_t *sess, time
 } 
 #endif 
 
-faim_export const char *aim_directim_getsn(aim_conn_t *conn)
+const char *aim_directim_getsn(aim_conn_t *conn)
 {
 	struct aim_directim_intdata *intdata;
 
@@ -463,7 +457,7 @@ faim_export const char *aim_directim_getsn(aim_conn_t *conn)
  * allocated and setup to connect.
  *
  */
-faim_export aim_conn_t *aim_directim_connect(aim_session_t *sess, const char *sn, const char *addr, const fu8_t *cookie)
+aim_conn_t *aim_directim_connect(aim_session_t *sess, const char *sn, const char *addr, const guint8 *cookie)
 { 
 	aim_conn_t *newconn;
 	struct aim_directim_intdata *intdata;
@@ -505,7 +499,7 @@ faim_export aim_conn_t *aim_directim_connect(aim_session_t *sess, const char *sn
  * returns conn for directim with name, %NULL if none found. 
  *
  */
-faim_export aim_conn_t *aim_directim_getconn(aim_session_t *sess, const char *name)
+aim_conn_t *aim_directim_getconn(aim_session_t *sess, const char *name)
 {
 	aim_conn_t *cur;
 
@@ -544,15 +538,15 @@ faim_export aim_conn_t *aim_directim_getconn(aim_session_t *sess, const char *na
  *
  * XXX this should take a struct.
  */
-faim_export aim_conn_t *aim_accepttransfer(aim_session_t *sess, 
+aim_conn_t *aim_accepttransfer(aim_session_t *sess, 
 						  aim_conn_t *conn, 
-						  const char *sn, const fu8_t *cookie, 
-						  const fu8_t *ip, 
-						  fu16_t listingfiles, 
-						  fu16_t listingtotsize, 
-						  fu16_t listingsize, 
-						  fu32_t listingchecksum, 
-						  fu16_t rendid)
+						  const char *sn, const guint8 *cookie, 
+						  const guint8 *ip, 
+						  guint16 listingfiles, 
+						  guint16 listingtotsize, 
+						  guint16 listingsize, 
+						  guint32 listingchecksum, 
+						  guint16 rendid)
 {
        return NULL;	
 #if 0
@@ -713,7 +707,7 @@ faim_export aim_conn_t *aim_accepttransfer(aim_session_t *sess,
  * guess.
  *
  */
-faim_export struct aim_fileheader_t *aim_getlisting(aim_session_t *sess, FILE *file) 
+struct aim_fileheader_t *aim_getlisting(aim_session_t *sess, FILE *file) 
 {
 	return NULL;
 #if 0
@@ -833,7 +827,7 @@ faim_export struct aim_fileheader_t *aim_getlisting(aim_session_t *sess, FILE *f
  * listener, then we no longer have a libfaim problem with broken
  * solaris *innocent smile* -jbm
  */
-static int listenestablish(fu16_t portnum)
+static int listenestablish(guint16 portnum)
 {
 #if HAVE_GETADDRINFO
 	int listenfd;
@@ -1038,7 +1032,7 @@ static void connkill_directim(aim_session_t *sess, aim_conn_t *conn)
 	return;
 }
 
-faim_internal void aim_conn_close_rend(aim_session_t *sess, aim_conn_t *conn)
+void aim_conn_close_rend(aim_session_t *sess, aim_conn_t *conn)
 {
 
 	if (conn->type != AIM_CONN_TYPE_RENDEZVOUS)
@@ -1054,7 +1048,7 @@ faim_internal void aim_conn_close_rend(aim_session_t *sess, aim_conn_t *conn)
 	return;
 }
 
-faim_internal void aim_conn_kill_rend(aim_session_t *sess, aim_conn_t *conn)
+void aim_conn_kill_rend(aim_session_t *sess, aim_conn_t *conn)
 {
 
 	if (conn->type != AIM_CONN_TYPE_RENDEZVOUS)
@@ -1070,12 +1064,12 @@ faim_internal void aim_conn_kill_rend(aim_session_t *sess, aim_conn_t *conn)
 	return;
 }
 
-static int handlehdr_directim(aim_session_t *sess, aim_conn_t *conn, fu8_t *hdr)
+static int handlehdr_directim(aim_session_t *sess, aim_conn_t *conn, guint8 *hdr)
 {
 	aim_frame_t fr;
 	aim_rxcallback_t userfunc;
-	fu32_t payloadlength;
-	fu16_t flags;
+	guint32 payloadlength;
+	guint16 flags;
 	char *snptr = NULL;
 
 	fr.conn = conn;
@@ -1083,8 +1077,6 @@ static int handlehdr_directim(aim_session_t *sess, aim_conn_t *conn, fu8_t *hdr)
 	payloadlength = aimutil_get32(hdr+22);
 	flags = aimutil_get16(hdr+32);
 	snptr = (char *)hdr+38;
-
-	faimdprintf(sess, 2, "faim: OFT frame: handlehdr_directim: %04x / %04x / %s\n", payloadlength, flags, snptr);
 
 	if (flags == 0x000e) { 
 		int ret = 0;
@@ -1139,7 +1131,7 @@ static int handlehdr_directim(aim_session_t *sess, aim_conn_t *conn, fu8_t *hdr)
 	return 0;
 }
 
-static int handlehdr_getfile_listing(aim_session_t *sess, aim_conn_t *conn, fu8_t *hdr)
+static int handlehdr_getfile_listing(aim_session_t *sess, aim_conn_t *conn, guint8 *hdr)
 {
 #if 0
 	struct aim_filetransfer_priv *ft;
@@ -1197,7 +1189,7 @@ static int handlehdr_getfile_listing(aim_session_t *sess, aim_conn_t *conn, fu8_
 	return -1;
 }
 
-static int handlehdr_getfile_listing2(aim_session_t *sess, aim_conn_t *conn, fu8_t *hdr)
+static int handlehdr_getfile_listing2(aim_session_t *sess, aim_conn_t *conn, guint8 *hdr)
 {
 #if 0
 	struct aim_filetransfer_priv *ft;
@@ -1229,7 +1221,7 @@ static int handlehdr_getfile_listing2(aim_session_t *sess, aim_conn_t *conn, fu8
 #endif
 }
 
-static int handlehdr_getfile_listing3(aim_session_t *sess, aim_conn_t *conn, fu8_t *hdr)
+static int handlehdr_getfile_listing3(aim_session_t *sess, aim_conn_t *conn, guint8 *hdr)
 {
 #if 0
 	struct aim_filetransfer_priv *ft;
@@ -1257,7 +1249,7 @@ static int handlehdr_getfile_listing3(aim_session_t *sess, aim_conn_t *conn, fu8
 	return -1;
 }
 
-static int handlehdr_getfile_request(aim_session_t *sess, aim_conn_t *conn, fu8_t *hdr)
+static int handlehdr_getfile_request(aim_session_t *sess, aim_conn_t *conn, guint8 *hdr)
 {
 #if 0
 	struct aim_filetransfer_priv *ft;
@@ -1320,7 +1312,7 @@ static int handlehdr_getfile_request(aim_session_t *sess, aim_conn_t *conn, fu8_
 #endif
 }
 
-static int handlehdr_getfile_sending(aim_session_t *sess, aim_conn_t *conn, fu8_t *hdr)
+static int handlehdr_getfile_sending(aim_session_t *sess, aim_conn_t *conn, guint8 *hdr)
 {
 #if 0
 	struct aim_fileheader_t *fh;
@@ -1376,7 +1368,7 @@ static int handlehdr_getfile_sending(aim_session_t *sess, aim_conn_t *conn, fu8_
 #endif
 }
 
-static int handlehdr_getfile_recv(aim_session_t *sess, aim_conn_t *conn, fu8_t *hdr)
+static int handlehdr_getfile_recv(aim_session_t *sess, aim_conn_t *conn, guint8 *hdr)
 {
 #if 0
 	struct aim_fileheader_t *fh;
@@ -1407,7 +1399,7 @@ static int handlehdr_getfile_recv(aim_session_t *sess, aim_conn_t *conn, fu8_t *
 #endif
 }
 
-static int handlehdr_getfile_finish(aim_session_t *sess, aim_conn_t *conn, fu8_t *hdr)
+static int handlehdr_getfile_finish(aim_session_t *sess, aim_conn_t *conn, guint8 *hdr)
 {
 #if 0
 	struct aim_fileheader_t *fh;
@@ -1434,10 +1426,10 @@ static int handlehdr_getfile_finish(aim_session_t *sess, aim_conn_t *conn, fu8_t
  * this reads and handles data from conn->fd. currently a little rough
  * around the edges
  */
-faim_internal int aim_get_command_rendezvous(aim_session_t *sess, aim_conn_t *conn)
+int aim_get_command_rendezvous(aim_session_t *sess, aim_conn_t *conn)
 {
-	fu8_t hdrbuf1[6];
-	fu8_t *hdr = NULL;
+	guint8 hdrbuf1[6];
+	guint8 *hdr = NULL;
 	int hdrlen, hdrtype;
 	int ret = -1;
 
@@ -1453,7 +1445,7 @@ faim_internal int aim_get_command_rendezvous(aim_session_t *sess, aim_conn_t *co
 	/* XXX fix all the error cases here */
 	if (aim_recv(conn->fd, hdrbuf1, 6) < 6) {
 
-		faimdprintf(sess, 2, "faim: rend: read error (fd: %i)\n", conn->fd);
+		do_error_dialog(sess->aux_data, "read error", "Gaim");
 
 		aim_conn_close(conn);
 
@@ -1466,7 +1458,7 @@ faim_internal int aim_get_command_rendezvous(aim_session_t *sess, aim_conn_t *co
 	hdr = g_malloc(hdrlen);
 
 	if (aim_recv(conn->fd, hdr, hdrlen) < hdrlen) {
-		faimdprintf(sess, 2, "faim: rend: read2 error on %d (%d)\n", conn->fd, hdrlen);
+		do_error_dialog(sess->aux_data, "read error", "Gaim");
 		g_free(hdr);
 		aim_conn_close(conn);
 		return -1;
@@ -1491,7 +1483,6 @@ faim_internal int aim_get_command_rendezvous(aim_session_t *sess, aim_conn_t *co
 	else if (hdrtype == 0x0204) /* getfile finished */
 		ret = handlehdr_getfile_finish(sess, conn, hdr);
 	else {
-		faimdprintf(sess, 2,"faim: OFT frame: uknown type %04x\n", hdrtype);
 		ret = -1;
 	}
 	
@@ -1594,11 +1585,11 @@ static struct aim_fileheader_t *aim_oft_getfh(unsigned char *hdr)
  * Also, it's been said that this is incorrect as currently
  * written. You were warned.
  */
-faim_export fu32_t aim_oft_checksum(aim_session_t *sess, const char *buffer, int bufsize, fu32_t *checksum)
+guint32 aim_oft_checksum(aim_session_t *sess, const char *buffer, int bufsize, guint32 *checksum)
 {
 	return 0xdeadbeef;
 #if 0
-  fu16_t check0, check1;
+  guint16 check0, check1;
   int i;
 
   check0 = ((*checksum & 0xFF000000) >> 16);
@@ -1709,7 +1700,7 @@ static int oft_buildheader(unsigned char *dest, struct aim_fileheader_t *fh)
  * 
  * returns a new &aim_conn_t on success, %NULL on error
  */
-faim_export aim_conn_t *aim_getfile_initiate(aim_session_t *sess, aim_conn_t *conn, const char *destsn)
+aim_conn_t *aim_getfile_initiate(aim_session_t *sess, aim_conn_t *conn, const char *destsn)
 { 
 	return NULL;
 #if 0
@@ -1847,7 +1838,6 @@ faim_export aim_conn_t *aim_getfile_initiate(aim_session_t *sess, aim_conn_t *co
   newconn->fd = listenfd;
   newconn->subtype = AIM_CONN_SUBTYPE_OFT_GETFILE;
   newconn->priv = priv;
-  faimdprintf(sess, 2,"faim: listening (fd = %d, unconnected)\n", newconn->fd);
 
   return newconn;
 #endif
@@ -1863,7 +1853,7 @@ faim_export aim_conn_t *aim_getfile_initiate(aim_session_t *sess, aim_conn_t *co
  *
  * returns -1 on error, 0 on successful enqueuing
  */
-faim_export int aim_oft_getfile_request(aim_session_t *sess, aim_conn_t *conn, const char *name, int size)
+int aim_oft_getfile_request(aim_session_t *sess, aim_conn_t *conn, const char *name, int size)
 {
 	return -EINVAL;
 #if 0
@@ -1921,7 +1911,7 @@ faim_export int aim_oft_getfile_request(aim_session_t *sess, aim_conn_t *conn, c
  * filetransfer. Returns -1 on error, 0 on apparent success
  *
  */
-faim_export int aim_oft_getfile_ack(aim_session_t *sess, aim_conn_t *conn) 
+int aim_oft_getfile_ack(aim_session_t *sess, aim_conn_t *conn) 
 {
 	return -EINVAL;
 #if 0
@@ -1969,7 +1959,7 @@ faim_export int aim_oft_getfile_ack(aim_session_t *sess, aim_conn_t *conn)
  * call this before you close the getfile connection if you're on the
  * receiving/requesting end.
  */
-faim_export int aim_oft_getfile_end(aim_session_t *sess, aim_conn_t *conn)
+int aim_oft_getfile_end(aim_session_t *sess, aim_conn_t *conn)
 {
 	return -EINVAL;
 #if 0

@@ -1,10 +1,9 @@
 
-#define FAIM_INTERNAL
 #include <aim.h>
 
 static int reportinterval(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, aim_modsnac_t *snac, aim_bstream_t *bs)
 {
-	fu16_t interval;
+	guint16 interval;
 	aim_rxcallback_t userfunc;
 
 	interval = aimbs_get16(bs);
@@ -24,7 +23,7 @@ static int snachandler(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, 
 	return 0;
 }
 
-faim_internal int stats_modfirst(aim_session_t *sess, aim_module_t *mod)
+int stats_modfirst(aim_session_t *sess, aim_module_t *mod)
 {
 
 	mod->family = 0x000b;

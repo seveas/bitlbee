@@ -54,7 +54,7 @@ install-bin:
 	chmod 0755 $(DESTDIR)$(BINDIR) $(DESTDIR)$(DATADIR)
 	rm -f $(DESTDIR)$(DATADIR)/help.txt # Prevent help function from breaking in running sessions
 	install -m 0755 $(OUTFILE) $(DESTDIR)$(BINDIR)/$(OUTFILE)
-	install -m 0644 help.txt $(DESTDIR)$(DATADIR)/help.txt
+	install -m 0644 doc/help.txt $(DESTDIR)$(DATADIR)/help.txt
 
 uninstall-bin:
 	rm -f $(DESTDIR)$(BINDIR)/$(OUTFILE)

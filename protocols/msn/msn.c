@@ -67,10 +67,6 @@ static void msn_close( struct gaim_connection *gc )
 	
 	if( md->fd >= 0 )
 		closesocket( md->fd );
-	/* Done in nogaim.c...
-	if( gc->inpa )
-		gaim_input_remove( gc->inpa );
-	*/
 	
 	if( md->handler )
 	{
@@ -95,7 +91,7 @@ static void msn_close( struct gaim_connection *gc )
 		}
 		g_slist_free( md->msgq );
 		
-		/* FIXME: Maybe warn the user that there were still messages in the queue? */
+		serv_got_crap( gc, "Warning: Closing down MSN connection with unsent message(s), you'll have to resend them." );
 	}
 	
 	for( l = gc->permit; l; l = l->next )
@@ -211,24 +207,41 @@ static void msn_set_away( struct gaim_connection *gc, char *state, char *message
 static void msn_set_info( struct gaim_connection *gc, char *info )
 {
 	int i;
-	char buf[1024], *fn;
+	char buf[1024], *fn, *s;
 	struct msn_data *md = gc->proto_data;
 	
 	if( strlen( info ) > 129 )
 	{
-		do_error_dialog( "Maximum name length exceeded", "MSN" );
+		do_error_dialog( gc, "Maximum name length exceeded", "MSN" );
 		return;
 	}
 	
-	/* Of course we could use http_encode() here, but when we encode every character,
-	   the server is less likely to complain about the chosen name. */
-	fn = g_new0( char, strlen( info ) * 3 + 1 );
+	/* Of course we could use http_encode() here, but when we encode
+	   every character, the server is less likely to complain about the
+	   chosen name. However, the MSN server doesn't seem to like escaped
+	   non-ASCII chars, so we keep those unescaped. */
+	s = fn = g_new0( char, strlen( info ) * 3 + 1 );
 	for( i = 0; info[i]; i ++ )
-		g_snprintf( fn + i * 3, 4, "%%%02X", info[i] );
+		if( info[i] & 128 )
+		{
+			*s = info[i];
+			s ++;
+		}
+		else
+		{
+			g_snprintf( s, 4, "%%%02X", info[i] );
+			s += 3;
+		}
 	
 	g_snprintf( buf, sizeof( buf ), "REA %d %s %s\r\n", ++md->trId, gc->username, fn );
 	msn_write( gc, buf, strlen( buf ) );
 	g_free( fn );
+}
+
+static void msn_get_info(struct gaim_connection *gc, char *who) 
+{
+	/* Just make an URL and let the user fetch the info */
+	serv_got_crap( gc, "%s\n%s: %s%s", _("User Info"), _("For now, fetch yourself"), PROFILE_URL, who );
 }
 
 static void msn_add_buddy( struct gaim_connection *gc, char *who )
@@ -355,6 +368,7 @@ void msn_init(struct prpl *ret)
 	ret->get_status_string = msn_get_status_string;
 	ret->set_away = msn_set_away;
 	ret->set_info = msn_set_info;
+	ret->get_info = msn_get_info;
 	ret->add_buddy = msn_add_buddy;
 	ret->remove_buddy = msn_remove_buddy;
 	ret->chat_send = msn_chat_send;

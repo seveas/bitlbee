@@ -1,5 +1,3 @@
-
-#define FAIM_INTERNAL
 #include <aim.h>
 
 /*
@@ -28,7 +26,7 @@ static int rights(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, aim_m
 {
 	aim_rxcallback_t userfunc;
 	aim_tlvlist_t *tlvlist;
-	fu16_t maxbuddies = 0, maxwatchers = 0;
+	guint16 maxbuddies = 0, maxwatchers = 0;
 	int ret = 0;
 
 	/* 
@@ -78,13 +76,13 @@ static int snachandler(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, 
 	return 0;
 }
 
-faim_internal int buddylist_modfirst(aim_session_t *sess, aim_module_t *mod)
+int buddylist_modfirst(aim_session_t *sess, aim_module_t *mod)
 {
 
 	mod->family = 0x0003;
 	mod->version = 0x0001;
 	mod->toolid = 0x0110;
-	mod->toolversion = 0x047b;
+	mod->toolversion = 0x0629;
 	mod->flags = 0;
 	strncpy(mod->name, "buddylist", sizeof(mod->name));
 	mod->snachandler = snachandler;
@@ -100,7 +98,7 @@ faim_internal int buddylist_modfirst(aim_session_t *sess, aim_module_t *mod)
  * XXX this should just be an extension of setbuddylist()
  *
  */
-faim_export int aim_add_buddy(aim_session_t *sess, aim_conn_t *conn, const char *sn)
+int aim_add_buddy(aim_session_t *sess, aim_conn_t *conn, const char *sn)
 {
 	aim_frame_t *fr;
 	aim_snacid_t snacid;
@@ -127,7 +125,7 @@ faim_export int aim_add_buddy(aim_session_t *sess, aim_conn_t *conn, const char 
  * the same as setbuddylist() but with a different snac subtype).
  *
  */
-faim_export int aim_remove_buddy(aim_session_t *sess, aim_conn_t *conn, const char *sn)
+int aim_remove_buddy(aim_session_t *sess, aim_conn_t *conn, const char *sn)
 {
 	aim_frame_t *fr;
 	aim_snacid_t snacid;

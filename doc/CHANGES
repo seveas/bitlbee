@@ -1,3 +1,53 @@
+Version 0.91:
+- Full support for ICQ server-side contact lists!
+  NOTE: BitlBee now ignores your client-side contact list. If you want to
+        import your ICQ contact list, use the import_buddies command.
+- Added the import_buddies command for upgrading purposes.
+- Added support for OpenSSL.
+- Fixed one major problem with the daemon mode by getting rid of the global
+  IRC structure.
+- Documentation fixes. help.txt is now generated from XML. Also updated the
+  installation manual.
+- Made the quickstart up-to-date. (By Elizabeth Krumbach)
+- Some bitlbeed additions. (By Marcus Dennis)
+- info-command support for Jabber, MSN, Yahoo! and a more verbose info-reply
+  for ICQ. (By Frank Thieme)
+- Support for Jabber over SSL.
+- nick_get() appends a _ on duplicates instead of chopping off the last
+  character.
+- Got rid of an unused piece of code that caused crashes.
+  (oscar.c:gaim_parse_clientauto)
+- When splitting long messages into 450-char chunks, BitlBee now tries not
+  to cut off in the middle of a line.
+- Added a warning when the user specifies an unknown OSCAR server.
+- Removed GLib 2.x dependency, BitlBee will work with GLib 1.x again.
+- Improved strip_html(), now less likely to strip non-HTML things.
+- An invalid account-command will now display an error message.
+- Fixed a bug that caused crashes when /CTCP'ing a groupchat channel.
+- Hopefully better Unicode/non-ASCII support for ICQ.
+- Fixed MSN connection crash on non-ASCII characters in screenname.
+- Added some missing charset conversion calls. (serv_got_crap,
+  serv_buddy_rename)
+- "account off" without extra arguments now logs off all connections.
+- Fixed a crash-bug on disconnecting Yahoo! connections before they're fully
+  connected.
+- Fixed a bug in helpfile handling which sometimes caused crashes in daemon
+  mode.
+- block and allow commands work with just a nick as an argument again.
+- Working around a crash on some probably invalid Yahoo! packets.
+- Fixed a possible double free() on shutdown in irc_free().
+- Talking to ICQ people on AIM and vice versa and talking to people with
+  @mac.com accounts now possible.
+- Low ASCII chars are now stripped from away-messages so the Jabber module
+  won't barf on BitchX and lame-script away messages anymore.
+
+Finished 25 Sep 2004
+
+Version 0.90a:
+- Fixed the Yahoo! authentication code.
+
+Finished 28 Jun 2004
+
 Version 0.90:
 - A complete rewrite of the MSN module. This gives BitlBee the following
   new features/improvements:
@@ -68,7 +118,7 @@ Version 0.90:
   problems.)
 - ISO8859-15 is now the default charset.
 
-Finished 28 May 2004
+Finished 21 May 2004
 
 Version 0.85a:
 - Fixed an authentication problem with logging into some MSN accounts.

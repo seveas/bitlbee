@@ -207,7 +207,7 @@ void msn_sb_destroy( struct msn_switchboard *sb )
 		}
 		g_slist_free( sb->msgq );
 		
-		/* FIXME: Maybe warn the user that there were still messages in the queue? */
+		serv_got_crap( gc, "Warning: Closing down MSN switchboard connection with unsent message(s), you'll have to resend them." );
 	}
 	
 	if( sb->chat )
@@ -503,7 +503,7 @@ static int msn_sb_command( gpointer data, char **cmd, int num_parts )
 		struct msn_status_code *err = msn_status_by_number( num );
 		
 		g_snprintf( buf, sizeof( buf ), "Error reported by switchboard server: %s", err->text );
-		do_error_dialog( buf, "MSN" );
+		do_error_dialog( gc, buf, "MSN" );
 		
 		if( err->flags & STATUS_SB_FATAL )
 		{

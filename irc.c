@@ -99,120 +99,103 @@ static gboolean irc_free_userhash( gpointer key, gpointer value, gpointer data )
 }
 
 /* Because we have no garbage collection, this is quite annoying */
-void irc_free( irc_t *irc ) {
+void irc_free(irc_t * irc)
+{
 	account_t *account, *accounttmp;
-	user_t *user, *usertmp; 
+	user_t *user, *usertmp;
 	nick_t *nick, *nicktmp;
-	help_t *helpnode, *helpnodetmp; 
-	set_t *setnode, *setnodetmp; 
+	help_t *helpnode, *helpnodetmp;
+	set_t *setnode, *setnodetmp;
 
-	if(irc!=NULL) {
-		if(irc->sendbuffer!=NULL)
-			g_free(irc->sendbuffer);	
-		if(irc->readbuffer!=NULL)
-			g_free(irc->readbuffer);
-	
-		if(irc->nick!=NULL);
-			g_free(irc->nick);	
-		if(irc->user!=NULL);
-			g_free(irc->user);
-		if(irc->host!=NULL);
-			g_free(irc->host);	
-		if(irc->realname!=NULL);
-			g_free(irc->realname);	
-		if(irc->password!=NULL);
-			g_free(irc->password);
+	if (irc != NULL) {
+		for (account = irc->accounts; account; account = account->next)
+			if (account->gc)
+				signoff(account->gc);
 		
-		if(irc->myhost!=NULL)
-			g_free(irc->myhost);
-		if(irc->mynick!=NULL)
-			g_free(irc->mynick);
+		g_free(irc->sendbuffer);
+		g_free(irc->readbuffer);
 
-		if(irc->channel!=NULL)
-			g_free(irc->channel);
-		
-		while(irc->queries!=NULL )
+		g_free(irc->nick);
+		g_free(irc->user);
+		g_free(irc->host);
+		g_free(irc->realname);
+		g_free(irc->password);
+
+		g_free(irc->myhost);
+		g_free(irc->mynick);
+
+		g_free(irc->channel);
+
+		while (irc->queries != NULL)
 			query_del(irc, irc->queries);
-		
-		if(irc->accounts!=NULL) {
-			account=irc->accounts;
-			while(account!=NULL) {
-				if(account->user!=NULL)
-					g_free(account->user);
-				if(account->pass!=NULL)
-					g_free(account->pass);
-				if(account->server!=NULL)
-					g_free(account->server);
-				accounttmp=account;
-				account=account->next;
+
+		if (irc->accounts != NULL) {
+			account = irc->accounts;
+			while (account != NULL) {
+				g_free(account->user);
+				g_free(account->pass);
+				g_free(account->server);
+				accounttmp = account;
+				account = account->next;
 				g_free(accounttmp);
-			}		
+			}
 		}
-		
-		if(irc->users!=NULL) {
-			user=irc->users;
-			while(user!=NULL) {
-				if(user->nick!=NULL)
-					g_free(user->nick);
-				if(user->away!=NULL)
-					g_free(user->away);
-				if(user->handle!=NULL)
-					g_free(user->handle);
-				if(user->user!=user->nick)
-					g_free(user->user);
-				if(user->host!=user->nick)
-					g_free(user->host);
-				if(user->realname!=user->nick)
-					g_free(user->realname);
-				if(user->sendbuf_timer)
-					gaim_input_remove(user->sendbuf_timer);
-				usertmp=user;	
-				user=user->next;
+
+		if (irc->users != NULL) {
+			user = irc->users;
+			while (user != NULL) {
+				g_free(user->nick);
+				g_free(user->away);
+				g_free(user->handle);
+				if(user->user!=user->nick) g_free(user->user);
+				if(user->host!=user->nick) g_free(user->host);
+				if(user->realname!=user->nick) g_free(user->realname);
+				gaim_input_remove(user->sendbuf_timer);
+				
+				usertmp = user;
+				user = user->next;
 				g_free(usertmp);
 			}
 		}
-		
+
 		g_hash_table_foreach_remove(irc->userhash, irc_free_userhash, NULL);
 		g_hash_table_destroy(irc->userhash);
-		
-		if(irc->nicks!=NULL) {
-			nick=irc->nicks;
-			while(nick!=NULL) {
-				if(nick->nick!=NULL)
-					g_free(nick->nick);
-				if(nick->handle!=NULL)
-					g_free(nick->handle);
-				nicktmp=nick;	
-				nick=nick->next;
+
+		if (irc->nicks != NULL) {
+			nick = irc->nicks;
+			while (nick != NULL) {
+				g_free(nick->nick);
+				g_free(nick->handle);
+				
+				nicktmp = nick;
+				nick = nick->next;
 				g_free(nicktmp);
 			}
 		}
-		if(irc->help!=NULL) {
-			helpnode=irc->help;
-			while(helpnode!=NULL) {
-				if(helpnode->string!=NULL)
-					g_free(helpnode->string);
-				helpnodetmp=helpnode;	
-				helpnode=helpnode->next;
+		if (irc->help != NULL) {
+			helpnode = irc->help;
+			while (helpnode != NULL) {
+				g_free(helpnode->string);
+				
+				helpnodetmp = helpnode;
+				helpnode = helpnode->next;
 				g_free(helpnodetmp);
 			}
 		}
-		if(irc->set!=NULL) {
-			setnode=irc->set;
-			while(setnode!=NULL) {
-				if(setnode->key!=NULL)
-					g_free(setnode->key);
-				if(setnode->def!=NULL)
-					g_free(setnode->def);
-				if(setnode->value!=NULL)
-					g_free(setnode->value);
-				setnodetmp=setnode;	
-				setnode=setnode->next;
+		if (irc->set != NULL) {
+			setnode = irc->set;
+			while (setnode != NULL) {
+				g_free(setnode->key);
+				g_free(setnode->def);
+				g_free(setnode->value);
+				
+				setnodetmp = setnode;
+				setnode = setnode->next;
 				g_free(setnodetmp);
 			}
 		}
-		g_free(irc);				
-	}	
+		g_free(irc);
+	}
 }
 
 int irc_process( irc_t *irc )
@@ -276,7 +259,7 @@ char **irc_tokenize( char *buffer ) {
 			if(i!=0)
 				if(buffer[i-1]=='\r')
 					buffer[i-1]='\0';
-			if(buffer[i+1]!='\r'&& buffer[i+1]!='\n')
+			if(buffer[i+1]!='\r'&&buffer[i+1]!='\n')
 				lines[++j]=buffer+i+1;
 		}
 	}
@@ -443,7 +426,7 @@ int irc_exec( irc_t *irc, char **cmd )
 
 	if( (global.conf)->authmode == AUTHMODE_CLOSED && irc->status < USTATUS_AUTHORIZED )
 	{
-		if( g_ascii_strcasecmp( cmd[0], "PASS" ) == 0 )
+		if( g_strcasecmp( cmd[0], "PASS" ) == 0 )
 		{
 			if( !cmd[1] )
 			{
@@ -466,7 +449,7 @@ int irc_exec( irc_t *irc, char **cmd )
 		return( 1 );
 	}
 	
-	if( g_ascii_strcasecmp( cmd[0], "USER" ) == 0 )
+	if( g_strcasecmp( cmd[0], "USER" ) == 0 )
 	{
 		if( !( cmd[1] && cmd[2] && cmd[3] && cmd[4] ) )
 		{
@@ -484,7 +467,7 @@ int irc_exec( irc_t *irc, char **cmd )
 		}
 		return( 1 );
 	}
-	else if( g_ascii_strcasecmp( cmd[0], "NICK" ) == 0 )
+	else if( g_strcasecmp( cmd[0], "NICK" ) == 0 )
 	{
 		if( !cmd[1] )
 		{
@@ -514,11 +497,11 @@ int irc_exec( irc_t *irc, char **cmd )
 	
 	if( !irc->user || !irc->nick ) return( 1 );
 	
-	if( g_ascii_strcasecmp( cmd[0], "PING" ) == 0 )
+	if( g_strcasecmp( cmd[0], "PING" ) == 0 )
 	{
 		irc_write( irc, ":%s PONG %s :%s", irc->myhost, irc->myhost, cmd[1]?cmd[1]:irc->myhost );
 	}
-	else if( g_ascii_strcasecmp( cmd[0], "MODE" ) == 0 )
+	else if( g_strcasecmp( cmd[0], "MODE" ) == 0 )
 	{
 		if( !cmd[1] )
 		{
@@ -547,11 +530,11 @@ int irc_exec( irc_t *irc, char **cmd )
 				irc_reply( irc, 502, ":Don't touch their modes" );
 		}
 	}
-	else if( g_ascii_strcasecmp( cmd[0], "NAMES" ) == 0 )
+	else if( g_strcasecmp( cmd[0], "NAMES" ) == 0 )
 	{
 		irc_names( irc, cmd[1]?cmd[1]:irc->channel );
 	}
-	else if( g_ascii_strcasecmp( cmd[0], "PART" ) == 0 )
+	else if( g_strcasecmp( cmd[0], "PART" ) == 0 )
 	{
 		struct conversation *c;
 		
@@ -559,7 +542,7 @@ int irc_exec( irc_t *irc, char **cmd )
 		{
 			irc_reply( irc, 461, "%s :Need more parameters", cmd[0] );
 		}
-		else if( g_ascii_strcasecmp( cmd[1], irc->channel ) == 0 )
+		else if( g_strcasecmp( cmd[1], irc->channel ) == 0 )
 		{
 			user_t *u = user_find( irc, irc->nick );
 			
@@ -584,13 +567,13 @@ int irc_exec( irc_t *irc, char **cmd )
 			irc_reply( irc, 403, "%s :No such channel", cmd[1] );
 		}
 	}
-	else if( g_ascii_strcasecmp( cmd[0], "JOIN" ) == 0 )
+	else if( g_strcasecmp( cmd[0], "JOIN" ) == 0 )
 	{
 		if( !cmd[1] )
 		{
 			irc_reply( irc, 461, "%s :Need more parameters", cmd[0] );
 		}
-		else if( g_ascii_strcasecmp( cmd[1], irc->channel ) == 0 )
+		else if( g_strcasecmp( cmd[1], irc->channel ) == 0 )
 			; /* Dude, you're already there...
 			     RFC doesn't have any reply for that though? */
 		else if( cmd[1] )
@@ -619,14 +602,14 @@ int irc_exec( irc_t *irc, char **cmd )
 			}
 		}
 	}
-	else if( g_ascii_strcasecmp( cmd[0], "INVITE" ) == 0 )
+	else if( g_strcasecmp( cmd[0], "INVITE" ) == 0 )
 	{
 		if( cmd[1] && cmd[2] )
 			irc_invite( irc, cmd[1], cmd[2] );
 		else
 			irc_reply( irc, 461, "%s :Need more parameters", cmd[0] );
 	}
-	else if( g_ascii_strcasecmp( cmd[0], "PRIVMSG" ) == 0 )
+	else if( g_strcasecmp( cmd[0], "PRIVMSG" ) == 0 )
 	{
 		if( !( cmd[1] && cmd[2] ) )
 		{
@@ -634,7 +617,7 @@ int irc_exec( irc_t *irc, char **cmd )
 		}
 		else
 		{
-			if( g_ascii_strcasecmp( cmd[1], irc->channel ) == 0 )
+			if( g_strcasecmp( cmd[1], irc->channel ) == 0 )
 			{
 				unsigned int i;
 				char *t = set_getstr( irc, "default_target" );
@@ -673,7 +656,7 @@ int irc_exec( irc_t *irc, char **cmd )
 			irc_send( irc, cmd[1], cmd[2] );
 		}
 	}
-	else if( g_ascii_strcasecmp( cmd[0], "QUIT" ) == 0 )
+	else if( g_strcasecmp( cmd[0], "QUIT" ) == 0 )
 	{
 		irc_write( irc, "ERROR :%s%s", cmd[1]?"Quit: ":"", cmd[1]?cmd[1]:"Client Quit" );
 #ifndef _WIN32
@@ -684,11 +667,11 @@ int irc_exec( irc_t *irc, char **cmd )
 		closesocket( irc->fd );
 		return( 0 );
 	}
-	else if( g_ascii_strcasecmp( cmd[0], "WHO" ) == 0 )
+	else if( g_strcasecmp( cmd[0], "WHO" ) == 0 )
 	{
 		irc_who( irc, cmd[1] );
 	}
-	else if( g_ascii_strcasecmp( cmd[0], "USERHOST" ) == 0 )
+	else if( g_strcasecmp( cmd[0], "USERHOST" ) == 0 )
 	{
 		/* [TV] Usable USERHOST-implementation according to
 			RFC1459. Without this, mIRC shows an error
@@ -706,7 +689,7 @@ int irc_exec( irc_t *irc, char **cmd )
 					irc_reply( irc, 302, ":%s=+%s@%s", u->nick, u->user, u->host );
 			}
 	}
-	else if( g_ascii_strcasecmp( cmd[0], "ISON" ) == 0 )
+	else if( g_strcasecmp( cmd[0], "ISON" ) == 0 )
 	{
 		user_t *u;
 		char buff[IRC_MAX_LINE];
@@ -751,7 +734,7 @@ int irc_exec( irc_t *irc, char **cmd )
 		
 		irc_reply( irc, 303, ":%s", buff );
 	}
-	else if( g_ascii_strcasecmp( cmd[0], "TOPIC" ) == 0 )
+	else if( g_strcasecmp( cmd[0], "TOPIC" ) == 0 )
 	{
 		if( cmd[1] && cmd[2] )
 			irc_reply( irc, 482, "%s :Cannot change topic", cmd[1] );
@@ -760,11 +743,11 @@ int irc_exec( irc_t *irc, char **cmd )
 		else
 			irc_reply( irc, 461, "%s :Need more parameters", cmd[0] );
 	}
-	else if( g_ascii_strcasecmp( cmd[0], "AWAY" ) == 0 )
+	else if( g_strcasecmp( cmd[0], "AWAY" ) == 0 )
 	{
 		irc_away( irc, cmd[1] );
 	}
-	else if( g_ascii_strcasecmp( cmd[0], "WHOIS" ) == 0 )
+	else if( g_strcasecmp( cmd[0], "WHOIS" ) == 0 )
 	{
 		if( cmd[1] )
 		{
@@ -775,7 +758,7 @@ int irc_exec( irc_t *irc, char **cmd )
 			irc_reply( irc, 461, "%s :Need more parameters", cmd[0] );
 		}
 	}
-	else if( g_ascii_strcasecmp( cmd[0], "WHOWAS" ) == 0 )
+	else if( g_strcasecmp( cmd[0], "WHOWAS" ) == 0 )
 	{
 		/* For some reason irssi tries a whowas when whois fails. We can
 		   ignore this, but then the user never gets a "user not found"
@@ -792,24 +775,24 @@ int irc_exec( irc_t *irc, char **cmd )
 			irc_reply( irc, 461, "%s :Need more parameters", cmd[0] );
 		}
 	}
-	else if( ( g_ascii_strcasecmp( cmd[0], "NICKSERV" ) == 0 ) || ( g_ascii_strcasecmp( cmd[0], "NS" ) == 0 ) )
+	else if( ( g_strcasecmp( cmd[0], "NICKSERV" ) == 0 ) || ( g_strcasecmp( cmd[0], "NS" ) == 0 ) )
 	{
 		/* [SH] This aliases the NickServ command to PRIVMSG root */
 		/* [TV] This aliases the NS command to PRIVMSG root as well */
 		root_command( irc, cmd + 1 );
 	}
-	else if( g_ascii_strcasecmp( cmd[0], "MOTD" ) == 0 )
+	else if( g_strcasecmp( cmd[0], "MOTD" ) == 0 )
 	{
 		irc_motd( irc );
 	}
-	else if( g_ascii_strcasecmp( cmd[0], "PONG" ) == 0 )
+	else if( g_strcasecmp( cmd[0], "PONG" ) == 0 )
 	{
 		/* We could check the value we get back from the user, but in
 		   fact we don't care, we're just happy he's still alive. */
 		irc->last_pong = gettime();
 		irc->pinging = 0;
 	}
-	else if( g_ascii_strcasecmp( cmd[0], "COMPLETIONS" ) == 0 )
+	else if( g_strcasecmp( cmd[0], "COMPLETIONS" ) == 0 )
 	{
 		user_t *u = user_find( irc, irc->mynick );
 		help_t *h;
@@ -939,7 +922,7 @@ void irc_names( irc_t *irc, char *channel )
 {
 	user_t *u = irc->users;
 	char *s;
-	int control = ( g_ascii_strcasecmp( channel, irc->channel ) == 0 );
+	int control = ( g_strcasecmp( channel, irc->channel ) == 0 );
 	struct conversation *c = NULL;
 	
 	if( !control )
@@ -1003,7 +986,7 @@ void irc_who( irc_t *irc, char *channel )
 			irc_reply( irc, 352, "%s %s %s %s %s %c :0 %s", u->online ? irc->channel : "*", u->user, u->host, irc->myhost, u->nick, u->online ? ( u->away ? 'G' : 'H' ) : 'G', u->realname );
 			u = u->next;
 		}
-	else if( g_ascii_strcasecmp( channel, irc->channel ) == 0 )
+	else if( g_strcasecmp( channel, irc->channel ) == 0 )
 		while( u )
 		{
 			if( u->online )
@@ -1113,7 +1096,7 @@ void irc_motd( irc_t *irc )
 
 void irc_topic( irc_t *irc, char *channel )
 {
-	if( g_ascii_strcasecmp( channel, irc->channel ) == 0 )
+	if( g_strcasecmp( channel, irc->channel ) == 0 )
 	{
 		irc_reply( irc, 332, "%s :%s", channel, CONTROL_TOPIC );
 	}
@@ -1189,12 +1172,21 @@ int irc_away( irc_t *irc, char *away )
 	GSList *c = get_connections();
 	
 	if( !u ) return( 0 );
-
+	
 	if( away && *away )
 	{
-		irc_reply( irc, 306, ":You're now away: %s", away );
+		int i, j;
+		
+		/* Copy away string, but skip control chars. Mainly because
+		   Jabber really doesn't like them. */
+		u->away = g_malloc( strlen( away ) + 1 );
+		for( i = j = 0; away[i]; i ++ )
+			if( ( u->away[j] = away[i] ) >= ' ' )
+				j ++;
+		u->away[j] = 0;
+		
+		irc_reply( irc, 306, ":You're now away: %s", u->away );
 		/* irc_umode_set( irc, irc->myhost, "+a" ); */
-		u->away = g_strdup( away );
 	}
 	else
 	{
@@ -1207,7 +1199,7 @@ int irc_away( irc_t *irc, char *away )
 	while( c )
 	{
 		if( ((struct gaim_connection *)c->data)->flags & OPT_LOGGED_IN )
-			proto_away( c->data, away );
+			proto_away( c->data, u->away );
 		
 		c = c->next;
 	}
@@ -1222,7 +1214,7 @@ void irc_spawn( irc_t *irc, user_t *u )
 
 void irc_join( irc_t *irc, user_t *u, char *channel )
 {
-	if( ( g_ascii_strcasecmp( channel, irc->channel ) != 0 ) || user_find( irc, irc->nick ) )
+	if( ( g_strcasecmp( channel, irc->channel ) != 0 ) || user_find( irc, irc->nick ) )
 		irc_write( irc, ":%s!%s@%s JOIN :%s", u->nick, u->user, u->host, channel );
 	
 	if( nick_cmp( u->nick, irc->nick ) == 0 )
@@ -1298,7 +1290,7 @@ int irc_send( irc_t *irc, char *nick, char *s )
 	
 	if( *s == 1 && s[strlen(s)-1] == 1 )
 	{
-		if( g_ascii_strncasecmp( s + 1, "ACTION", 6 ) == 0 )
+		if( g_strncasecmp( s + 1, "ACTION", 6 ) == 0 )
 		{
 			if( s[7] == ' ' ) s ++;
 			s += 3;
@@ -1309,13 +1301,15 @@ int irc_send( irc_t *irc, char *nick, char *s )
 			s -= 4;
 			s[strlen(s)-1] = 0;
 		}
-		else if( g_ascii_strncasecmp( s + 1, "VERSION", 7 ) == 0 )
+		else if( g_strncasecmp( s + 1, "VERSION", 7 ) == 0 )
 		{
+			u = user_find( irc, irc->mynick );
 			irc_privmsg( irc, u, "NOTICE", irc->nick, "", "\001VERSION BitlBee " BITLBEE_VERSION " " ARCH "/" CPU "\001" );
 			return( 1 );
 		}
-		else if( g_ascii_strncasecmp( s + 1, "PING", 4 ) == 0 )
+		else if( g_strncasecmp( s + 1, "PING", 4 ) == 0 )
 		{
+			u = user_find( irc, irc->mynick );
 			irc_privmsg( irc, u, "NOTICE", irc->nick, "", s );
 			return( 1 );
 		}
@@ -1404,7 +1398,7 @@ int irc_privmsg( irc_t *irc, user_t *u, char *type, char *to, char *prefix, char
 		}
 		if( *s == 0 )
 		{
-			if( g_ascii_strncasecmp( line, "/me ", 4 ) == 0 && ( !prefix || !*prefix ) && g_ascii_strcasecmp( type, "PRIVMSG" ) == 0 )
+			if( g_strncasecmp( line, "/me ", 4 ) == 0 && ( !prefix || !*prefix ) && g_strcasecmp( type, "PRIVMSG" ) == 0 )
 			{
 				irc_write( irc, ":%s!%s@%s %s %s :\001ACTION %s\001", u->nick, u->user, u->host,
 				           type, to, line + 4 );

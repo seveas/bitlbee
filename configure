@@ -21,7 +21,6 @@ yahoo=1
 
 debug=0
 strip=1
-tcpd=0
 flood=0
 ssl=auto
 
@@ -56,7 +55,8 @@ Option		Description				Default
 
 --flood=0/1	Flood protection			$flood
 
---ssl=...	SSL library to use (gnutls, nss, auto)	$ssl
+--ssl=...	SSL library to use (gnutls, nss, openssl, bogus, auto)
+							$ssl
 EOF
 		exit;
 	fi
@@ -146,33 +146,24 @@ else
 	exit 1;
 fi
 
-if [ -e /usr/include/tcpd.h -a "$tcpd" = "1" ]; then
-	cat<<EOF>>Makefile.settings
-EFLAGS+=-lwrap
-EOF
-elif [ -e /usr/local/include/tcpd.h -a "$tcpd" = "1" ]; then
-	cat<<EOF>>Makefile.settings
-EFLAGS+=-L/usr/local/lib -lwrap
-CFLAGS+=-I/usr/local/include
-EOF
+if [ -e /usr/include/iconv.h ]; then
+	:;
+elif [ -e /usr/local/include/iconv.h ]; then
+	echo CFLAGS+=-I/usr/local/include >> Makefile.settings;
 else
-	if ! [ "$tcpd" = 0 ]; then
-		tcpd=0
-		echo
-		echo 'Compiling without tcpd support, /etc/hosts.{allow,deny} will be ignored!';
-	fi
-	echo '#define NO_TCPD' >> config.h
+	echo
+	echo 'Warning: Could not find iconv.h, you might have to install it and/or modify'
+	echo 'Makefile.settings to tell where this file is.';
 fi
+
 
 detect_gnutls()
 {
 	if libgnutls-config --version > /dev/null 2> /dev/null; then
 		cat <<EOF>>Makefile.settings
-SSL_CLIENT=ssl_client.o
 EFLAGS+=`libgnutls-config --libs`
 CFLAGS+=`libgnutls-config --cflags`
 EOF
-		echo '#define USE_GNUTLS' >> config.h;
 		
 		ssl=gnutls
 		ret=1;
@@ -185,7 +176,6 @@ detect_nss()
 {
 	if type pkg-config > /dev/null 2>/dev/null && pkg-config mozilla-nss; then
 		cat<<EOF>>Makefile.settings
-SSL_CLIENT=nss_client.o
 EFLAGS+=`pkg-config --libs mozilla-nss`
 CFLAGS+=`pkg-config --cflags mozilla-nss`
 EOF
@@ -197,7 +187,7 @@ EOF
 	fi;
 }
 
-if [ "$msn" = 1 ]; then
+if [ "$msn" = 1 -o "$jabber" = 1 ]; then
 	if [ "$ssl" = "auto" ]; then
 		detect_gnutls
 		if [ "$ret" = "0" ]; then
@@ -207,6 +197,37 @@ if [ "$msn" = 1 ]; then
 		detect_gnutls;
 	elif [ "$ssl" = "nss" ]; then
 		detect_nss;
+	elif [ "$ssl" = "openssl" ]; then
+		echo
+		echo 'No detection code exists for OpenSSL. Make sure that you have a complete'
+		echo 'install of OpenSSL (including devel/header files) before reporting'
+		echo 'compilation problems.'
+		echo
+		echo 'Also, keep in mind that the OpenSSL is, according to some people, not'
+		echo 'completely GPL-compatible. Using GnuTLS or NSS is recommended and better'
+		echo 'supported by us. However, on many BSD machines, OpenSSL can be considered'
+		echo 'part of the operating system, which makes it GPL-compatible.'
+		echo
+		echo 'For more info, see: http://www.openssl.org/support/faq.html#LEGAL2'
+		echo '                    http://www.gnome.org/~markmc/openssl-and-the-gpl.html'
+		echo
+		echo 'Please note that distributing a BitlBee binary which links to OpenSSL is'
+		echo 'probably illegal. If you want to create and distribute a binary BitlBee'
+		echo 'package, you really should use GnuTLS or NSS instead.'
+		echo
+		echo 'Also, the OpenSSL license requires us to say this:'
+		echo ' *    "This product includes software developed by the OpenSSL Project'
+		echo ' *    for use in the OpenSSL Toolkit. (http://www.openssl.org/)"'
+		
+		echo 'EFLAGS+=-lssl -lcrypto' >> Makefile.settings
+		
+		ret=1;
+	elif [ "$ssl" = "bogus" ]; then
+		echo
+		echo 'Using bogus SSL code. This will not make the MSN module work, but it will'
+		echo 'allow you to use the Jabber module - although without working SSL support.'
+		
+		ret=1;
 	else
 		echo
 		echo 'ERROR: Unknown SSL library specified.'
@@ -215,12 +236,15 @@ if [ "$msn" = 1 ]; then
 	
 	if [ "$ret" = "0" ]; then
 		echo
-		echo 'WARNING: Could not find a suitable SSL library (GnuTLS or libnss). This is'
-		echo '         necessary for MSN support. To continue, install a suitable SSL library'
-		echo '         or disable MSN support (--msn=0).'
+		echo 'WARNING: Could not find a suitable SSL library (GnuTLS, libnss or OpenSSL).'
+		echo '         This is necessary for MSN and full Jabber support. To continue,'
+		echo '         install a suitable SSL library or disable MSN support (--msn=0).'
+		echo '         If you want Jabber without SSL support you can try --ssl=bogus.'
 		
 		exit 1;
 	fi;
+	
+	echo 'SSL_CLIENT=ssl_'$ssl'.o' >> Makefile.settings
 fi
 
 if [ "$strip" = 0 ]; then
@@ -305,18 +329,21 @@ Linux )
 	echo 'Linux is our primary development platform, BitlBee should work well.'
 ;;
 *BSD )
-	echo 'Although our primary development system is Linux, BitlBee should run quite well on most BSD systems.'
+	echo 'Although our primary development system is Linux, BitlBee should run without problems on most BSD systems.'
+	echo 'EFLAGS+=-liconv' >> Makefile.settings;
 ;;
 SunOS )
 	echo 'Solaris does not work with stripping enabled, so we will disable that.'
 	echo 'EFLAGS+=-lresolv -lnsl -lsocket' >> Makefile.settings
 	echo 'STRIP=\# skip strip' >> Makefile.settings
+	echo 'EFLAGS+=-liconv' >> Makefile.settings;
 ;;
 Darwin )
 	echo 'Darwin/Mac OS X. This should work well, please read the docs for more information.'
+	echo 'EFLAGS+=-liconv' >> Makefile.settings;
 ;;
 IRIX )
-	echo 'IRIX should not be a problem. I got some positive testing reports.'
+	echo 'IRIX should not be a problem. There were some positive testing reports.'
 ;;
 CYGWIN* )
 	echo 'Cygwin is tested and functioning, but not officially supported.'
@@ -339,15 +366,6 @@ if [ "$strip" = "1" ]; then
 	echo '  Binary stripping enabled.';
 else
 	echo '  Binary stripping disabled.';
-fi
-
-if [ "$tcpd" = "0" ]; then
-	echo '  Tcpd support disabled.';
-else
-	echo '  Tcpd support enabled.'
-	echo '    -- Please do not report any bugs when using tcpd, we disabled this feature'
-	echo '       long ago, for a very good reason: It usually does not work and does not'
-	echo '       really make sense in inetd services anyway.';
 fi
 
 if [ "$msn" = "1" ]; then

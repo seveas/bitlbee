@@ -23,7 +23,7 @@
   Suite 330, Boston, MA  02111-1307  USA
 */
 
-typedef struct
+typedef struct set
 {
 	char *key;
 	char *value;
@@ -32,8 +32,8 @@ typedef struct
 	/* Eval: Returns NULL if the value is incorrect. Can return a
 	   corrected value. set_setstr() should be able to free() the
 	   returned string! */
-	char *(*eval) ( irc_t *irc, void *set, char *value );
-	void *next;
+	char *(*eval) ( irc_t *irc, struct set *set, char *value );
+	struct set *next;
 } set_t;
 
 set_t *set_add( irc_t *irc, char *key, char *def, void *eval );

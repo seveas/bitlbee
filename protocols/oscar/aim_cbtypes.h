@@ -90,7 +90,7 @@
 #define AIM_CB_BUD_DEFAULT 0xffff
 
 /*
- * SNAC Family: Messeging Services.
+ * SNAC Family: Messaging Services.
  */ 
 #define AIM_CB_MSG_ERROR 0x0001
 #define AIM_CB_MSG_PARAMINFO 0x0005
@@ -182,6 +182,7 @@
 #define AIM_CB_ICQ_OFFLINEMSG 0x00f0
 #define AIM_CB_ICQ_OFFLINEMSGCOMPLETE 0x00f1
 #define AIM_CB_ICQ_SIMPLEINFO 0x00f2
+#define AIM_CB_ICQ_INFO 0x00f2 /* just transitional */
 #define AIM_CB_ICQ_DEFAULT 0xffff
 
 /*
@@ -190,6 +191,7 @@
 #define AIM_CB_SSI_ERROR 0x0001
 #define AIM_CB_SSI_REQRIGHTS 0x0002
 #define AIM_CB_SSI_RIGHTSINFO 0x0003
+#define AIM_CB_SSI_REQFULLLIST 0x0004
 #define AIM_CB_SSI_REQLIST 0x0005
 #define AIM_CB_SSI_LIST 0x0006
 #define AIM_CB_SSI_ACTIVATE 0x0007
@@ -200,6 +202,10 @@
 #define AIM_CB_SSI_NOLIST 0x000F
 #define AIM_CB_SSI_EDITSTART 0x0011
 #define AIM_CB_SSI_EDITSTOP 0x0012
+#define AIM_CB_SSI_SENDAUTHREQ 0x0018
+#define AIM_CB_SSI_SERVAUTHREQ 0x0019
+#define AIM_CB_SSI_SENDAUTHREP 0x001A
+#define AIM_CB_SSI_SERVAUTHREP 0x001B
 
 /*
  * SNAC Family: Authorizer

@@ -46,10 +46,13 @@ The authors thank the following people:
 - Simon Schubert, for providing code to read the names of ICQ contacts.
 - NETRIC (www.netric.org) for auditting the BitlBee code security (and
   finding some small problems).
+- Elizabeth Krumbach, for her help on the docs.
+- Frank Thieme, for the info-command enhancements and other patches.
+- Marcus Dennis, for some bitlbeed enhancements.
 
 - And all other users who help us by sending useful bug reports, positive
   feedback, nice patches and cool addons. Mentioning you all would make
   this list fill up the whole source tree, so please don't be offended
-  by don't seeing your name here.
+  by not seeing your name here.
 
 - All the people who run public BitlBee servers.

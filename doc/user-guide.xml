@@ -1,8 +1,11 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
 <!DOCTYPE book PUBLIC "-//OASIS//DTD DocBook V4.2//EN" "http://www.oasis-open.org/docbook/xml/4.2/docbookx.dtd" [
-<!ENTITY INSTALLATION SYSTEM "Installation.xml">
-<!ENTITY USAGE SYSTEM "Usage.xml">
-<!ENTITY SUPPORT SYSTEM "Support.xml">
+<!ENTITY installation SYSTEM "Installation.xml">
+<!ENTITY usage SYSTEM "Usage.xml">
+<!ENTITY support SYSTEM "Support.xml">
+<!ENTITY quickstart SYSTEM "quickstart.xml">
+<!ENTITY commands SYSTEM "commands.xml">
+<!ENTITY misc SYSTEM "misc.xml">
 ]>
 
 <book id="BitlBee-User-Guide">
@@ -11,8 +14,18 @@
 	<title>BitlBee User Guide</title>
 	<author>
 		<firstname>Jelmer</firstname><surname>Vernooij</surname>
+		<address><email>jelmer@samba.org</email></address>
 	</author>
-	<address><email>jelmer@nl.linux.org</email></address>
+
+	<author>
+		<firstname>Wilmer</firstname><surname>van der Gaast</surname>
+		<address><email>wilmer@gaast.net</email></address>
+	</author>
+
+	<author>
+		<firstname>Sjoerd</firstname><surname>Hemminga</surname>
+		<address><email>sjoerd@huiswerkservice.nl</email></address>
+	</author>
 
 	<legalnotice id="legalnotice">
      <para>
@@ -37,8 +50,11 @@
 
   </bookinfo>
 
-&INSTALLATION;
-&USAGE;
-&SUPPORT;
+&installation;
+&usage;
+&support;
+&commands;
+&quickstart;
+&misc;
 
 </book>

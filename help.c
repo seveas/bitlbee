@@ -114,7 +114,7 @@ char *help_get( help_t **help, char *string )
 
 	while( h )
 	{
-		if( g_ascii_strcasecmp( h->string, string ) == 0 ) break;
+		if( g_strcasecmp( h->string, string ) == 0 ) break;
 		h = h->next;
 	}
 	if( h )
@@ -134,7 +134,7 @@ char *help_get( help_t **help, char *string )
 			return( g_strdup( "Help file changed during this session. Please restart to get help back." ) );
 		}
 		s[h->length] = 0;
-		if( h->fd > 0 )
+		if( h->fd >= 0 )
 		{
 			lseek( h->fd, h->offset.file_offset, SEEK_SET );
 			read( h->fd, s, h->length );

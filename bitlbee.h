@@ -29,7 +29,7 @@
 #define _GNU_SOURCE /* Stupid GNU :-P */
 
 #define PACKAGE "BitlBee"
-#define BITLBEE_VERSION "0.90"
+#define BITLBEE_VERSION "0.91"
 #define VERSION BITLBEE_VERSION
 
 #define MAX_STRING 128
@@ -48,10 +48,6 @@
 #ifndef _WIN32
 #include <syslog.h>
 #include <errno.h>
-
-#ifndef NO_TCPD
-#include <tcpd.h>
-#endif
 #endif
 
 #include <glib.h>
@@ -137,9 +133,6 @@ G_MODULE_EXPORT void http_decode( char *s );
 void *bitlbee_alloc(size_t size);
 void *bitlbee_realloc(void *oldmem, size_t newsize);
 
-G_MODULE_EXPORT irc_t *get_IRC();
-
-extern irc_t *IRC;
 extern global_t global;
 extern GList *connection_list;
 

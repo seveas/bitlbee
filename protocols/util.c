@@ -145,7 +145,8 @@ void strip_linefeed(gchar *text)
 char *add_cr(char *text)
 {
 	char *ret = NULL;
-	int count = 0, i, j;
+	int count = 0, j;
+	unsigned int i;
 
 	if (text[0] == '\n')
 		count++;
@@ -272,6 +273,8 @@ typedef struct htmlentity
 	char is;
 } htmlentity_t;
 
+/* FIXME: This is ISO8859-1(5) centric, so might cause problems with other charsets. */
+
 static htmlentity_t ent[] =
 {
 	{ "lt",     '<' },
@@ -303,38 +306,54 @@ void strip_html( char *in )
 	char *start = in;
 	char *out = g_malloc( strlen( in ) + 1 );
 	char *s = out, *cs;
-	int i;
-	int matched;
+	int i, matched;
 	
 	memset( out, 0, strlen( in ) + 1 );
 	
 	while( *in )
 	{
-		if( *in == '<' )
+		if( *in == '<' && ( isalpha( *(in+1) ) || *(in+1) == '/' ) )
 		{
-			while( *in && *in != '>' ) in ++;
-			if( *in ) in ++;
+			/* If in points at a < and in+1 points at a letter or a slash, this is probably
+			   a HTML-tag. Try to find a closing > and continue there. If the > can't be
+			   found, assume that it wasn't a HTML-tag after all. */
+			
+			cs = in;
+			
+			while( *in && *in != '>' )
+				in ++;
+			
+			if( *in )
+			{
+				in ++;
+			}
+			else
+			{
+				in = cs;
+				*(s++) = *(in++);
+			}
 		}
 		else if( *in == '&' )
 		{
 			cs = ++in;
-			while( *in && ( ( *in >= 'a' && *in <= 'z' ) || ( *in >= 'A' && *in <= 'Z' ) ) )
+			while( *in && isalpha( *in ) )
 				in ++;
 			
 			if( *in == ';' ) in ++;
 			matched = 0;
 			
 			for( i = 0; *ent[i].code; i ++ )
-				if( g_ascii_strncasecmp( ent[i].code, cs, strlen( ent[i].code ) ) == 0 )
+				if( g_strncasecmp( ent[i].code, cs, strlen( ent[i].code ) ) == 0 )
 				{
 					*(s++) = ent[i].is;
 					matched = 1;
 					break;
 				}
 
-			// none of the entities were matched, return the string
-			if (!matched) {
-				in = cs-1;
+			/* None of the entities were matched, so return the string */
+			if( !matched )
+			{
+				in = cs - 1;
 				*(s++) = *(in++);
 			}
 		}
@@ -347,3 +366,9 @@ void strip_html( char *in )
 	strcpy( start, out );
 	g_free( out );
 } 
+
+void info_string_append(GString *str, char *newline, char *name, char *value)
+{
+	if( value && value[0] )
+		g_string_sprintfa( str, "%s%s: %s", newline, name, value );
+}

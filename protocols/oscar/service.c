@@ -3,14 +3,13 @@
  * this group, as it does some particularly good things (like rate limiting).
  */
 
-#define FAIM_INTERNAL
 #define FAIM_NEED_CONN_INTERNAL
 #include <aim.h>
 
 #include "md5.h"
 
 /* Client Online (group 1, subtype 2) */
-faim_export int aim_clientready(aim_session_t *sess, aim_conn_t *conn)
+int aim_clientready(aim_session_t *sess, aim_conn_t *conn)
 {
 	aim_conn_inside_t *ins = (aim_conn_inside_t *)conn->inside;
 	struct snacgroup *sg;
@@ -38,8 +37,7 @@ faim_export int aim_clientready(aim_session_t *sess, aim_conn_t *conn)
 			aimbs_put16(&fr->data, mod->version);
 			aimbs_put16(&fr->data, mod->toolid);
 			aimbs_put16(&fr->data, mod->toolversion);
-		} else
-			faimdprintf(sess, 1, "aim_clientready: server supports group 0x%04x but we don't!\n", sg->group);
+		} 
 	}
 
 	aim_tx_enqueue(sess, fr);
@@ -63,7 +61,7 @@ faim_export int aim_clientready(aim_session_t *sess, aim_conn_t *conn)
  */
 static int hostonline(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, aim_modsnac_t *snac, aim_bstream_t *bs)
 {
-	fu16_t *families;
+	guint16 *families;
 	int famcount;
 
 
@@ -92,7 +90,7 @@ static int hostonline(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, a
 }
 
 /* Service request (group 1, type 4) */
-faim_export int aim_reqservice(aim_session_t *sess, aim_conn_t *conn, fu16_t serviceid)
+int aim_reqservice(aim_session_t *sess, aim_conn_t *conn, guint16 serviceid)
 {
 	return aim_genericreq_s(sess, conn, 0x0001, 0x0004, &serviceid);
 }
@@ -148,7 +146,7 @@ static int redirect(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, aim
 }
 
 /* Request Rate Information. (group 1, type 6) */
-faim_internal int aim_reqrates(aim_session_t *sess, aim_conn_t *conn)
+int aim_reqrates(aim_session_t *sess, aim_conn_t *conn)
 {
 	return aim_genericreq_n(sess, conn, 0x0001, 0x0006);
 }
@@ -222,7 +220,7 @@ static void rc_addclass(struct rateclass **head, struct rateclass *inrc)
 	return;
 }
 
-static struct rateclass *rc_findclass(struct rateclass **head, fu16_t id)
+static struct rateclass *rc_findclass(struct rateclass **head, guint16 id)
 {
 	struct rateclass *rc;
 
@@ -234,7 +232,7 @@ static struct rateclass *rc_findclass(struct rateclass **head, fu16_t id)
 	return NULL;
 }
 
-static void rc_addpair(struct rateclass *rc, fu16_t group, fu16_t type)
+static void rc_addpair(struct rateclass *rc, guint16 group, guint16 type)
 {
 	struct snacpair *sp, *sp2;
 
@@ -261,7 +259,7 @@ static void rc_addpair(struct rateclass *rc, fu16_t group, fu16_t type)
 static int rateresp(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, aim_modsnac_t *snac, aim_bstream_t *bs)
 {
 	aim_conn_inside_t *ins = (aim_conn_inside_t *)rx->conn->inside;
-	fu16_t numclasses, i;
+	guint16 numclasses, i;
 	aim_rxcallback_t userfunc;
 
 
@@ -293,8 +291,6 @@ static int rateresp(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, aim
 		if (mod->version >= 3)
 			aimbs_getrawbuf(bs, rc.unknown, sizeof(rc.unknown));
 
-		faimdprintf(sess, 1, "--- Adding rate class %d to connection type %d: window size = %ld, clear = %ld, alert = %ld, limit = %ld, disconnect = %ld, current = %ld, max = %ld\n", rx->conn->type, rc.classid, rc.windowsize, rc.clear, rc.alert, rc.limit, rc.disconnect, rc.current, rc.max);
-
 		rc_addclass(&ins->rates, &rc);
 	}
 
@@ -302,7 +298,7 @@ static int rateresp(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, aim
 	 * Then the members of each class.
 	 */
 	for (i = 0; i < numclasses; i++) {
-		fu16_t classid, count;
+		guint16 classid, count;
 		struct rateclass *rc;
 		int j;
 
@@ -312,7 +308,7 @@ static int rateresp(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, aim
 		rc = rc_findclass(&ins->rates, classid);
 
 		for (j = 0; j < count; j++) {
-			fu16_t group, subtype;
+			guint16 group, subtype;
 
 			group = aimbs_get16(bs);
 			subtype = aimbs_get16(bs);
@@ -345,7 +341,7 @@ static int rateresp(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, aim
 }
 
 /* Add Rate Parameter (group 1, type 8) */
-faim_internal int aim_rates_addparam(aim_session_t *sess, aim_conn_t *conn)
+int aim_rates_addparam(aim_session_t *sess, aim_conn_t *conn)
 {
 	aim_conn_inside_t *ins = (aim_conn_inside_t *)conn->inside;
 	aim_frame_t *fr;	
@@ -367,7 +363,7 @@ faim_internal int aim_rates_addparam(aim_session_t *sess, aim_conn_t *conn)
 }
 
 /* Delete Rate Parameter (group 1, type 9) */
-faim_internal int aim_rates_delparam(aim_session_t *sess, aim_conn_t *conn)
+int aim_rates_delparam(aim_session_t *sess, aim_conn_t *conn)
 {
 	aim_conn_inside_t *ins = (aim_conn_inside_t *)conn->inside;
 	aim_frame_t *fr;	
@@ -392,8 +388,8 @@ faim_internal int aim_rates_delparam(aim_session_t *sess, aim_conn_t *conn)
 static int ratechange(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, aim_modsnac_t *snac, aim_bstream_t *bs)
 {
 	aim_rxcallback_t userfunc;
-	fu16_t code, rateclass;
-	fu32_t currentavg, maxavg, windowsize, clear, alert, limit, disconnect;
+	guint16 code, rateclass;
+	guint32 currentavg, maxavg, windowsize, clear, alert, limit, disconnect;
 
 	code = aimbs_get16(bs);
 	rateclass = aimbs_get16(bs);
@@ -447,7 +443,7 @@ static int serverpause(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, 
  * libfaim can cause.
  *
  */
-faim_export int aim_sendpauseack(aim_session_t *sess, aim_conn_t *conn)
+int aim_sendpauseack(aim_session_t *sess, aim_conn_t *conn)
 {
 	aim_frame_t *fr;
 	aim_snacid_t snacid;
@@ -485,7 +481,7 @@ static int serverresume(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx,
 }
 
 /* Request self-info (group 1, type 0x0e) */
-faim_export int aim_reqpersonalinfo(aim_session_t *sess, aim_conn_t *conn)
+int aim_reqpersonalinfo(aim_session_t *sess, aim_conn_t *conn)
 {
 	return aim_genericreq_n(sess, conn, 0x0001, 0x000e);
 }
@@ -508,7 +504,7 @@ static int selfinfo(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, aim
 static int evilnotify(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, aim_modsnac_t *snac, aim_bstream_t *bs)
 {
 	aim_rxcallback_t userfunc;
-	fu16_t newevil;
+	guint16 newevil;
 	aim_userinfo_t userinfo;
 
 	memset(&userinfo, 0, sizeof(aim_userinfo_t));
@@ -533,7 +529,7 @@ static int evilnotify(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, a
  * call it again with zero when you're back.
  *
  */
-faim_export int aim_bos_setidle(aim_session_t *sess, aim_conn_t *conn, fu32_t idletime)
+int aim_bos_setidle(aim_session_t *sess, aim_conn_t *conn, guint32 idletime)
 {
 	return aim_genericreq_l(sess, conn, 0x0001, 0x0011, &idletime);
 }
@@ -550,7 +546,7 @@ static int migrate(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, aim_
 {
 	aim_rxcallback_t userfunc;
 	int ret = 0;
-	fu16_t groupcount, i;
+	guint16 groupcount, i;
 	aim_tlvlist_t *tl;
 	char *ip = NULL;
 	aim_tlv_t *cktlv;
@@ -568,11 +564,11 @@ static int migrate(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, aim_
 	 */
 	groupcount = aimbs_get16(bs);
 	for (i = 0; i < groupcount; i++) {
-		fu16_t group;
+		guint16 group;
 
 		group = aimbs_get16(bs);
 
-		faimdprintf(sess, 0, "bifurcated migration unsupported -- group 0x%04x\n", group);
+		do_error_dialog(sess->aux_data, "bifurcated migration unsupported", "Gaim");
 	}
 
 	tl = aim_readtlvchain(bs);
@@ -598,7 +594,7 @@ static int motd(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, aim_mod
 	char *msg = NULL;
 	int ret = 0;
 	aim_tlvlist_t *tlvlist;
-	fu16_t id;
+	guint16 id;
 
 	/*
 	 * Code.
@@ -639,7 +635,7 @@ static int motd(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, aim_mod
  *  Bit 2:  Allows other AIM users to see how long you've been a member.
  *
  */
-faim_export int aim_bos_setprivacyflags(aim_session_t *sess, aim_conn_t *conn, fu32_t flags)
+int aim_bos_setprivacyflags(aim_session_t *sess, aim_conn_t *conn, guint32 flags)
 {
 	return aim_genericreq_l(sess, conn, 0x0001, 0x0014, &flags);
 }
@@ -651,7 +647,7 @@ faim_export int aim_bos_setprivacyflags(aim_session_t *sess, aim_conn_t *conn, f
  * real necessary.
  *
  */
-faim_export int aim_nop(aim_session_t *sess, aim_conn_t *conn)
+int aim_nop(aim_session_t *sess, aim_conn_t *conn)
 {
 	return aim_genericreq_n(sess, conn, 0x0001, 0x0016);
 }
@@ -669,7 +665,7 @@ faim_export int aim_nop(aim_session_t *sess, aim_conn_t *conn)
  * the rate information based on what version of group 1 we advertise here.
  *
  */
-faim_internal int aim_setversions(aim_session_t *sess, aim_conn_t *conn)
+int aim_setversions(aim_session_t *sess, aim_conn_t *conn)
 {
 	aim_conn_inside_t *ins = (aim_conn_inside_t *)conn->inside;
 	struct snacgroup *sg;
@@ -695,8 +691,7 @@ faim_internal int aim_setversions(aim_session_t *sess, aim_conn_t *conn)
 		if ((mod = aim__findmodulebygroup(sess, sg->group))) {
 			aimbs_put16(&fr->data, mod->family);
 			aimbs_put16(&fr->data, mod->version);
-		} else
-			faimdprintf(sess, 1, "aim_setversions: server supports group 0x%04x but we don't!\n", sg->group);
+		}
 	}
 
 	aim_tx_enqueue(sess, fr);
@@ -708,7 +703,7 @@ faim_internal int aim_setversions(aim_session_t *sess, aim_conn_t *conn)
 static int hostversions(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, aim_modsnac_t *snac, aim_bstream_t *bs)
 {
 	int vercount;
-	fu8_t *versions;
+	guint8 *versions;
 
 	/* This is frivolous. (Thank you SmarterChild.) */
 	vercount = aim_bstream_empty(bs)/4;
@@ -729,22 +724,27 @@ static int hostversions(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx,
  * Currently only works if using ICQ.
  *
  */
-faim_export int aim_setextstatus(aim_session_t *sess, aim_conn_t *conn, fu32_t status)
+int aim_setextstatus(aim_session_t *sess, aim_conn_t *conn, guint32 status, const char *msg)
 {
 	aim_frame_t *fr;
 	aim_snacid_t snacid;
 	aim_tlvlist_t *tl = NULL;
-	fu32_t data;
+	guint32 data;
+	int tlvlen;
 
 	data = 0x00030000 | status; /* yay for error checking ;^) */
 
-	if (!(fr = aim_tx_new(sess, conn, AIM_FRAMETYPE_FLAP, 0x02, 10 + 8)))
+	tlvlen = aim_addtlvtochain32(&tl, 0x0006, data);
+	tlvlen += aim_addtlvtochain_availmsg(&tl, 0x001d, msg);
+
+	printf("%d\n", tlvlen);
+
+	if (!(fr = aim_tx_new(sess, conn, AIM_FRAMETYPE_FLAP, 0x02, 20 + tlvlen)))
 		return -ENOMEM;
 
 	snacid = aim_cachesnac(sess, 0x0001, 0x001e, 0x0000, NULL, 0);
 	aim_putsnac(&fr->data, 0x0001, 0x001e, 0x0000, snacid);
 	
-	aim_addtlvtochain32(&tl, 0x0006, data);
 	aim_writetlvchain(&fr->data, &tl);
 	aim_freetlvchain(&tl);
 	
@@ -794,7 +794,7 @@ faim_export int aim_setextstatus(aim_session_t *sess, aim_conn_t *conn, fu32_t s
 static int memrequest(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, aim_modsnac_t *snac, aim_bstream_t *bs)
 {
 	aim_rxcallback_t userfunc;
-	fu32_t offset, len;
+	guint32 offset, len;
 	aim_tlvlist_t *list;
 	char *modname;
 
@@ -803,8 +803,6 @@ static int memrequest(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, a
 	list = aim_readtlvchain(bs);
 
 	modname = aim_gettlv_str(list, 0x0001, 1);
-
-	faimdprintf(sess, 1, "data at 0x%08lx (%d bytes) of requested\n", offset, len, modname ? modname : "aim.exe");
 
 	if ((userfunc = aim_callhandler(sess, rx->conn, snac->family, snac->subtype)))
 		return userfunc(sess, rx, offset, len, modname);
@@ -815,31 +813,8 @@ static int memrequest(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, a
 	return 0;
 }
 
-#if 0
-static void dumpbox(aim_session_t *sess, unsigned char *buf, int len)
-{
-	int i;
-
-	if (!sess || !buf || !len)
-		return;
-
-	faimdprintf(sess, 1, "\nDump of %d bytes at %p:", len, buf);
-
-	for (i = 0; i < len; i++) {
-		if ((i % 8) == 0)
-			faimdprintf(sess, 1, "\n\t");
-
-		faimdprintf(sess, 1, "0x%2x ", buf[i]);
-	}
-
-	faimdprintf(sess, 1, "\n\n");
-
-	return;
-}
-#endif
-
 /* Client verification reply (group 1, subtype 0x20) */
-faim_export int aim_sendmemblock(aim_session_t *sess, aim_conn_t *conn, fu32_t offset, fu32_t len, const fu8_t *buf, fu8_t flag)
+int aim_sendmemblock(aim_session_t *sess, aim_conn_t *conn, guint32 offset, guint32 len, const guint8 *buf, guint8 flag)
 {
 	aim_frame_t *fr;
 	aim_snacid_t snacid;
@@ -867,11 +842,11 @@ faim_export int aim_sendmemblock(aim_session_t *sess, aim_conn_t *conn, fu32_t o
 		md5_append(&state, (const md5_byte_t *)buf, len);
 		md5_finish(&state, digest);
 
-		aimbs_putraw(&fr->data, (fu8_t *)digest, 0x10);
+		aimbs_putraw(&fr->data, (guint8 *)digest, 0x10);
 
 	} else if (len == 0) { /* no length, just hash NULL (buf is optional) */
 		md5_state_t state;
-		fu8_t nil = '\0';
+		guint8 nil = '\0';
 		md5_byte_t digest[0x10];
 
 		/*
@@ -883,7 +858,7 @@ faim_export int aim_sendmemblock(aim_session_t *sess, aim_conn_t *conn, fu32_t o
 		md5_append(&state, (const md5_byte_t *)&nil, 0);
 		md5_finish(&state, digest);
 
-		aimbs_putraw(&fr->data, (fu8_t *)digest, 0x10);
+		aimbs_putraw(&fr->data, (guint8 *)digest, 0x10);
 
 	} else {
 
@@ -916,7 +891,7 @@ faim_export int aim_sendmemblock(aim_session_t *sess, aim_conn_t *conn, fu32_t o
 			aimbs_put32(&fr->data, 0xecf8427e);
 
 		} else
-			faimdprintf(sess, 0, "sendmemblock: WARNING: unknown hash request\n");
+			do_error_dialog(sess->aux_data, "WARNING: unknown hash request", "Gaim");
 
 	}
 
@@ -956,13 +931,13 @@ static int snachandler(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, 
 	return 0;
 }
 
-faim_internal int general_modfirst(aim_session_t *sess, aim_module_t *mod)
+int general_modfirst(aim_session_t *sess, aim_module_t *mod)
 {
 
 	mod->family = 0x0001;
 	mod->version = 0x0003;
 	mod->toolid = 0x0110;
-	mod->toolversion = 0x047b;
+	mod->toolversion = 0x0629;
 	mod->flags = 0;
 	strncpy(mod->name, "general", sizeof(mod->name));
 	mod->snachandler = snachandler;

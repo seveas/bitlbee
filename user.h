@@ -44,7 +44,7 @@ typedef struct __USER
 	
 	int (*send_handler) ( irc_t *irc, struct __USER *u, char *msg );
 	
-	void *next;
+	struct __USER *next;
 } user_t;
 
 user_t *user_add( struct irc *irc, char *nick );

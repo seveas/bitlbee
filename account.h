@@ -35,6 +35,7 @@ typedef struct account
 	
 	int reconnect;
 	
+	struct irc *irc;
 	struct gaim_connection *gc;
 	struct account *next;
 } account_t;

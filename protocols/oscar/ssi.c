@@ -22,7 +22,6 @@
  *
  */
 
-#define FAIM_INTERNAL
 #include <aim.h>
 
 /**
@@ -36,7 +35,7 @@
  * @param type The type of the item, 0x0001 for a contact, 0x0002 for a group, etc.
  * @return The newly created item.
  */
-static struct aim_ssi_item *aim_ssi_itemlist_add(struct aim_ssi_item **list, struct aim_ssi_item *parent, char *name, fu16_t type)
+static struct aim_ssi_item *aim_ssi_itemlist_add(struct aim_ssi_item **list, struct aim_ssi_item *parent, char *name, guint16 type)
 {
 	int i;
 	struct aim_ssi_item *cur, *newitem;
@@ -117,9 +116,9 @@ static int aim_ssi_itemlist_rebuildgroup(struct aim_ssi_item **list, struct aim_
 
 	/* Rebuild the additional data */
 	if (newlen>0) {
-		fu8_t *newdata;
+		guint8 *newdata;
 
-		if (!(newdata = (fu8_t *)g_malloc((newlen)*sizeof(fu8_t))))
+		if (!(newdata = (guint8 *)g_malloc((newlen)*sizeof(guint8))))
 			return -ENOMEM;
 		newlen = 0;
 		if (parentgroup->gid == 0x0000) {
@@ -173,7 +172,7 @@ static int aim_ssi_freelist(aim_session_t *sess)
  * @param bid The buddy ID# of the desired item.
  * @return Return a pointer to the item if found, else return NULL;
  */
-faim_export struct aim_ssi_item *aim_ssi_itemlist_find(struct aim_ssi_item *list, fu16_t gid, fu16_t bid)
+struct aim_ssi_item *aim_ssi_itemlist_find(struct aim_ssi_item *list, guint16 gid, guint16 bid)
 {
 	struct aim_ssi_item *cur;
 	for (cur=list; cur; cur=cur->next)
@@ -192,7 +191,7 @@ faim_export struct aim_ssi_item *aim_ssi_itemlist_find(struct aim_ssi_item *list
  * @param type The type of the desired item.
  * @return Return a pointer to the item if found, else return NULL;
  */
-faim_export struct aim_ssi_item *aim_ssi_itemlist_finditem(struct aim_ssi_item *list, char *gn, char *sn, fu16_t type)
+struct aim_ssi_item *aim_ssi_itemlist_finditem(struct aim_ssi_item *list, char *gn, char *sn, guint16 type)
 {
 	struct aim_ssi_item *cur;
 	if (!list)
@@ -228,7 +227,7 @@ faim_export struct aim_ssi_item *aim_ssi_itemlist_finditem(struct aim_ssi_item *
  * @param bn The buddy name of the desired item.
  * @return Return a pointer to the item if found, else return NULL;
  */
-faim_export struct aim_ssi_item *aim_ssi_itemlist_findparent(struct aim_ssi_item *list, char *sn)
+struct aim_ssi_item *aim_ssi_itemlist_findparent(struct aim_ssi_item *list, char *sn)
 {
 	struct aim_ssi_item *cur, *curg;
 	if (!list || !sn)
@@ -247,7 +246,7 @@ faim_export struct aim_ssi_item *aim_ssi_itemlist_findparent(struct aim_ssi_item
  * @param list A pointer to the current list of items.
  * @return Return the current SSI permit deny setting, or 0 if no setting was found.
  */
-faim_export int aim_ssi_getpermdeny(struct aim_ssi_item *list)
+int aim_ssi_getpermdeny(struct aim_ssi_item *list)
 {
 	struct aim_ssi_item *cur = aim_ssi_itemlist_finditem(list, NULL, NULL, AIM_SSI_TYPE_PDINFO);
 	if (cur) {
@@ -269,7 +268,7 @@ faim_export int aim_ssi_getpermdeny(struct aim_ssi_item *list)
  * @param list A pointer to the current list of items.
  * @return Return the current visibility mask.
  */
-faim_export fu32_t aim_ssi_getpresence(struct aim_ssi_item *list)
+guint32 aim_ssi_getpresence(struct aim_ssi_item *list)
 {
 	struct aim_ssi_item *cur = aim_ssi_itemlist_finditem(list, NULL, NULL, AIM_SSI_TYPE_PRESENCEPREFS);
 	if (cur) {
@@ -351,7 +350,7 @@ static int aim_ssi_dispatch(aim_session_t *sess, aim_conn_t *conn)
  * @param conn The bos connection for this session.
  * @return Return 0 if no errors, otherwise return the error number.
  */
-faim_export int aim_ssi_deletelist(aim_session_t *sess, aim_conn_t *conn)
+int aim_ssi_deletelist(aim_session_t *sess, aim_conn_t *conn)
 {
 	int num;
 	struct aim_ssi_item *cur, **items;
@@ -387,7 +386,7 @@ faim_export int aim_ssi_deletelist(aim_session_t *sess, aim_conn_t *conn)
  * @param conn The bos connection for this session.
  * @return Return 0 if no errors, otherwise return the error number.
  */
-faim_export int aim_ssi_cleanlist(aim_session_t *sess, aim_conn_t *conn)
+int aim_ssi_cleanlist(aim_session_t *sess, aim_conn_t *conn)
 {
 	unsigned int i;
 	struct aim_ssi_item *cur, *parentgroup;
@@ -488,12 +487,13 @@ faim_export int aim_ssi_cleanlist(aim_session_t *sess, aim_conn_t *conn)
  * @param gn The name of the group to which you want to add these names.
  * @param sn An array of null terminated strings of the names you want to add.
  * @param num The number of screen names you are adding (size of the sn array).
+ * @param flags 1 - Add with TLV(0x66)
  * @return Return 0 if no errors, otherwise return the error number.
  */
-faim_export int aim_ssi_addbuddies(aim_session_t *sess, aim_conn_t *conn, char *gn, char **sn, unsigned int num)
+int aim_ssi_addbuddies(aim_session_t *sess, aim_conn_t *conn, char *gn, char **sn, unsigned int num, unsigned int flags)
 {
 	struct aim_ssi_item *parentgroup, **newitems;
-	fu16_t i;
+	guint16 i;
 
 	if (!sess || !conn || !gn || !sn || !num)
 		return -EINVAL;
@@ -514,6 +514,10 @@ faim_export int aim_ssi_addbuddies(aim_session_t *sess, aim_conn_t *conn, char *
 		if (!(newitems[i] = aim_ssi_itemlist_add(&sess->ssi.items, parentgroup, sn[i], AIM_SSI_TYPE_BUDDY))) {
 			g_free(newitems);
 			return -ENOMEM;
+		} else if (flags & 1) {
+			aim_tlvlist_t *tl = NULL;
+			aim_addtlvtochain_noval(&tl, 0x66);
+			newitems[i]->data = tl;
 		}
 
 	/* Send the add item SNAC */
@@ -548,7 +552,7 @@ faim_export int aim_ssi_addbuddies(aim_session_t *sess, aim_conn_t *conn, char *
  * @param conn The bos connection for this session.
  * @return Return 0 if no errors, otherwise return the error number.
  */
-faim_export int aim_ssi_addmastergroup(aim_session_t *sess, aim_conn_t *conn)
+int aim_ssi_addmastergroup(aim_session_t *sess, aim_conn_t *conn)
 {
 	struct aim_ssi_item *newitem;
 
@@ -581,10 +585,10 @@ faim_export int aim_ssi_addmastergroup(aim_session_t *sess, aim_conn_t *conn)
  * @param num The number of groups names you are adding (size of the sn array).
  * @return Return 0 if no errors, otherwise return the error number.
  */
-faim_export int aim_ssi_addgroups(aim_session_t *sess, aim_conn_t *conn, char **gn, unsigned int num)
+int aim_ssi_addgroups(aim_session_t *sess, aim_conn_t *conn, char **gn, unsigned int num)
 {
 	struct aim_ssi_item *parentgroup, **newitems;
-	fu16_t i;
+	guint16 i;
 
 	if (!sess || !conn || !gn || !num)
 		return -EINVAL;
@@ -644,10 +648,10 @@ faim_export int aim_ssi_addgroups(aim_session_t *sess, aim_conn_t *conn, char **
  *        #defines in aim.h.
  * @return Return 0 if no errors, otherwise return the error number.
  */
-faim_export int aim_ssi_addpord(aim_session_t *sess, aim_conn_t *conn, char **sn, unsigned int num, fu16_t type)
+int aim_ssi_addpord(aim_session_t *sess, aim_conn_t *conn, char **sn, unsigned int num, guint16 type)
 {
 	struct aim_ssi_item **newitems;
-	fu16_t i;
+	guint16 i;
 
 	if (!sess || !conn || !sn || !num)
 		return -EINVAL;
@@ -690,10 +694,10 @@ faim_export int aim_ssi_addpord(aim_session_t *sess, aim_conn_t *conn, char **sn
  * @param sn The name of the buddy to be moved.
  * @return Return 0 if no errors, otherwise return the error number.
  */
-faim_export int aim_ssi_movebuddy(aim_session_t *sess, aim_conn_t *conn, char *oldgn, char *newgn, char *sn)
+int aim_ssi_movebuddy(aim_session_t *sess, aim_conn_t *conn, char *oldgn, char *newgn, char *sn)
 {
 	struct aim_ssi_item **groups, *buddy, *cur;
-	fu16_t i;
+	guint16 i;
 
 	if (!sess || !conn || !oldgn || !newgn || !sn)
 		return -EINVAL;
@@ -762,7 +766,7 @@ faim_export int aim_ssi_movebuddy(aim_session_t *sess, aim_conn_t *conn, char *o
  * @param num The number of screen names you are deleting (size of the sn array).
  * @return Return 0 if no errors, otherwise return the error number.
  */
-faim_export int aim_ssi_delbuddies(aim_session_t *sess, aim_conn_t *conn, char *gn, char **sn, unsigned int num)
+int aim_ssi_delbuddies(aim_session_t *sess, aim_conn_t *conn, char *gn, char **sn, unsigned int num)
 {
 	struct aim_ssi_item *cur, *parentgroup, **delitems;
 	int i;
@@ -832,7 +836,7 @@ faim_export int aim_ssi_delbuddies(aim_session_t *sess, aim_conn_t *conn, char *
  * @param conn The bos connection for this session.
  * @return Return 0 if no errors, otherwise return the error number.
  */
-faim_export int aim_ssi_delmastergroup(aim_session_t *sess, aim_conn_t *conn)
+int aim_ssi_delmastergroup(aim_session_t *sess, aim_conn_t *conn)
 {
 	struct aim_ssi_item *cur, *delitem;
 
@@ -877,7 +881,7 @@ faim_export int aim_ssi_delmastergroup(aim_session_t *sess, aim_conn_t *conn)
  * @param num The number of groups you are deleting (size of the gn array).
  * @return Return 0 if no errors, otherwise return the error number.
  */
-faim_export int aim_ssi_delgroups(aim_session_t *sess, aim_conn_t *conn, char **gn, unsigned int num) {
+int aim_ssi_delgroups(aim_session_t *sess, aim_conn_t *conn, char **gn, unsigned int num) {
 	struct aim_ssi_item *cur, *parentgroup, **delitems;
 	int i;
 
@@ -949,7 +953,7 @@ faim_export int aim_ssi_delgroups(aim_session_t *sess, aim_conn_t *conn, char **
  * @param num The number of items you are deleting (size of the sn array).
  * @return Return 0 if no errors, otherwise return the error number.
  */
-faim_export int aim_ssi_delpord(aim_session_t *sess, aim_conn_t *conn, char **sn, unsigned int num, fu16_t type) {
+int aim_ssi_delpord(aim_session_t *sess, aim_conn_t *conn, char **sn, unsigned int num, guint16 type) {
 	struct aim_ssi_item *cur, **delitems;
 	int i;
 
@@ -1011,9 +1015,9 @@ faim_export int aim_ssi_delpord(aim_session_t *sess, aim_conn_t *conn, char **sn
  *        visible.  See the AIM_FLAG_BLEH #defines in aim.h
  * @return Return 0 if no errors, otherwise return the error number.
  */
-faim_export int aim_ssi_setpermdeny(aim_session_t *sess, aim_conn_t *conn, fu8_t permdeny, fu32_t vismask) {
+int aim_ssi_setpermdeny(aim_session_t *sess, aim_conn_t *conn, guint8 permdeny, guint32 vismask) {
 	struct aim_ssi_item *cur; //, *tmp;
-//	fu16_t j;
+//	guint16 j;
 	aim_tlv_t *tlv;
 
 	if (!sess || !conn)
@@ -1029,7 +1033,7 @@ faim_export int aim_ssi_setpermdeny(aim_session_t *sess, aim_conn_t *conn, fu8_t
 			if (tlv->length != 1) {
 				tlv->length = 1;
 				g_free(tlv->value);
-				tlv->value = (fu8_t *)g_malloc(sizeof(fu8_t));
+				tlv->value = (guint8 *)g_malloc(sizeof(guint8));
 			}
 			tlv->value[0] = permdeny;
 		} else {
@@ -1042,7 +1046,7 @@ faim_export int aim_ssi_setpermdeny(aim_session_t *sess, aim_conn_t *conn, fu8_t
 			if (tlv->length != 4) {
 				tlv->length = 4;
 				g_free(tlv->value);
-				tlv->value = (fu8_t *)g_malloc(4*sizeof(fu8_t));
+				tlv->value = (guint8 *)g_malloc(4*sizeof(guint8));
 			}
 			aimutil_put32(tlv->value, vismask);
 		} else {
@@ -1076,9 +1080,9 @@ faim_export int aim_ssi_setpermdeny(aim_session_t *sess, aim_conn_t *conn, fu8_t
  *        0x00000400 - Allow others to see your idle time
  * @return Return 0 if no errors, otherwise return the error number.
  */
-faim_export int aim_ssi_setpresence(aim_session_t *sess, aim_conn_t *conn, fu32_t presence) {
+int aim_ssi_setpresence(aim_session_t *sess, aim_conn_t *conn, guint32 presence) {
 	struct aim_ssi_item *cur; //, *tmp;
-//	fu16_t j;
+//	guint16 j;
 	aim_tlv_t *tlv;
 
 	if (!sess || !conn)
@@ -1094,7 +1098,7 @@ faim_export int aim_ssi_setpresence(aim_session_t *sess, aim_conn_t *conn, fu32_
 			if (tlv->length != 4) {
 				tlv->length = 4;
 				g_free(tlv->value);
-				tlv->value = (fu8_t *)g_malloc(4*sizeof(fu8_t));
+				tlv->value = (guint8 *)g_malloc(4*sizeof(guint8));
 			}
 			aimutil_put32(tlv->value, presence);
 		} else {
@@ -1121,7 +1125,7 @@ faim_export int aim_ssi_setpresence(aim_session_t *sess, aim_conn_t *conn, fu32_
 /*
  * Request SSI Rights.
  */
-faim_export int aim_ssi_reqrights(aim_session_t *sess, aim_conn_t *conn)
+int aim_ssi_reqrights(aim_session_t *sess, aim_conn_t *conn)
 {
 	return aim_genericreq_n(sess, conn, AIM_CB_FAM_SSI, AIM_CB_SSI_REQRIGHTS);
 }
@@ -1149,7 +1153,7 @@ static int parserights(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, 
  * Note that the client should never increment the revision, only the server.
  * 
  */
-faim_export int aim_ssi_reqdata(aim_session_t *sess, aim_conn_t *conn, time_t localstamp, fu16_t localrev)
+int aim_ssi_reqdata(aim_session_t *sess, aim_conn_t *conn, time_t localstamp, guint16 localrev)
 {
 	aim_frame_t *fr;
 	aim_snacid_t snacid;
@@ -1171,6 +1175,26 @@ faim_export int aim_ssi_reqdata(aim_session_t *sess, aim_conn_t *conn, time_t lo
 	return 0;
 }
 
+int aim_ssi_reqalldata(aim_session_t *sess, aim_conn_t *conn)
+{
+	aim_frame_t *fr;
+	aim_snacid_t snacid;
+
+	if (!sess || !conn)
+		return -EINVAL;
+
+	if (!(fr = aim_tx_new(sess, conn, AIM_FRAMETYPE_FLAP, 0x02, 10)))
+		return -ENOMEM;
+
+	snacid = aim_cachesnac(sess, AIM_CB_FAM_SSI, AIM_CB_SSI_REQFULLLIST, 0x0000, NULL, 0);
+
+	aim_putsnac(&fr->data, AIM_CB_FAM_SSI, AIM_CB_SSI_REQFULLLIST, 0x0000, snacid);
+
+	aim_tx_enqueue(sess, fr);
+
+	return 0;
+}
+
 /*
  * SSI Data.
  */
@@ -1179,9 +1203,9 @@ static int parsedata(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, ai
 	int ret = 0;
 	aim_rxcallback_t userfunc;
 	struct aim_ssi_item *cur = NULL;
-	fu8_t fmtver; /* guess */
-	fu16_t revision;
-	fu32_t timestamp;
+	guint8 fmtver; /* guess */
+	guint16 revision;
+	guint32 timestamp;
 
 	/* When you set the version for the SSI family to 2-4, the beginning of this changes.
 	 * Instead of the version and then the revision, there is "0x0006" and then a type 
@@ -1199,7 +1223,7 @@ static int parsedata(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, ai
 	for (cur = sess->ssi.items; cur && cur->next; cur=cur->next) ;
 
 	while (aim_bstream_empty(bs) > 4) { /* last four bytes are stamp */
-		fu16_t namelen, tbslen;
+		guint16 namelen, tbslen;
 
 		if (!sess->ssi.items) {
 			if (!(sess->ssi.items = g_malloc(sizeof(struct aim_ssi_item))))
@@ -1247,10 +1271,86 @@ static int parsedata(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, ai
  * settings into effect.
  * 
  */
-faim_export int aim_ssi_enable(aim_session_t *sess, aim_conn_t *conn)
+int aim_ssi_enable(aim_session_t *sess, aim_conn_t *conn)
 {
 	return aim_genericreq_n(sess, conn, AIM_CB_FAM_SSI, 0x0007);
 }
+
+/*
+ * Stuff for SSI authorizations. The code used to work with the old im_ch4
+ * messages, but those are supposed to be obsolete. This is probably
+ * ICQ-specific.
+ */
+
+/**
+ * Request authorization to add someone to the server-side buddy list.
+ *
+ * @param sess The oscar session.
+ * @param conn The bos connection for this session.
+ * @param uin The contact's ICQ UIN.
+ * @param reason The reason string to send with the request.
+ * @return Return 0 if no errors, otherwise return the error number.
+ */
+int aim_ssi_auth_request( aim_session_t *sess, aim_conn_t *conn, char *uin, char *reason )
+{
+	aim_frame_t *fr;
+	aim_snacid_t snacid;
+	int snaclen;
+	
+	snaclen = 10 + 1 + strlen( uin ) + 2 + strlen( reason ) + 2;
+	
+	if( !( fr = aim_tx_new( sess, conn, AIM_FRAMETYPE_FLAP, 0x02, snaclen ) ) )
+		return -ENOMEM;
+
+	snacid = aim_cachesnac( sess, AIM_CB_FAM_SSI, AIM_CB_SSI_SENDAUTHREQ, 0x0000, NULL, 0 );
+	aim_putsnac( &fr->data, AIM_CB_FAM_SSI, AIM_CB_SSI_SENDAUTHREQ, 0x0000, snacid );
+	
+	aimbs_put8( &fr->data, strlen( uin ) );
+	aimbs_putraw( &fr->data, uin, strlen( uin ) );
+	aimbs_put16( &fr->data, strlen( reason ) );
+	aimbs_putraw( &fr->data, reason, strlen( reason ) );
+	aimbs_put16( &fr->data, 0 );
+	
+	aim_tx_enqueue( sess, fr );
+	
+	return( 0 );
+}
+
+/**
+ * Reply to an authorization request to add someone to the server-side buddy list.
+ *
+ * @param sess The oscar session.
+ * @param conn The bos connection for this session.
+ * @param uin The contact's ICQ UIN.
+ * @param yesno 1 == Permit, 0 == Deny
+ * @param reason The reason string to send with the request.
+ * @return Return 0 if no errors, otherwise return the error number.
+ */
+int aim_ssi_auth_reply( aim_session_t *sess, aim_conn_t *conn, char *uin, int yesno, char *reason )
+{
+	aim_frame_t *fr;
+	aim_snacid_t snacid;
+	int snaclen;
+	
+	snaclen = 10 + 1 + strlen( uin ) + 3 + strlen( reason );
+	
+	if( !( fr = aim_tx_new( sess, conn, AIM_FRAMETYPE_FLAP, 0x02, snaclen ) ) )
+		return -ENOMEM;
+	
+	snacid = aim_cachesnac( sess, AIM_CB_FAM_SSI, AIM_CB_SSI_SENDAUTHREP, 0x0000, NULL, 0 );
+	aim_putsnac( &fr->data, AIM_CB_FAM_SSI, AIM_CB_SSI_SENDAUTHREP, 0x0000, snacid );
+	
+	aimbs_put8( &fr->data, strlen( uin ) );
+	aimbs_putraw( &fr->data, uin, strlen( uin ) );
+	aimbs_put8( &fr->data, yesno );
+	aimbs_put16( &fr->data, strlen( reason ) );
+	aimbs_putraw( &fr->data, reason, strlen( reason ) );
+	
+	aim_tx_enqueue( sess, fr );
+	
+	return( 0 );
+}
+
 
 /*
  * SSI Add/Mod/Del Item(s).
@@ -1260,29 +1360,46 @@ faim_export int aim_ssi_enable(aim_session_t *sess, aim_conn_t *conn)
  * difference is the subtype that is set for the SNAC.
  * 
  */
-faim_export int aim_ssi_addmoddel(aim_session_t *sess, aim_conn_t *conn, struct aim_ssi_item **items, unsigned int num, fu16_t subtype)
+int aim_ssi_addmoddel(aim_session_t *sess, aim_conn_t *conn, struct aim_ssi_item **items, unsigned int num, guint16 subtype)
 {
 	aim_frame_t *fr;
 	aim_snacid_t snacid;
-	int i, snaclen;
+	int i, snaclen, listlen;
+	char *list = NULL;
 
 	if (!sess || !conn || !items || !num)
 		return -EINVAL;
 
 	snaclen = 10; /* For family, subtype, flags, and SNAC ID */
+	listlen = 0;
 	for (i=0; i<num; i++) {
 		snaclen += 10; /* For length, GID, BID, type, and length */
-		if (items[i]->name)
+		if (items[i]->name) {
 			snaclen += strlen(items[i]->name);
+			
+			if (subtype == AIM_CB_SSI_ADD) {
+				list = g_realloc(list, listlen + strlen(items[i]->name) + 1);
+				strcpy(list + listlen, items[i]->name);
+				listlen += strlen(items[i]->name) + 1;
+			}
+		} else {
+			if (subtype == AIM_CB_SSI_ADD) {
+				list = g_realloc(list, listlen + 1);
+				list[listlen] = '\0';
+				listlen ++;
+			}
+		}
 		if (items[i]->data)
 			snaclen += aim_sizetlvchain((aim_tlvlist_t **)&items[i]->data);
 	}
-
+	
 	if (!(fr = aim_tx_new(sess, conn, AIM_FRAMETYPE_FLAP, 0x02, snaclen)))
 		return -ENOMEM;
 
-	snacid = aim_cachesnac(sess, AIM_CB_FAM_SSI, subtype, 0x0000, NULL, 0);
+	snacid = aim_cachesnac(sess, AIM_CB_FAM_SSI, subtype, 0x0000, list, list ? listlen : 0);
 	aim_putsnac(&fr->data, AIM_CB_FAM_SSI, subtype, 0x0000, snacid);
+	
+	g_free(list);
 
 	for (i=0; i<num; i++) {
 		aimbs_put16(&fr->data, items[i]->name ? strlen(items[i]->name) : 0);
@@ -1311,13 +1428,21 @@ static int parseack(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, aim
 {
 	int ret = 0;
 	aim_rxcallback_t userfunc;
+	aim_snac_t *origsnac;
 
 	sess->ssi.waiting_for_ack = 0;
 	aim_ssi_dispatch(sess, rx->conn);
-
+	
+	origsnac = aim_remsnac(sess, snac->id);
+	
 	if ((userfunc = aim_callhandler(sess, rx->conn, snac->family, snac->subtype)))
-		ret = userfunc(sess, rx);
-
+		ret = userfunc(sess, rx, origsnac);
+	
+	if (origsnac) {
+		g_free(origsnac->data);
+		g_free(origsnac);
+	}
+	
 	return ret;
 }
 
@@ -1327,7 +1452,7 @@ static int parseack(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, aim
  * Tells the server you're going to start modifying data.
  * 
  */
-faim_export int aim_ssi_modbegin(aim_session_t *sess, aim_conn_t *conn)
+int aim_ssi_modbegin(aim_session_t *sess, aim_conn_t *conn)
 {
 	return aim_genericreq_n(sess, conn, AIM_CB_FAM_SSI, AIM_CB_SSI_EDITSTART);
 }
@@ -1338,7 +1463,7 @@ faim_export int aim_ssi_modbegin(aim_session_t *sess, aim_conn_t *conn)
  * Tells the server you're done modifying data.
  *
  */
-faim_export int aim_ssi_modend(aim_session_t *sess, aim_conn_t *conn)
+int aim_ssi_modend(aim_session_t *sess, aim_conn_t *conn)
 {
 	return aim_genericreq_n(sess, conn, AIM_CB_FAM_SSI, AIM_CB_SSI_EDITSTOP);
 }
@@ -1385,13 +1510,13 @@ static void ssi_shutdown(aim_session_t *sess, aim_module_t *mod)
 	return;
 }
 
-faim_internal int ssi_modfirst(aim_session_t *sess, aim_module_t *mod)
+int ssi_modfirst(aim_session_t *sess, aim_module_t *mod)
 {
 
 	mod->family = AIM_CB_FAM_SSI;
-	mod->version = 0x0001;
+	mod->version = 0x0003;
 	mod->toolid = 0x0110;
-	mod->toolversion = 0x047b;
+	mod->toolversion = 0x0629;
 	mod->flags = 0;
 	strncpy(mod->name, "ssi", sizeof(mod->name));
 	mod->snachandler = snachandler;

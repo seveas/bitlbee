@@ -6,10 +6,9 @@
  *
  */
 
-#define FAIM_INTERNAL
 #include <aim.h>
 
-faim_export int aim_usersearch_address(aim_session_t *sess, aim_conn_t *conn, const char *address)
+int aim_usersearch_address(aim_session_t *sess, aim_conn_t *conn, const char *address)
 {
 	aim_frame_t *fr;
 	aim_snacid_t snacid;
@@ -39,7 +38,7 @@ static int error(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, aim_mo
 
 	/* XXX the modules interface should have already retrieved this for us */
 	if (!(snac2 = aim_remsnac(sess, snac->id))) {
-		faimdprintf(sess, 2, "search error: couldn't get a snac for 0x%08lx\n", snac->id);
+		do_error_dialog(sess->aux_data, "couldn't get snac", "Gaim");
 		return 0;
 	}
 
@@ -105,13 +104,13 @@ static int snachandler(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, 
 	return 0;
 }
 
-faim_internal int search_modfirst(aim_session_t *sess, aim_module_t *mod)
+int search_modfirst(aim_session_t *sess, aim_module_t *mod)
 {
 
 	mod->family = 0x000a;
 	mod->version = 0x0001;
 	mod->toolid = 0x0110;
-	mod->toolversion = 0x047b;
+	mod->toolversion = 0x0629;
 	mod->flags = 0;
 	strncpy(mod->name, "search", sizeof(mod->name));
 	mod->snachandler = snachandler;

@@ -32,11 +32,6 @@
 #include <unistd.h>
 #include <sys/time.h>
 
-#ifdef USE_GNUTLS
-#include <gnutls/gnutls.h>
-#endif
-
-irc_t *IRC;
 global_t global;	/* Against global namespace pollution */
 
 static void sighandler( int signal );
@@ -50,9 +45,6 @@ int main( int argc, char *argv[] )
 	
 	log_init( );
 	nogaim_init( );
-#ifdef USE_GNUTLS
-	gnutls_global_init();
-#endif
 	
 	CONF_FILE = g_strdup( CONF_FILE_DEF );
 	
@@ -111,9 +103,6 @@ int main( int argc, char *argv[] )
 			break;
 	}
 	
-#ifdef USE_GNUTLS
-	gnutls_global_deinit();
-#endif
 	return( 0 );
 }
 

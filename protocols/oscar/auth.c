@@ -3,7 +3,6 @@
  *
  */
 
-#define FAIM_INTERNAL
 #include <aim.h> 
 
 #include "md5.h"
@@ -18,7 +17,7 @@ static int aim_encode_password(const char *password, unsigned char *encoded);
  * be the first thing you send.
  *
  */
-faim_export int aim_sendcookie(aim_session_t *sess, aim_conn_t *conn, const fu8_t *chipsahoy)
+int aim_sendcookie(aim_session_t *sess, aim_conn_t *conn, const guint8 *chipsahoy)
 {
 	aim_frame_t *fr;
 	aim_tlvlist_t *tl = NULL;
@@ -44,7 +43,7 @@ faim_export int aim_sendcookie(aim_session_t *sess, aim_conn_t *conn, const fu8_
  * libfaim sends this internally when doing SNAC login.
  *
  */
-faim_export int aim_sendflapver(aim_session_t *sess, aim_conn_t *conn)
+int aim_sendflapver(aim_session_t *sess, aim_conn_t *conn)
 {
 	aim_frame_t *fr;
 
@@ -115,7 +114,7 @@ static int goddamnicq(aim_session_t *sess, aim_conn_t *conn, const char *sn)
  * login command (0017/0002). 
  *
  */
-faim_export int aim_request_login(aim_session_t *sess, aim_conn_t *conn, const char *sn)
+int aim_request_login(aim_session_t *sess, aim_conn_t *conn, const char *sn)
 {
 	aim_frame_t *fr;
 	aim_snacid_t snacid;
@@ -260,11 +259,11 @@ static int goddamnicq2(aim_session_t *sess, aim_conn_t *conn, const char *sn, co
  *   serverstore = 0x01
  *
  */
-faim_export int aim_send_login(aim_session_t *sess, aim_conn_t *conn, const char *sn, const char *password, struct client_info_s *ci, const char *key)
+int aim_send_login(aim_session_t *sess, aim_conn_t *conn, const char *sn, const char *password, struct client_info_s *ci, const char *key)
 {
 	aim_frame_t *fr;
 	aim_tlvlist_t *tl = NULL;
-	fu8_t digest[16];
+	guint8 digest[16];
 	aim_snacid_t snacid;
 
 	if (!ci || !sn || !password)
@@ -296,11 +295,11 @@ faim_export int aim_send_login(aim_session_t *sess, aim_conn_t *conn, const char
 
 	if (ci->clientstring)
 		aim_addtlvtochain_raw(&tl, 0x0003, strlen(ci->clientstring), ci->clientstring);
-	aim_addtlvtochain16(&tl, 0x0016, (fu16_t)ci->clientid);
-	aim_addtlvtochain16(&tl, 0x0017, (fu16_t)ci->major);
-	aim_addtlvtochain16(&tl, 0x0018, (fu16_t)ci->minor);
-	aim_addtlvtochain16(&tl, 0x0019, (fu16_t)ci->point);
-	aim_addtlvtochain16(&tl, 0x001a, (fu16_t)ci->build);
+	aim_addtlvtochain16(&tl, 0x0016, (guint16)ci->clientid);
+	aim_addtlvtochain16(&tl, 0x0017, (guint16)ci->major);
+	aim_addtlvtochain16(&tl, 0x0018, (guint16)ci->minor);
+	aim_addtlvtochain16(&tl, 0x0019, (guint16)ci->point);
+	aim_addtlvtochain16(&tl, 0x001a, (guint16)ci->build);
 	aim_addtlvtochain_raw(&tl, 0x000e, strlen(ci->country), ci->country);
 	aim_addtlvtochain_raw(&tl, 0x000f, strlen(ci->lang), ci->lang);
 
@@ -319,7 +318,7 @@ faim_export int aim_send_login(aim_session_t *sess, aim_conn_t *conn, const char
 	return 0;
 }
 
-faim_export int aim_encode_password_md5(const char *password, const char *key, fu8_t *digest)
+int aim_encode_password_md5(const char *password, const char *key, guint8 *digest)
 {
 	md5_state_t state;
 
@@ -349,9 +348,9 @@ faim_export int aim_encode_password_md5(const char *password, const char *key, f
  * This is only used for the XOR method, not the better MD5 method.
  *
  */
-static int aim_encode_password(const char *password, fu8_t *encoded)
+static int aim_encode_password(const char *password, guint8 *encoded)
 {
-	fu8_t encoding_table[] = {
+	guint8 encoding_table[] = {
 #if 0 /* old v1 table */
 		0xf3, 0xb3, 0x6c, 0x99,
 		0x95, 0x3f, 0xac, 0xb6,
@@ -530,7 +529,7 @@ static int snachandler(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, 
 	return 0;
 }
 
-faim_internal int auth_modfirst(aim_session_t *sess, aim_module_t *mod)
+int auth_modfirst(aim_session_t *sess, aim_module_t *mod)
 {
 
 	mod->family = 0x0017;

@@ -6,15 +6,14 @@
  *
  */
 
-#define FAIM_INTERNAL
 #include <aim.h>
 
 struct aim_priv_inforeq {
 	char sn[MAXSNLEN+1];
-	fu16_t infotype;
+	guint16 infotype;
 };
 
-faim_export int aim_getinfo(aim_session_t *sess, aim_conn_t *conn, const char *sn, fu16_t infotype)
+int aim_getinfo(aim_session_t *sess, aim_conn_t *conn, const char *sn, guint16 infotype)
 {
 	struct aim_priv_inforeq privdata;
 	aim_frame_t *fr;
@@ -40,7 +39,7 @@ faim_export int aim_getinfo(aim_session_t *sess, aim_conn_t *conn, const char *s
 	return 0;
 }
 
-faim_export const char *aim_userinfo_sn(aim_userinfo_t *ui)
+const char *aim_userinfo_sn(aim_userinfo_t *ui)
 {
 
 	if (!ui)
@@ -49,7 +48,7 @@ faim_export const char *aim_userinfo_sn(aim_userinfo_t *ui)
 	return ui->sn;
 }
 
-faim_export fu16_t aim_userinfo_flags(aim_userinfo_t *ui)
+guint16 aim_userinfo_flags(aim_userinfo_t *ui)
 {
 
 	if (!ui)
@@ -58,7 +57,7 @@ faim_export fu16_t aim_userinfo_flags(aim_userinfo_t *ui)
 	return ui->flags;
 }
 
-faim_export fu16_t aim_userinfo_idle(aim_userinfo_t *ui)
+guint16 aim_userinfo_idle(aim_userinfo_t *ui)
 {
 
 	if (!ui)
@@ -67,7 +66,7 @@ faim_export fu16_t aim_userinfo_idle(aim_userinfo_t *ui)
 	return ui->idletime;
 }
 
-faim_export float aim_userinfo_warnlevel(aim_userinfo_t *ui)
+float aim_userinfo_warnlevel(aim_userinfo_t *ui)
 {
 
 	if (!ui)
@@ -76,7 +75,7 @@ faim_export float aim_userinfo_warnlevel(aim_userinfo_t *ui)
 	return (ui->warnlevel / 10);
 }
 
-faim_export time_t aim_userinfo_membersince(aim_userinfo_t *ui)
+time_t aim_userinfo_membersince(aim_userinfo_t *ui)
 {
 
 	if (!ui)
@@ -85,7 +84,7 @@ faim_export time_t aim_userinfo_membersince(aim_userinfo_t *ui)
 	return (time_t)ui->membersince;
 }
 
-faim_export time_t aim_userinfo_onlinesince(aim_userinfo_t *ui)
+time_t aim_userinfo_onlinesince(aim_userinfo_t *ui)
 {
 
 	if (!ui)
@@ -94,7 +93,7 @@ faim_export time_t aim_userinfo_onlinesince(aim_userinfo_t *ui)
 	return (time_t)ui->onlinesince;
 }
 
-faim_export fu32_t aim_userinfo_sessionlen(aim_userinfo_t *ui)
+guint32 aim_userinfo_sessionlen(aim_userinfo_t *ui)
 {
 
 	if (!ui)
@@ -103,7 +102,7 @@ faim_export fu32_t aim_userinfo_sessionlen(aim_userinfo_t *ui)
 	return ui->sessionlen;
 }
 
-faim_export int aim_userinfo_hascap(aim_userinfo_t *ui, fu32_t cap)
+int aim_userinfo_hascap(aim_userinfo_t *ui, guint32 cap)
 {
 
 	if (!ui || !(ui->present & AIM_USERINFO_PRESENT_CAPABILITIES))
@@ -124,8 +123,8 @@ faim_export int aim_userinfo_hascap(aim_userinfo_t *ui, fu32_t cap)
  * But, eh.
  */
 static const struct {
-	fu32_t flag;
-	fu8_t data[16];
+	guint32 flag;
+	guint8 data[16];
 } aim_caps[] = {
 
 	/*
@@ -190,6 +189,10 @@ static const struct {
 	 {0x09, 0x46, 0x13, 0x4b, 0x4c, 0x7f, 0x11, 0xd1,
 	  0x82, 0x22, 0x44, 0x45, 0x53, 0x54, 0x00, 0x00}},
 
+	{AIM_CAPS_UTF8,
+	 {0x09, 0x46, 0x13, 0x4E, 0x4C, 0x7F, 0x11, 0xD1,
+	  0x82, 0x22, 0x44, 0x45, 0x53, 0x54, 0x00, 0x00}},
+
 	{AIM_CAPS_ICQRTF,
 	 {0x97, 0xb1, 0x27, 0x51, 0x24, 0x3c, 0x43, 0x34, 
 	  0xad, 0x22, 0xd6, 0xab, 0xf7, 0x3f, 0x14, 0x92}},
@@ -207,12 +210,17 @@ static const struct {
 	  0xb2, 0x35, 0x36, 0x79, 0x8b, 0xdf, 0x00, 0x00}},
 
 	{AIM_CAPS_APINFO, 
-         {0xAA, 0x4A, 0x32, 0xB5,
-	         0xF8, 0x84,
-                0x48, 0xc6,
-	         0xA3, 0xD7,
-	         0x8C, 0x50, 0x97, 0x19, 0xFD, 0x5B}},
+     {0xAA, 0x4A, 0x32, 0xB5, 0xF8, 0x84, 0x48, 0xc6,
+      0xA3, 0xD7, 0x8C, 0x50, 0x97, 0x19, 0xFD, 0x5B}},
 
+	{AIM_CAPS_INTEROP,
+	 {0x09, 0x46, 0x13, 0x4d, 0x4c, 0x7f, 0x11, 0xd1,
+	  0x82, 0x22, 0x44, 0x45, 0x53, 0x54, 0x00, 0x00}},
+
+	{AIM_CAPS_ICHAT,
+	 {0x09, 0x46, 0x00, 0x00, 0x4c, 0x7f, 0x11, 0xd1, 
+	  0x82, 0x22, 0x44, 0x45, 0x53, 0x54, 0x00, 0x00}},
+	
 	{AIM_CAPS_LAST}
 };
 
@@ -221,13 +229,13 @@ static const struct {
  * are not naturally bounded.
  * 
  */
-faim_internal fu32_t aim_getcap(aim_session_t *sess, aim_bstream_t *bs, int len)
+guint32 aim_getcap(aim_session_t *sess, aim_bstream_t *bs, int len)
 {
-	fu32_t flags = 0;
+	guint32 flags = 0;
 	int offset;
 
 	for (offset = 0; aim_bstream_empty(bs) && (offset < len); offset += 0x10) {
-		fu8_t *cap;
+		guint8 *cap;
 		int i, identified;
 
 		cap = aimbs_getraw(bs, 0x10);
@@ -243,13 +251,15 @@ faim_internal fu32_t aim_getcap(aim_session_t *sess, aim_bstream_t *bs, int len)
 		}
 
 		if (!identified) {
-			faimdprintf(sess, 0, "unknown capability: {%02x%02x%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x%02x%02x%02x%02x}\n",
+			/*FIXME*/
+			g_strdup_printf("unknown capability: {%02x%02x%02x%02x-%02x%02x-%02x%02x-%02x%02x-%02x%02x%02x%02x%02x%02x}\n",
 					cap[0], cap[1], cap[2], cap[3],
 					cap[4], cap[5],
 					cap[6], cap[7],
 					cap[8], cap[9],
 					cap[10], cap[11], cap[12], cap[13],
 					cap[14], cap[15]);
+			
 		}
 
 		g_free(cap);
@@ -258,7 +268,7 @@ faim_internal fu32_t aim_getcap(aim_session_t *sess, aim_bstream_t *bs, int len)
 	return flags;
 }
 
-faim_internal int aim_putcap(aim_bstream_t *bs, fu32_t caps)
+int aim_putcap(aim_bstream_t *bs, guint32 caps)
 {
 	int i;
 
@@ -282,10 +292,10 @@ faim_internal int aim_putcap(aim_bstream_t *bs, fu32_t caps)
  * AIM is fairly regular about providing user info.  This is a generic 
  * routine to extract it in its standard form.
  */
-faim_internal int aim_extractuserinfo(aim_session_t *sess, aim_bstream_t *bs, aim_userinfo_t *outinfo)
+int aim_extractuserinfo(aim_session_t *sess, aim_bstream_t *bs, aim_userinfo_t *outinfo)
 {
 	int curtlv, tlvcnt;
-	fu8_t snlen;
+	guint8 snlen;
 
 	if (!bs || !outinfo)
 		return -EINVAL;
@@ -316,7 +326,7 @@ faim_internal int aim_extractuserinfo(aim_session_t *sess, aim_bstream_t *bs, ai
 	 */
 	for (curtlv = 0; curtlv < tlvcnt; curtlv++) {
 		int endpos;
-		fu16_t type, length;
+		guint16 type, length;
 
 		type = aimbs_get16(bs);
 		length = aimbs_get16(bs);
@@ -453,10 +463,9 @@ faim_internal int aim_extractuserinfo(aim_session_t *sess, aim_bstream_t *bs, ai
 			 * recovery.
 			 *
 			 */
-			faimdprintf(sess, 0, "userinfo: **warning: unexpected TLV:\n");
-			faimdprintf(sess, 0, "userinfo:   sn    =%s\n", outinfo->sn);
-			faimdprintf(sess, 0, "userinfo:   type  =0x%04x\n",type);
-			faimdprintf(sess, 0, "userinfo:   length=0x%04x\n", length);
+#ifdef DEBUG
+			// do_error_dialog(sess->aux_data, G_STRLOC, "Unknown TLV encountered");
+#endif
 
 		}
 
@@ -470,7 +479,7 @@ faim_internal int aim_extractuserinfo(aim_session_t *sess, aim_bstream_t *bs, ai
 /*
  * Inverse of aim_extractuserinfo()
  */
-faim_internal int aim_putuserinfo(aim_bstream_t *bs, aim_userinfo_t *info)
+int aim_putuserinfo(aim_bstream_t *bs, aim_userinfo_t *info)
 {
 	aim_tlvlist_t *tlvlist = NULL;
 
@@ -497,7 +506,7 @@ faim_internal int aim_putuserinfo(aim_bstream_t *bs, aim_userinfo_t *info)
 
 	aim_addtlvtochain_caps(&tlvlist, 0x000d, info->capabilities);
 
-	aim_addtlvtochain32(&tlvlist, (fu16_t)((info->flags & AIM_FLAG_AOL) ? 0x0010 : 0x000f), info->sessionlen);
+	aim_addtlvtochain32(&tlvlist, (guint16)((info->flags & AIM_FLAG_AOL) ? 0x0010 : 0x000f), info->sessionlen);
 
 	aimbs_put16(bs, aim_counttlvchain(&tlvlist));
 	aim_writetlvchain(bs, &tlvlist);
@@ -506,7 +515,7 @@ faim_internal int aim_putuserinfo(aim_bstream_t *bs, aim_userinfo_t *info)
 	return 0;
 }
 
-faim_export int aim_sendbuddyoncoming(aim_session_t *sess, aim_conn_t *conn, aim_userinfo_t *info)
+int aim_sendbuddyoncoming(aim_session_t *sess, aim_conn_t *conn, aim_userinfo_t *info)
 {
 	aim_frame_t *fr;
 	aim_snacid_t snacid;
@@ -527,7 +536,7 @@ faim_export int aim_sendbuddyoncoming(aim_session_t *sess, aim_conn_t *conn, aim
 	return 0;
 }
 
-faim_export int aim_sendbuddyoffgoing(aim_session_t *sess, aim_conn_t *conn, const char *sn)
+int aim_sendbuddyoffgoing(aim_session_t *sess, aim_conn_t *conn, const char *sn)
 {
 	aim_frame_t *fr;
 	aim_snacid_t snacid;
@@ -552,7 +561,7 @@ faim_export int aim_sendbuddyoffgoing(aim_session_t *sess, aim_conn_t *conn, con
 /*
  * Huh? What is this?
  */
-faim_export int aim_0002_000b(aim_session_t *sess, aim_conn_t *conn, const char *sn)
+int aim_0002_000b(aim_session_t *sess, aim_conn_t *conn, const char *sn)
 {
 	aim_frame_t *fr;
 	aim_snacid_t snacid;
@@ -586,7 +595,7 @@ static int rights(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, aim_m
 	aim_tlvlist_t *tlvlist;
 	aim_rxcallback_t userfunc;
 	int ret = 0;
-	fu16_t maxsiglen = 0;
+	guint16 maxsiglen = 0;
 
 	tlvlist = aim_readtlvchain(bs);
 
@@ -614,7 +623,7 @@ static int userinfo(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, aim
 	origsnac = aim_remsnac(sess, snac->id);
 
 	if (!origsnac || !origsnac->data) {
-		faimdprintf(sess, 0, "parse_userinfo_middle: major problem: no snac stored!\n");
+		do_error_dialog(sess->aux_data, "major problem: no snac stored!", "Gaim");
 		return 0;
 	}
 
@@ -623,7 +632,7 @@ static int userinfo(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, aim
 	if ((inforeq->infotype != AIM_GETINFO_GENERALINFO) &&
 			(inforeq->infotype != AIM_GETINFO_AWAYMESSAGE) &&
 			(inforeq->infotype != AIM_GETINFO_CAPABILITIES)) {
-		faimdprintf(sess, 0, "parse_userinfo_middle: unknown infotype in request! (0x%04x)\n", inforeq->infotype);
+		do_error_dialog(sess->aux_data, "unknown infotype in request!", "Gaim");
 		return 0;
 	}
 
@@ -683,13 +692,13 @@ static int snachandler(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, 
 	return 0;
 }
 
-faim_internal int locate_modfirst(aim_session_t *sess, aim_module_t *mod)
+int locate_modfirst(aim_session_t *sess, aim_module_t *mod)
 {
 
 	mod->family = 0x0002;
 	mod->version = 0x0001;
-	mod->toolid = 0x0101;
-	mod->toolversion = 0x047b;
+	mod->toolid = 0x0110;
+	mod->toolversion = 0x0629;
 	mod->flags = 0;
 	strncpy(mod->name, "locate", sizeof(mod->name));
 	mod->snachandler = snachandler;

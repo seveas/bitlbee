@@ -9,11 +9,17 @@
 *                                                                *
 *  Licensed under the GNU General Public License                 *
 *                                                                *
+*  Modified by M. Dennis, 20040627                               *
 \****************************************************************/
 
 /* 
    ChangeLog:
    
+   2004-06-27: Added support for AF_LOCAL (UNIX domain) sockets
+               Renamed log to do_log to fix conflict warning
+               Changed protocol to 0 (6 is not supported?)
+               Added error check for socket()
+               Added a no-fork (debug) mode
    2004-05-15: Added rate limiting
    2003-12-26: Added the SO_REUSEADDR sockopt, logging and CPU-time limiting
                for clients using setrlimit(), fixed the execv() call
@@ -37,12 +43,16 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/resource.h>
+#include <sys/stat.h>
 
+#include <sys/un.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
 typedef struct settings
 {
+	char local;
+	char debug;
 	char *interface;
 	signed int port;
 	
@@ -71,7 +81,7 @@ FILE *logfile;
 ipstats_t *ipstats;
 
 settings_t *set_load( int argc, char *argv[] );
-void log( char *fmt, ... );
+void do_log( char *fmt, ... );
 ipstats_t *ip_get( char *ip_txt );
 
 int main( int argc, char *argv[] )
@@ -81,6 +91,7 @@ int main( int argc, char *argv[] )
 	
 	int serv_fd, serv_len;
 	struct sockaddr_in serv_addr;
+	struct sockaddr_un local_addr;
 	
 	pid_t st;
 	
@@ -96,18 +107,43 @@ int main( int argc, char *argv[] )
 	
 	fcntl( fileno( logfile ), F_SETFD, FD_CLOEXEC );
 	
-	serv_fd = socket( AF_INET, SOCK_STREAM, 6 );
+	if( set->local )
+		serv_fd = socket( PF_LOCAL, SOCK_STREAM, 0 );
+	else
+		serv_fd = socket( PF_INET, SOCK_STREAM, 0 );
+	if( serv_fd < 0 )
+	{
+		perror( "socket" );
+		return( 1 );
+	}
 	setsockopt( serv_fd, SOL_SOCKET, SO_REUSEADDR, &rebind_on, sizeof( rebind_on ) );
 	fcntl( serv_fd, F_SETFD, FD_CLOEXEC );
-	serv_addr.sin_family = AF_INET;
-	serv_addr.sin_addr.s_addr = inet_addr( set->interface );
-	serv_addr.sin_port = htons( set->port );
-	serv_len = sizeof( serv_addr );
+	if (set->local) {
+		local_addr.sun_family = AF_LOCAL;
+		strncpy( local_addr.sun_path, set->interface, sizeof( local_addr.sun_path ) - 1 );
+		local_addr.sun_path[sizeof( local_addr.sun_path ) - 1] = '\0';
+		
+		/* warning - don't let untrusted users run this program if it
+		   is setuid/setgid! Arbitrary file deletion risk! */
+		unlink( set->interface );
+		if( bind( serv_fd, (struct sockaddr *) &local_addr, SUN_LEN( &local_addr ) ) != 0 )
+		{
+			perror( "bind" );
+			return( 1 );
+		}
+		chmod( set->interface, S_IRWXO|S_IRWXG|S_IRWXU );
+
+	} else {
+		serv_addr.sin_family = AF_INET;
+		serv_addr.sin_addr.s_addr = inet_addr( set->interface );
+		serv_addr.sin_port = htons( set->port );
+		serv_len = sizeof( serv_addr );
 	
-	if( bind( serv_fd, (struct sockaddr *) &serv_addr, serv_len ) != 0 )
-	{
-		perror( "bind" );
-		return( 1 );
+		if( bind( serv_fd, (struct sockaddr *) &serv_addr, serv_len ) != 0 )
+		{
+			perror( "bind" );
+			return( 1 );
+		}
 	}
 	
 	if( listen( serv_fd, set->max_conn ) != 0 )
@@ -116,29 +152,32 @@ int main( int argc, char *argv[] )
 		return( 1 );
 	}
 	
-	st = fork();
-	if( st < 0 )
-	{
-		perror( "fork" );
-		return( 1 );
-	}
-	else if( st > 0 )
-	{
-		return( 0 );
+	if ( ! set->debug ) {
+		st = fork();
+		if( st < 0 )
+		{
+			perror( "fork" );
+			return( 1 );
+		}
+		else if( st > 0 )
+		{
+			return( 0 );
+		}
+		
+		setsid();
+		close( 0 );
+		close( 1 );
+		close( 2 );
 	}
 	
-	setsid();
-	close( 0 );
-	close( 1 );
-	close( 2 );
-	
-	log( "bitlbeed running" );
+	do_log( "bitlbeed running" );
 	
 	/* The Daemon */
 	while( 1 )
 	{
 		int cli_fd, cli_len, i, st;
 		struct sockaddr_in cli_addr;
+		struct sockaddr_un cli_local;
 		ipstats_t *ip;
 		char *cli_txt;
 		pid_t child;
@@ -157,9 +196,15 @@ int main( int argc, char *argv[] )
 		tm.tv_usec = 0;
 		if( select( serv_fd + 1, &rd, NULL, NULL, &tm ) > 0 )
 		{
-			cli_len = sizeof( cli_addr );
-			cli_fd = accept( serv_fd, (struct sockaddr *) &cli_addr, &cli_len );
-			cli_txt = inet_ntoa( cli_addr.sin_addr );
+			if (set->local) {
+				cli_len = SUN_LEN( &cli_local );
+				cli_fd = accept( serv_fd, (struct sockaddr *) &cli_local, &cli_len );
+				cli_txt = "127.0.0.1";
+			} else {
+				cli_len = sizeof( cli_addr );
+				cli_fd = accept( serv_fd, (struct sockaddr *) &cli_addr, &cli_len );
+				cli_txt = inet_ntoa( cli_addr.sin_addr );
+			}
 			
 			ip = ip_get( cli_txt );
 			
@@ -179,7 +224,7 @@ int main( int argc, char *argv[] )
 						setrlimit( RLIMIT_CPU, &li );
 					}
 					execv( set->call[0], set->call );
-					log( "Error while executing %s!", set->call[0] );
+					do_log( "Error while executing %s!", set->call[0] );
 					return( 1 );
 				}
 				
@@ -188,14 +233,14 @@ int main( int argc, char *argv[] )
 				close( 1 );
 				close( 2 );
 				
-				log( "Started child process for client %s (PID=%d), got %d clients now", cli_txt, child, running );
+				do_log( "Started child process for client %s (PID=%d), got %d clients now", cli_txt, child, running );
 				
 				if( time( NULL ) < ( ip->rate_start + set->rate_seconds ) )
 				{
 					ip->rate_times ++;
 					if( ip->rate_times >= set->rate_times )
 					{
-						log( "Client %s crossed the limit; ignoring for the next %d seconds", cli_txt, set->rate_ignore );
+						do_log( "Client %s crossed the limit; ignoring for the next %d seconds", cli_txt, set->rate_ignore );
 						ip->rate_ignore = time( NULL ) + set->rate_ignore;
 						ip->rate_start = 0;
 					}
@@ -208,7 +253,7 @@ int main( int argc, char *argv[] )
 			}
 			else
 			{
-				log( "Ignoring connection from %s", cli_txt );
+				do_log( "Ignoring connection from %s", cli_txt );
 				close( cli_fd );
 			}
 		}
@@ -222,18 +267,18 @@ int main( int argc, char *argv[] )
 			running --;
 			if( WIFEXITED( st ) )
 			{
-				log( "Child process (PID=%d) exited normally with status %d. %d Clients left now",
+				do_log( "Child process (PID=%d) exited normally with status %d. %d Clients left now",
 				     i, WEXITSTATUS( st ), running );
 			}
 			else if( WIFSIGNALED( st ) )
 			{
-				log( "Child process (PID=%d) killed by signal %d. %d Clients left now",
+				do_log( "Child process (PID=%d) killed by signal %d. %d Clients left now",
 				     i, WTERMSIG( st ), running );
 			}
 			else
 			{
 				/* Should not happen AFAIK... */
-				log( "Child process (PID=%d) stopped for unknown reason, %d clients left now",
+				do_log( "Child process (PID=%d) stopped for unknown reason, %d clients left now",
 				     i, running );
 			}
 		}
@@ -249,14 +294,16 @@ settings_t *set_load( int argc, char *argv[] )
 	
 	set = malloc( sizeof( settings_t ) );
 	memset( set, 0, sizeof( settings_t ) );
-	set->interface = "0.0.0.0";
+	set->interface = NULL;		/* will be filled in later */
 	set->port = 6667;
+	set->local = 0;
+	set->debug = 0;
 	
 	set->rate_seconds = 600;
 	set->rate_times = 5;
 	set->rate_ignore = 900;
 	
-	while( ( opt = getopt( argc, argv, "i:p:n:t:l:r:h" ) ) >= 0 )
+	while( ( opt = getopt( argc, argv, "i:p:n:t:l:r:hud" ) ) >= 0 )
 	{
 		if( opt == 'i' )
 		{
@@ -307,6 +354,10 @@ settings_t *set_load( int argc, char *argv[] )
 				return( NULL );
 			}
 		}
+		else if( opt == 'u' )
+			set->local = 1;
+		else if( opt == 'd' )
+			set->debug = 1;
 		else if( opt == 'h' )
 		{
 			printf( "Usage: %s [-i <interface>] [-p <port>] [-n <num>] [-r x,y,z] ...\n"
@@ -323,10 +374,15 @@ settings_t *set_load( int argc, char *argv[] )
 			        "  -l  Specify a logfile. (Default: none)\n"
 			        "  -r  Rate limiting: Ignore a host for z seconds when it connects for more\n"
 			        "      than y times in x seconds. (Default: 600,5,900. Disable: 0,0,0)\n"
+				"  -u  Use a local socket, by default /tmp/bitlbee (override with -i <filename>)\n"
+				"  -d  Don't fork for listening (for debugging purposes)\n"
 			        "  -h  This information\n", argv[0] );
 			return( NULL );
 		}
 	}
+	
+	if( set->interface == NULL )
+		set->interface = (set->local) ? "/tmp/bitlbee" : "0.0.0.0";
 	
 	if( optind == argc )
 	{
@@ -342,7 +398,7 @@ settings_t *set_load( int argc, char *argv[] )
 	return( set );
 }
 
-void log( char *fmt, ... )
+void do_log( char *fmt, ... )
 {
 	va_list params;
 	char line[MAX_LOG_LEN];

@@ -29,19 +29,6 @@ to bitlbee. All commands you give on #bitlbee are 'answered' by root.
 </sect1>
 
 <sect1>
-<title>Commands</title>
-
-<para>
-BitlBee can be configured by giving 'commands' in the #bitlbee channel. 'root' 
-responds to these commands. Use the command 'help' to retrieve a list of
-commands bitlbee supports with syntax. You can get an
-up-to-date list of available commands using the <command>help commands</command>
-command.
-</para>
-
-</sect1>
- 
-<sect1>
 <title>Talking to people</title>
 
 <para>

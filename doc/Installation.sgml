@@ -1,0 +1,108 @@
+<chapter id="Installation">
+
+<title>Installation</title>
+
+<sect1>
+<title>Downloading the package</title>
+
+<para>
+The latest BitlBee release is always available from 
+<ulink url="http://www.lintux.cx/bitlbee.html">http://www.lintux.cx/bitlbee.html</ulink>. 
+Download the package with your favorite program and unpack it:
+<command>tar xvfz BitlBee-0.6.tar.gz</command>
+</para>
+
+</sect1>
+
+<sect1>
+<title>Compiling</title>
+<para>
+BitlBee's build system has to be configured before compiling. The
+<filename>configure</filename> script will do this for you. Just run
+it, it'll set up with nice and hopefully well-working defaults. If you
+want to change some settings, just try
+<command>./configure --help</command> and see what you can do.
+</para>
+
+<para>Some variables that might be of interest to the normal user:</para>
+
+<itemizedlist>
+<listitem><para>config - The place where BitlBee will save settings for
+all the users. <filename>/var/lib/bitlbee/</filename> is the default
+value.</para></listitem>
+<listitem><para>tcpd - If you enable this one, you can specify what hosts
+should be allowed to use your BitlBee by editting
+<filename>/etc/hosts.deny</filename> and/or <filename>/etc/hosts.deny</filename>.
+</itemizedlist>
+
+<para>
+After running <filename>configure</filename>, you should run
+<command>make</command>. After that, run <command>make install</command> as 
+root.
+</para>
+
+</sect1>
+
+<sect1>
+<title>Configuration</title>
+
+<para>
+By default, BitlBee runs as the user nobody. You might want 
+to run it as a seperate user (some computers run named or apache as nobody). 
+</para>
+
+<para>
+Since BitlBee uses inetd, you should add the following line to <filename>/etc/inetd.conf</filename>:
+</para>
+
+<para>
+<programlisting>
+6667    stream  tcp     nowait nobody /usr/local/bin/bitlbee bitlbee
+</programlisting>
+</para>
+
+<para>
+You might be one of the.. ehr, lucky people running an xinetd-powered distro.
+<command>xinetd</command> is quite different and they seem to be proud of that.. ;-)
+Anyway, if you want BitlBee to work with <command>xinetd</command>, put the following
+text in <filename>/etc/xinetd.conf</filename> or <filename>/etc/xinetd.d/bitlbee</filename>:
+</para>
+
+<para>
+<programlisting>
+service 6667
+{
+	socket_type     = stream
+	protocol        = tcp
+	wait            = no
+	user            = bitlbee
+	server          = /usr/sbin/bitlbee
+	port		= 6667
+}
+</programlisting>
+</para>
+
+<para>
+This would start bitlbee from the default path: 
+<filename>/usr/local/bin/bitlbee</filename> and as the user nobody.
+</para>
+
+<para>
+Inetd has to be restarted after changing the configuration. Either
+<command>killall -HUP inetd</command> or 
+<command>/etc/init.d/inetd restart</command> should do the job on most systems.
+</para>
+
+<para>
+You should create a directory where BitlBee can store it's data files. This 
+should be the directory named after the value 'CONFIG' in Makefile.settings. 
+The default is <filename>/var/lib/bitlbee</filename>, which can be created 
+with the command <command>mkdir -p /var/lib/bitlbee</command>. This 
+directory has to be owned by the user that runs bitlbee. To make 
+'nobody' owner of this directory, run <command>chown nobody /var/lib/bitlbee</command>.
+Because things like passwords are saved in this directory, it's probably
+a good idea to make this directory owner-read-/writable only.
+</para>
+</sect1>
+
+</chapter>

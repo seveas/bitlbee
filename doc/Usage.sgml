@@ -1,0 +1,219 @@
+<chapter id="Usage">
+
+<title>Usage</title>
+
+<sect1>
+<title>Connecting to the server</title>
+<para>
+Since BitlBee acts just like any other irc daemon, you can connect to 
+it with your favorite irc client. Launch it and connect to localhost port 6667
+(or whatever host/port you are running bitlbee on).
+</para>
+
+</sect1>
+
+<sect1>
+<title>The #bitlbee control channel</title>
+
+<para>
+Once you are connected to the BitlBee server, you should 'join' #bitlbee on 
+that server. This channel acts like the 'buddy list' you have on the various
+other chat networks.
+</para>
+
+<para>
+The user 'root' always hangs around in #bitlbee and acts as your interface 
+to bitlbee. All commands you give on #bitlbee are 'answered' by root.
+</para>
+
+</sect1>
+
+<sect1>
+<title>Commands</title>
+
+<para>
+BitlBee can be configured by giving 'commands' in the #bitlbee channel. 'root' 
+responds to these commands.
+</para>
+
+<sect2>
+<title>help</title>
+
+<para>Syntax: <command>help</command></para>
+
+<para>
+Gives a list of commands bitlbee supports with syntax
+</para>
+
+</sect2>
+
+<sect2>
+<title>login</title>
+
+<para>Syntax: <command>login &lt;protocol&gt; &lt;username&gt; &lt;password&gt; [&lt;server&gt;]</command></para>
+
+<para>
+Logs in to the given server with the specified protocol, username and password.
+Specifying the server is optional and principally only necessary when using 
+oscar. 
+</para>
+
+<para>Example:
+<programlisting>
+00:10 < ctrlsoft> login jabber ctrlsoft@jabber.org secret
+00:10 < root> JABBER - Logging in: Connecting
+00:10 < root> JABBER - Logging in: Connected
+00:10 < root> JABBER - Logging in: Requesting Authentication Method
+00:10 < root> JABBER - Logging in: Authenticating
+00:10 < root> JABBER - Logged in
+</programlisting>
+</para>
+
+</sect2>
+
+<sect2>
+<title>slist</title>
+
+<para>Syntax: <command>slist</command></para>
+
+<para>Gives a list of all active connections to servers</para>
+
+<para>Example:
+<programlisting>
+00:09 < ctrlsoft> slist
+00:09 < root>  0. MSN, jelmervernooij@hotmail.com
+00:09 < root>  1. OSCAR, 30761007 on login.icq.com
+00:09 < root>  2. OSCAR, JelmerVernooij on login.oscar.aol.com
+00:09 < root>  3. JABBER, ctrlsoft@jabber.org
+00:09 < root> End of connection list
+</programlisting>
+</para>
+
+</sect2>
+
+<sect2>
+<title>logout</title>
+<para>Syntax: <command>logout &lt;connection-number&gt;</command></para>
+
+<para>Log out of the specified connection number's network. 
+The correct connection number can be retrieved by running the
+<command>slist</command> command.</para>
+
+<para>Example:
+<programlisting>
+00:11 < ctrlsoft> logout 3
+00:11 -!- gryp [gryp@jabber.jabber.org] has quit [Leaving...]
+00:11 < root> JABBER - Logged out
+</programlisting>
+</para>
+
+</sect2>
+
+<sect2>
+<title>add</title>
+<para>Syntax: <command>add &lt;connection&gt; &lt;handle&gt;</command></para>
+
+<para>
+Adds the given buddy at the specified connection to your buddy list. The 
+connection number can be retrieved with the <command>slist</command> command.
+</para>
+
+<para>Example:
+<programlisting>
+00:15 < ctrlsoft> add 3 gryp@jabber.org
+00:15 -!- gryp (gryp@jabber.org) [gryp@jabber.jabber.org] has joined #bitlbee
+</programlisting>
+</para>
+
+</sect2>
+
+<sect2>
+<title>remove</title>
+
+<para>Syntax: <command>remove &lt;nick&gt;</command></para>
+
+<para>
+Removes the specified nick from your buddy list. 
+</para>
+
+<para>Example:
+<programlisting>
+00:14 < ctrlsoft> remove gryp
+00:14 -!- gryp [gryp@jabber.jabber.org] has quit [Leaving...]
+</programlisting>
+</para>
+
+</sect2>
+
+<sect2>
+<title>block</title>
+
+<para>Syntax: <command>block [&lt;nick&lt;|&lt;connection&gt; &lt;handle&gt;]</command></para>
+
+<para>
+Puts the specified user on your ignore list. Either specify the users' nick 
+when you have him/her in your contact list or a connection number and a user 
+handle. The connection number can be retrieved with the 
+<command>slist</command> command.
+</para>
+
+</sect2>
+
+<sect2>
+<title>allow</title>
+
+<para>Syntax: <command>allow [&lt;nick&lt;|&lt;connection&gt; &lt;handle&gt;]</command></para>
+
+<para>
+Reverse of <command>block</command>. Unignores the specified user 
+or user handle on specified connection. Connection number can be retrieved 
+using the <command>slist</command> command.
+</para>
+
+</sect2>
+
+<sect2>
+<title>set</title>
+
+<para>Syntax: <command>set [&lt;variable&gt;] [&lt;value&gt;]</command></para>
+
+<para>
+Without any arguments, this command lists all the set variables. You can also
+specify a single argument, a variable name, to get that variable's value. To
+change this value, specify the new value as the second argument.
+</para>
+
+</sect2>
+
+<sect2>
+<title>save</title>
+
+<para>Syntax: <command>save</command></para>
+
+<para>
+This command saves all your nicks and accounts immediately. Handy if you have
+the autosave functionality disabled, or if you don't trust the program's
+stability... ;-)
+</para>
+
+</sect2>
+
+</sect1>
+
+<sect1>
+<title>Talking to people</title>
+
+<para>
+You can talk to by starting a query with them. In most irc clients, 
+this can be done with either <command>/msg &lt;nick&gt; &lt;text&gt;</command>
+or <command>/query &lt;nick&gt;</command>.
+</para>
+
+<para>
+To keep the number of open query windows limited, you can also talk to people
+in the control channel, like <command>&lt;nick&gt;: &lt;text&gt;</command>.
+</para>
+
+</sect1>
+
+</chapter>

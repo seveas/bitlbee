@@ -1,0 +1,89 @@
+.\" bitlbee is free software; you can redistribute it and/or modify
+.\" it under the terms of the GNU General Public License as published by
+.\" the Free Software Foundation; either version 2 of the License, or
+.\" (at your option) any later version.
+.\"
+.\" This program is distributed in the hope that it will be useful,
+.\" but WITHOUT ANY WARRANTY; without even the implied warranty of
+.\" MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+.\" GNU General Public License for more details.
+.\"
+.\" You should have received a copy of the GNU General Public License
+.\" along with this program; see the file COPYING.  If not, write to
+.\" the Free Software Foundation, 675 Mass Ave, Cambridge, MA 02139, USA.
+.\"
+.TH bitlbee 8 "July 10, 2002"
+.SH NAME
+bitlbee \- irc gateway to im chat networks
+.SH SYNOPSIS
+.B bitlbee
+.RI
+.SH DESCRIPTION
+\fBbitlbee\fP is an irc daemon that can talk to instant messaging 
+networks and acts as a gateway. Users can connect to the server
+with any normal irc client and see their 'buddy list' in
+#bitlbee. Bitlbee's protocol support is based on the gaim 
+protocol plugins. Bitlbee currently supports oscar (aim and icq), 
+MSN and ICQ.
+
+Bitlbee should be called by inetd.
+.PP
+.SH OPTIONS
+\fBbitlbee\fP doesn't currently accept any command-line options.
+.SH COMMANDS
+BitlBee can be configured by giving one or more of these commands in 
+#bitlbee:
+.TP
+.B help
+Show list of commands and supported protocols
+.TP
+.B login <protocol> <username> <password> [<server>]
+Connect using the specified protocol, username and password. If no 
+server is specified, the default server is used.
+.TP
+.B logout <connection>
+Disconnect the given (numbered) connection.
+.TP
+.B slist
+List all current connections with connection numbers.
+.TP
+.B add <connection> <handle>
+Add new buddy with given handle on protocol with given number to buddy list.
+.TP
+.B remove <nick>
+Remove specified nick from buddy list
+.TP
+.B block [<nick>|<connection> <handle>]
+Ignore specified nick or combination of connection number and handle.
+.TP
+.B allow [<nick>|<connection> <handle>]
+Unignore specified nick or combination of connection number and handle.
+.SH "SEE ALSO"
+.BR ircd (8), 
+.BR inetd (8), 
+.BR inetd.conf (5), 
+.BR gaim (1).
+.BR http://www.lintux.cx/bitlbee.html
+.SH BUGS
+Probably many, but none are known at the moment.
+.SH LICENSE
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+.PP
+This program is distributed in the hope that it will be useful, but
+\fBWITHOUT ANY WARRANTY\fR; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU 
+General Public License for more details.
+.PP
+You should have received a copy of the GNU General Public License 
+along with this program; if not, write to the Free Software
+Foundation, Inc., 59 Temple PLace, Suite 330, Boston, MA  02111-1307  USA
+.SH AUTHORS
+.PP
+ Wilmer van der Gaast <lintux@lintux.cx>
+.BR
+ Sjoerd Hemminga <sjoerd@hemminga-online.nl>
+.BR
+ Jelmer Vernooij <jelmer@nl.linux.org>

@@ -15,8 +15,8 @@ objects = md5.o nogaim.o proxy.o util.o
 #      and the name of the object file, which should be linked into
 #      protocols.o (in $(subdirobjs)). These need to be in order, i.e. the
 #      first object file should be in the first directory.
-subdirs = msn jabber oscar
-subdirobjs = msn.o jabberr.o oscarr.o
+subdirs = msn jabber oscar yahoo
+subdirobjs = msn.o jabberr.o oscarr.o yahooo.o
 
 # Expansion of variables
 subdirobjs := $(join $(subdirs),$(addprefix /,$(subdirobjs)))
@@ -44,4 +44,5 @@ protocols.o: $(objects) $(subdirs)
 $(objects): ../Makefile.settings Makefile
 
 $(objects): %.o: %.c
-	$(CC) -c $(CFLAGS) $< -o $@
+	@echo Compiling $<
+	@$(CC) -c $(CFLAGS) $< -o $@

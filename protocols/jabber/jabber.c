@@ -613,6 +613,8 @@ static int jabber_find_chat_by_convo_id(struct gaim_connection *gc, int id, stru
 }
 ** End - Bitlbee ** */
 
+/* [SH] Not needed now */
+#if 0
 /*
  * Find any chat
  */
@@ -631,7 +633,8 @@ static struct jabber_chat *find_any_chat(struct gaim_connection *gc, jid chat)
 
 	return jc;
 }
-
+#endif
+/* [SH] Till here */
 
 /*
  * Find existing/active Jabber chat

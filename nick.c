@@ -38,7 +38,7 @@ char *nick_get( irc_t *irc, char *handle, int proto )
 	memset( nick, 0, MAX_NICK_LENGTH + 1 );
 	
 	while( n && !*nick )
-		if( ( strcasecmp( n->handle, handle ) == 0 ) && n->proto == proto )
+		if( ( n->proto == proto ) && ( strcasecmp( n->handle, handle ) == 0 ) )
 			strcpy( nick, n->nick );
 		else
 			n = n->next;
@@ -60,6 +60,29 @@ char *nick_get( irc_t *irc, char *handle, int proto )
 			nick[0] ++;
 	
 	return( nick );
+}
+
+void nick_del( irc_t *irc, char *nick )
+{
+	nick_t *l = NULL, *n = irc->nicks;
+	
+	while( n )
+	{
+		if( strcasecmp( n->nick, nick ) == 0 )
+		{
+			if( l )
+				l->next = n->next;
+			else
+				irc->nicks = n->next;
+			
+			free( n->handle );
+			free( n->nick );
+			free( n );
+			
+			break;
+		}
+		n = (l=n)->next;
+	}
 }
 
 static char *nick_lc_chars = "0123456789abcdefghijklmnopqrstuvwxyz{}|^_";

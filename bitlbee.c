@@ -4,7 +4,11 @@
 #include "protocols/nogaim.h"
 #include "help.h"
 
+#include <signal.h>
+
 irc_t *IRC;	/* :-( */
+
+static void sighandler( int signal );
 
 int main( int argc, char *argv[] )
 {
@@ -12,6 +16,21 @@ int main( int argc, char *argv[] )
 	struct timeval tv[1];
 	fd_set fds[1];
 	int i;
+	
+	if( 1 )
+	{
+		/* Catch some signals to tell the user what's happening before quitting */
+		struct sigaction sig, old;
+		memset( &sig, 0, sizeof( sig ) );
+		sig.sa_handler = sighandler;
+		sigaction( SIGINT,  &sig, &old );
+		sigaction( SIGILL,  &sig, &old );
+		sigaction( SIGBUS,  &sig, &old );
+		sigaction( SIGFPE,  &sig, &old );
+		sigaction( SIGSEGV, &sig, &old );
+		sigaction( SIGPIPE, &sig, &old );
+		sigaction( SIGTERM, &sig, &old );
+	}
 	
 	if( !( IRC = irc = irc_new( 0 ) ) )
 		return( 1 );
@@ -23,8 +42,8 @@ int main( int argc, char *argv[] )
 	{
 		FD_ZERO( fds );
 		FD_SET( irc->fd, fds );
-		tv->tv_sec = 1;
-		tv->tv_usec = 0;
+		tv->tv_sec = 0;
+		tv->tv_usec = 200000;
 		if( ( i = select( irc->fd + 1, fds, NULL, NULL, tv ) ) > 0 )
 		{
 			if( !irc_process( irc ) ) break;
@@ -112,10 +131,10 @@ int bitlbee_save( irc_t *irc )
 	FILE *fp;
 	
 	/*\
-	 *  [SH] Nothing should be save if no password is set,
-	 *  because the password is not set if it was wrong, or if one
-	 *  is not identified yet. This means that a malicious user could
-	 *  easily overwrite files owned by someone else:
+	 *  [SH] Nothing should be saved if no password is set, because the
+	 *  password is not set if it was wrong, or if one is not identified
+	 *  yet. This means that a malicious user could easily overwrite
+	 *  files owned by someone else:
 	 *  a Bad Thing, methinks
 	\*/
 
@@ -161,12 +180,10 @@ int bitlbee_save( irc_t *irc )
 		struct gaim_connection *gc = c->data;
 		c = c->next;
 		
-		if( gc->protocol == PROTO_MSN )
-			snprintf( s, sizeof( s ), "login msn %s %s", gc->user->username, gc->user->password );
-		else if( gc->protocol == PROTO_OSCAR || gc->protocol == PROTO_ICQ || gc->protocol == PROTO_TOC )
+		if( gc->protocol == PROTO_OSCAR || gc->protocol == PROTO_ICQ || gc->protocol == PROTO_TOC )
 			snprintf( s, sizeof( s ), "login oscar \"%s\" %s %s", gc->user->username, gc->user->password, gc->user->proto_opt[0] );
-		else if( gc->protocol == PROTO_JABBER )
-			snprintf( s, sizeof( s ), "login jabber %s %s", gc->user->username, gc->user->password );
+		else
+			snprintf( s, sizeof( s ), "login %s %s %s", proto_name[gc->user->protocol], gc->user->username, gc->user->password );
 		
 		line = obfucrypt( irc, s );
 		if( *line ) fprintf( fp, "%s\n", line );
@@ -287,6 +304,8 @@ void http_decode( char *s )
 	free( t );
 }
 
+/* Warning: This one explodes the string. Worst-cases can make the string 3x its original size! */
+/* This fuction is safe, but make sure you call it safely as well! */
 void http_encode( char *s )
 {
 	char *t;
@@ -310,4 +329,21 @@ void http_encode( char *s )
 	
 	strcpy( s, t );
 	free( t );
+}
+
+static void sighandler( int signal )
+{
+	if( signal == SIGPIPE )
+	{
+		/* SIGPIPE is ignored by Gaim. Looks like we have to do
+		   the same, because it causes some nasty hangs. */
+		if( set_getint( IRC, "debug" ) )
+			irc_usermsg( IRC, "Warning: Caught SIGPIPE, but we probably have to ignore this and pretend nothing happened..." );
+		return;
+	}
+	else
+	{
+		irc_write( IRC, "ERROR :Fatal signal received: %d. That's probably a bug.. :-/", signal );
+		exit( 1 );
+	}
 }

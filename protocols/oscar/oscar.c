@@ -205,7 +205,7 @@ static int conninitdone_admin    (aim_session_t *, aim_frame_t *, ...);
 static int conninitdone_chat     (aim_session_t *, aim_frame_t *, ...);
 static int conninitdone_chatnav  (aim_session_t *, aim_frame_t *, ...);
 static int gaim_parse_msgerr     (aim_session_t *, aim_frame_t *, ...);
-//static int gaim_parse_locaterights(aim_session_t *, aim_frame_t *, ...);
+static int gaim_parse_locaterights(aim_session_t *, aim_frame_t *, ...);
 static int gaim_parse_buddyrights(aim_session_t *, aim_frame_t *, ...);
 static int gaim_parse_locerr     (aim_session_t *, aim_frame_t *, ...);
 static int gaim_icbm_param_info  (aim_session_t *, aim_frame_t *, ...);
@@ -542,7 +542,7 @@ static int gaim_parse_auth_resp(aim_session_t *sess, aim_frame_t *fr, ...) {
 	aim_conn_addhandler(sess, bosconn, 0x0009, 0x0003, gaim_bosrights, 0);
 	aim_conn_addhandler(sess, bosconn, AIM_CB_FAM_ACK, AIM_CB_ACK_ACK, NULL, 0);
 	aim_conn_addhandler(sess, bosconn, AIM_CB_FAM_GEN, AIM_CB_GEN_REDIRECT, gaim_handle_redirect, 0);
-//	aim_conn_addhandler(sess, bosconn, AIM_CB_FAM_LOC, AIM_CB_LOC_RIGHTSINFO, gaim_parse_locaterights, 0);
+	aim_conn_addhandler(sess, bosconn, AIM_CB_FAM_LOC, AIM_CB_LOC_RIGHTSINFO, gaim_parse_locaterights, 0);
 	aim_conn_addhandler(sess, bosconn, AIM_CB_FAM_BUD, AIM_CB_BUD_RIGHTSINFO, gaim_parse_buddyrights, 0);
 	aim_conn_addhandler(sess, bosconn, AIM_CB_FAM_BUD, AIM_CB_BUD_ONCOMING, gaim_parse_oncoming, 0);
 	aim_conn_addhandler(sess, bosconn, AIM_CB_FAM_BUD, AIM_CB_BUD_OFFGOING, gaim_parse_offgoing, 0);
@@ -567,7 +567,7 @@ static int gaim_parse_auth_resp(aim_session_t *sess, aim_frame_t *fr, ...) {
 	aim_conn_addhandler(sess, bosconn, AIM_CB_FAM_ICQ, AIM_CB_ICQ_OFFLINEMSG, gaim_offlinemsg, 0);
 	aim_conn_addhandler(sess, bosconn, AIM_CB_FAM_ICQ, AIM_CB_ICQ_OFFLINEMSGCOMPLETE, gaim_offlinemsgdone, 0);
 //	aim_conn_addhandler(sess, bosconn, AIM_CB_FAM_POP, 0x0002, gaim_popup, 0);
-	aim_conn_addhandler(sess, bosconn, AIM_CB_FAM_ICQ, AIM_CB_ICQ_SIMPLEINFO, gaim_simpleinfo, 0);
+	aim_conn_addhandler(sess, bosconn, AIM_CB_FAM_ICQ, AIM_CB_ICQ_SIMPLEINFO, (aim_rxcallback_t) gaim_simpleinfo, 0);
 	aim_conn_addhandler(sess, bosconn, AIM_CB_FAM_SSI, AIM_CB_SSI_RIGHTSINFO, gaim_ssi_parserights, 0);
 	aim_conn_addhandler(sess, bosconn, AIM_CB_FAM_SSI, AIM_CB_SSI_LIST, gaim_ssi_parselist, 0);
 	aim_conn_addhandler(sess, bosconn, AIM_CB_FAM_SSI, AIM_CB_SSI_NOLIST, gaim_ssi_parselist, 0);
@@ -1749,7 +1749,6 @@ static int gaim_icbm_param_info(aim_session_t *sess, aim_frame_t *fr, ...) {
 	return 1;
 }
 
-#if 0
 static int gaim_parse_locaterights(aim_session_t *sess, aim_frame_t *fr, ...)
 {
 	va_list ap;
@@ -1767,7 +1766,6 @@ static int gaim_parse_locaterights(aim_session_t *sess, aim_frame_t *fr, ...)
 
 	return 1;
 }
-#endif
 
 static int gaim_parse_buddyrights(aim_session_t *sess, aim_frame_t *fr, ...) {
 	va_list ap;
@@ -1932,10 +1930,14 @@ static void oscar_get_away(struct gaim_connection *g, char *who) {
 		aim_getinfo(odata->sess, odata->conn, who, AIM_GETINFO_GENERALINFO);
 }
 
+/* [SH] Not needed now */
+#if 0
 static void oscar_set_idle(struct gaim_connection *g, int time) {
 	struct oscar_data *odata = (struct oscar_data *)g->proto_data;
 	aim_bos_setidle(odata->sess, odata->conn, time);
 }
+#endif
+/* [SH] Till here */
 
 static void oscar_set_away_aim(struct gaim_connection *gc, struct oscar_data *od, const char *message)
 {
@@ -2019,10 +2021,14 @@ static void oscar_set_away(struct gaim_connection *gc, char *state, char *messag
 	return;
 }
 
+/* [SH] Not needed now */
+#if 0
 static void oscar_warn(struct gaim_connection *g, char *name, int anon) {
 	struct oscar_data *odata = (struct oscar_data *)g->proto_data;
 	aim_send_warning(odata->sess, odata->conn, name, anon ? AIM_WARN_ANON : 0);
 }
+#endif
+/* [SH] Till here */
 
 static void oscar_add_buddy(struct gaim_connection *g, char *name) {
 	struct oscar_data *odata = (struct oscar_data *)g->proto_data;

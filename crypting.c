@@ -88,8 +88,8 @@ char *obfucrypt (irc_t *irc, char *line) {
 	i = j = 0;
 	while (*line) {
 		/* Encrypt/obfuscate the line, using the password */
-		if (*line < 0) *line = - (*line);
-		if (irc->password[i] < 0) irc->password[i] = - irc->password[i];
+		if (*(signed char*)line < 0) *line = - (*line);
+		if (((signed char*)irc->password)[i] < 0) irc->password[i] = - irc->password[i];
 		
 		rv[j] = *line + irc->password[i]; /* Overflow intended */
 		

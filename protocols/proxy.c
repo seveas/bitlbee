@@ -39,6 +39,7 @@
 
 #define GAIM_READ_COND  (G_IO_IN | G_IO_HUP | G_IO_ERR)
 #define GAIM_WRITE_COND (G_IO_OUT | G_IO_HUP | G_IO_ERR | G_IO_NVAL)
+#define GAIM_ERR_COND   (G_IO_HUP | G_IO_ERR | G_IO_NVAL)
 
 char proxyhost[128] = { 0 };
 int proxyport = 0;
@@ -74,6 +75,8 @@ static gboolean gaim_io_invoke(GIOChannel *source, GIOCondition condition, gpoin
 		gaim_cond |= GAIM_INPUT_READ;
 	if (condition & GAIM_WRITE_COND)
 		gaim_cond |= GAIM_INPUT_WRITE;
+//	if (condition & GAIM_ERR_COND)
+//		fprintf( stderr, "ERROR! fd=%d\n", g_io_channel_unix_get_fd( source ) );
 
 	closure->function(closure->data, g_io_channel_unix_get_fd(source), gaim_cond);
 

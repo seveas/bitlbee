@@ -25,15 +25,16 @@
 #include "nogaim.h"
 
 struct prpl *proto_prpl[PROTO_MAX];
-char proto_name[PROTO_MAX][8] = { "TOC", "OSCAR", "", "ICQ", "MSN", "", "", "", "JABBER" };
+char proto_name[PROTO_MAX][8] = { "TOC", "OSCAR", "YAHOO", "ICQ", "MSN", "", "", "", "JABBER", "", "", "", "", "", "", "" };
 
-static char *proto_away_alias[6][8] =
+static char *proto_away_alias[7][5] =
 {
 	{ "Away from computer", "Away", "Extended away", NULL },
-	{ "NA", "N/A", "Not available", "Busy", "Do not disturb", "DND", "Occupied", NULL },
+	{ "NA", "N/A", "Not available", NULL },
+	{ "Busy", "Do not disturb", "DND", "Occupied", NULL },
 	{ "Be right back", "BRB", NULL },
-	{ "On the phone", "Phone", NULL },
-	{ "Out to lunch", "Lunch", NULL },
+	{ "On the phone", "Phone", "On phone", NULL },
+	{ "Out to lunch", "Lunch", "Food", NULL },
 	{ NULL }
 };
 static char *proto_away_alias_find( GList *gcm, char *away );
@@ -52,6 +53,10 @@ void nogaim_init()
 	proto_prpl[PROTO_OSCAR] = malloc( sizeof( struct prpl ) );
 	memset( proto_prpl[PROTO_OSCAR], 0, sizeof( struct prpl ) );
 	oscar_init( proto_prpl[PROTO_OSCAR] );
+	
+	proto_prpl[PROTO_YAHOO] = malloc( sizeof( struct prpl ) );
+	memset( proto_prpl[PROTO_YAHOO], 0, sizeof( struct prpl ) );
+	yahoo_init( proto_prpl[PROTO_YAHOO] );
 	
 	proto_prpl[PROTO_JABBER] = malloc( sizeof( struct prpl ) );
 	memset( proto_prpl[PROTO_JABBER], 0, sizeof( struct prpl ) );
@@ -95,10 +100,10 @@ struct gaim_connection *gc_nr( int i )
 
 int proto_away( struct gaim_connection *gc, char *away )
 {
-	GList *m;
+	GList *m, *ms;
 	char *s;
 	
-	m = gc->prpl->away_states( gc );
+	ms = m = gc->prpl->away_states( gc );
 	
 	while( m )
 	{
@@ -119,18 +124,22 @@ int proto_away( struct gaim_connection *gc, char *away )
 	
 	if( m )
 	{
-		gc->prpl->set_away( gc, m->data, NULL );
+		gc->prpl->set_away( gc, m->data, ( away && *away ) ? away : NULL );
 	}
 	else
 	{
-		s = proto_away_alias_find( m, away );
+		s = proto_away_alias_find( ms, away );
 		if( s )
-			gc->prpl->set_away( gc, s, NULL );
+		{
+			gc->prpl->set_away( gc, s, away );
+			if( set_getint( gc->irc, "debug" ) )
+				irc_usermsg( gc->irc, "Setting away state for %s to %s", proto_name[gc->protocol], s );
+		}
 		else
 			gc->prpl->set_away( gc, GAIM_AWAY_CUSTOM, away );
 	}
 	
-	g_list_free( m );
+	g_list_free( ms );
 	
 	return( 1 );
 }
@@ -141,25 +150,28 @@ static char *proto_away_alias_find( GList *gcm, char *away )
 	int i, j;
 	
 	for( i = 0; *proto_away_alias[i]; i ++ )
+	{
 		for( j = 0; proto_away_alias[i][j]; j ++ )
 			if( strcasecmp( away, proto_away_alias[i][j] ) == 0 )
-				goto paaf_found;
-	
-	return( NULL );
-	
-	paaf_found:
-	for( j = 0; proto_away_alias[i][j]; j ++ )
-	{
-		m = gcm;
-		while( m )
+				break;
+		
+		if( !proto_away_alias[i][j] )	/* If we reach the end, this row */
+			continue;		/* is not what we want. Next!    */
+		
+		/* Now find an entry in this row which exists in gcm */
+		for( j = 0; proto_away_alias[i][j]; j ++ )
 		{
-			if( strcasecmp( proto_away_alias[i][j], m->data ) == 0 )
-				return( proto_away_alias[i][j] );
-			m = m->next;
+			m = gcm;
+			while( m )
+			{
+				if( strcasecmp( proto_away_alias[i][j], m->data ) == 0 )
+					return( proto_away_alias[i][j] );
+				m = m->next;
+			}
 		}
 	}
 	
-	return( NULL );		/* Shouldn't happen */
+	return( NULL );
 }
 
 
@@ -338,23 +350,16 @@ void add_buddy( struct gaim_connection *gc, char *group, char *handle, char *rea
 	if( !realname || !*realname ) realname = nick;
 	u->realname = strdup( realname );
 	
-	if( gc->protocol == PROTO_MSN )
+	if( ( s = strchr( handle, '@' ) ) )
 	{
-		s = strchr( handle, '@' );
-		if( !s ) s = handle; else s ++;
+		s ++;
 		u->host = strdup( s );
-		if( s > handle )
-		{
-			*(s-1) = 0;
-			u->user = strdup( handle );
-			*(s-1) = '@';
-		}
-		else
-		{
-			u->user = strdup( handle );
-		}
+		
+		*(s-1) = 0;
+		u->user = strdup( handle );
+		*(s-1) = '@';
 	}
-	else if( gc->protocol == PROTO_OSCAR || gc->protocol == PROTO_ICQ || gc->protocol == PROTO_TOC )
+	else if( gc->user->proto_opt[0] && *gc->user->proto_opt[0] )
 	{
 		u->host = strdup( gc->user->proto_opt[0] );
 		u->user = strdup( handle );
@@ -364,21 +369,10 @@ void add_buddy( struct gaim_connection *gc, char *group, char *handle, char *rea
 			if( *s == ' ' )
 				*s = '_';
 	}
-	else if( gc->protocol == PROTO_JABBER )
+	else
 	{
-		s = strchr( handle, '@' );
-		if( !s ) s = handle; else s ++;
-		u->host = strdup( s );
-		if( s > handle )
-		{
-			*(s-1) = 0;
-			u->user = strdup( handle );
-			*(s-1) = '@';
-		}
-		else
-		{
-			u->user = strdup( handle );
-		}
+		u->host = strdup( proto_name[gc->user->protocol] );
+		u->user = strdup( handle );
 	}
 	
 	u->gc = gc;
@@ -495,8 +489,8 @@ void serv_got_update( struct gaim_connection *gc, char *handle, int loggedin, in
 	{
 		if( type & ( MSN_BUSY << 1 ) )
 			u->away = "Busy";
-		else if( type & ( MSN_IDLE << 1 ) )
-			u->away = "Idle";
+//		else if( type & ( MSN_IDLE << 1 ) )
+//			u->away = "Idle";
 		else if( type & ( MSN_BRB << 1 ) )
 			u->away = "Be right back";
 		else if( type & ( MSN_PHONE << 1 ) )
@@ -510,7 +504,7 @@ void serv_got_update( struct gaim_connection *gc, char *handle, int loggedin, in
 	{
 		u->away = "Away";
 	}
-	else if( ( type & UC_UNAVAILABLE ) && ( gc->protocol == PROTO_JABBER) )
+	else if( ( type & UC_UNAVAILABLE ) && ( gc->protocol == PROTO_JABBER ) )
 	{
 		if( type & UC_DND )
 			u->away = "Do Not Disturb";
@@ -518,6 +512,11 @@ void serv_got_update( struct gaim_connection *gc, char *handle, int loggedin, in
 			u->away = "Extended Away";
 		else // if( type & UC_AWAY )
 			u->away = "Away";
+	}
+	else if( ( type & UC_UNAVAILABLE ) && ( gc->protocol == PROTO_YAHOO ) )
+	{
+//		irc_usermsg( IRC, "Away-state for %s: %d", handle, type );
+		u->away = "Away";
 	}
 	else
 		u->away = NULL;

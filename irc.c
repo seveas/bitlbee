@@ -19,12 +19,12 @@ irc_t *irc_new( int fd )
 	
 	i = sizeof( *sock );
 	if( getsockname( irc->fd, (struct sockaddr*) sock, &i ) == 0 )
-		if( ( peer = gethostbyaddr( (char*) &sock->sin_addr, i, AF_INET ) ) )
+		if( ( peer = gethostbyaddr( (char*) &sock->sin_addr, sizeof(sock->sin_addr), AF_INET ) ) )
 			irc->myhost = strdup( peer->h_name );
 	
 	if( getpeername( irc->fd, (struct sockaddr*) sock, &i ) == 0 )
 	{
-		if( ( peer = gethostbyaddr( (char*) &sock->sin_addr, i, AF_INET ) ) )
+		if( ( peer = gethostbyaddr( (char*) &sock->sin_addr, sizeof(sock->sin_addr), AF_INET ) ) )
 			irc->host = strdup( peer->h_name );
 #ifndef NO_TCPD
 		i = hosts_ctl( "bitlbee", irc->host?irc->host:STRING_UNKNOWN, inet_ntoa( sock->sin_addr ), STRING_UNKNOWN );
@@ -125,6 +125,10 @@ int irc_exec( irc_t *irc, char **cmd )
 		{
 			irc_reply( irc, 461, "%s :Need more parameters", cmd[0] );
 		}
+		else if( irc->user )
+		{
+			irc_reply( irc, 432, "You can't change your nick/user" );
+		}
 		else
 		{
 			irc->user = strdup( cmd[1] );
@@ -141,13 +145,19 @@ int irc_exec( irc_t *irc, char **cmd )
 		}
 		else if( irc->nick )
 		{
-			irc_reply( irc, 432, "You can't change your nick" );
+			irc_reply( irc, 432, "You can't change your nick/user" );
 		}
 		else
 		{
 			irc->nick = strdup( cmd[1] );
 			if( irc->user ) irc_login( irc );
 		}
+		return( 1 );
+	}
+	else if( strcasecmp( cmd[0], "PASS" ) == 0 )
+	{
+		/* Ignore this one for now, just accept it in case the
+		   client insists on sending this.. */
 		return( 1 );
 	}
 	
@@ -250,7 +260,8 @@ int irc_exec( irc_t *irc, char **cmd )
 	}
 	else if( strcasecmp( cmd[0], "QUIT" ) == 0 )
 	{
-		irc_write( irc, ":%s!%s@%s QUIT :%s", irc->nick, irc->user, irc->host, cmd[1]?cmd[1]:"" );
+//		irc_write( irc, ":%s!%s@%s QUIT :%s", irc->nick, irc->user, irc->host, cmd[1]?cmd[1]:"" );
+		irc_write( irc, "ERROR :%s%s", cmd[1]?"Quit: ":"", cmd[1]?cmd[1]:"Client Quit" );
 		close( irc->fd );
 		return( 0 );
 	}
@@ -356,12 +367,26 @@ int irc_write( irc_t *irc, char *format, ... )
 {
 	char line[IRC_MAX_LINE];
 	va_list params;
+	int n, start = 0;
 	
 	va_start( params, format );
 	vsnprintf( line, IRC_MAX_LINE - 3, format, params );
 	va_end( params );
 	strcat( line, "\r\n" );
-	return( write( irc->fd, line, strlen( line ) ) == strlen( line ) );
+	
+	while( line[start] )
+	{
+		n = write( irc->fd, line + start, strlen( line + start ) );
+		if( n <= 0 )
+		{
+			/* PANIC! But we can't tell the user through IRC,
+			   that'd probably cause an infinite loop.. */
+			return( 0 );
+		}
+		start += n;
+	}
+	
+	return( 1 );
 }
 
 void irc_names( irc_t *irc, char *channel )

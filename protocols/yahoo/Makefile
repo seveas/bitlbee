@@ -9,12 +9,13 @@
 -include ../../Makefile.settings
 
 # [SH] Program variables
-objects = msn.o
+objects = yahoo.o crypt.o
 
 CFLAGS += -Wall
+LFLAGS += -r
 
 # [SH] Phony targets
-all: msn.o
+all: yahooo.o
 
 .PHONY: all clean distclean
 
@@ -30,3 +31,6 @@ $(objects): ../../Makefile.settings Makefile
 $(objects): %.o: %.c
 	@echo Compiling $<
 	@$(CC) -c $(CFLAGS) $< -o $@
+
+yahooo.o: $(objects)
+	$(LD) $(LFLAGS) $(objects) -o yahooo.o

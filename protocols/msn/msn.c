@@ -467,6 +467,8 @@ static int msn_process_switch(struct msn_switchboard *ms, char *buf)
 	return 1;
 }
 
+/* [SH] Not needed now */
+#if 0
 static void msn_unescape(char *text) {
 	char *cpy = g_strdup(text);
 	char *cur = cpy;
@@ -488,6 +490,8 @@ static void msn_unescape(char *text) {
 	*text = 0;
 	g_free(cpy);
 }
+#endif
+/* [SH] Till here */
 
 static void msn_process_switch_msg(struct msn_switchboard *ms, char *msg)
 {
@@ -1807,6 +1811,8 @@ static void msn_set_idle(struct gaim_connection *gc, int idle)
 	}
 }
 
+/* [SH] Not needed now */
+#if 0
 static char *msn_get_away_text(int s)
 {
 	switch (s) {
@@ -1826,6 +1832,8 @@ static char *msn_get_away_text(int s)
 			return "Available";
 	}
 }
+#endif
+/* [SH] Till here */
 
 static void msn_add_buddy(struct gaim_connection *gc, char *name)
 {

@@ -25,18 +25,6 @@ BitlBee commands:
   yes      - Accept a request
   no       - Deny a request
 %
-?identify
-Syntax: identify <password>
-
-BitlBee saves all your settings (contacts, accounts, passwords) on-server. To prevent other users from just logging in as you and getting this information, you'll have to identify yourself with your password. You can register this password using the register command.
-Once you're registered, you can change your password using set password <password> (as always, without the brackets..).
-%
-?register
-Syntax: register <password>
-
-BitlBee saves all your settings (contacts, accounts, passwords) on-server. To prevent other users from just logging in as you and getting this information, you'll have to identify yourself with your password. You can register this password using this command.
-When you want to use the Bee again, use the identify command. You'll be logged in to all the set up IM services and your buddy nicks will be the same.
-%
 ?quickstart
 Welcome to BitlBee, your IRC gateway to ICQ, MSN and other IM systems.
 
@@ -54,9 +42,9 @@ Now it's time to speak to some people. Let's suppose you got a jabber account i
 <itsme> login jabber itsme@jabber.com secret
 <root> JABBER - Logging in: Connecting
 
-Your turn now. Try to log in. Other available IM names are msn and oscar. Oscar is the protocol used by ICQ and AIM. For oscar, you need to specify the IM-server as a third argument. For AOL Instant Messenger, the server name is login.oscar.aol.com. For ICQ, the server name is login.icq.com.
+Your turn now. Try to log in. Other available IM names are msn, oscar and yahoo. Oscar is the protocol used by ICQ and AIM. For oscar, you need to specify the IM-server as a third argument. For AOL Instant Messenger, the server name is login.oscar.aol.com. For ICQ, the server name is login.icq.com.
 
-Of course it's possible to log into multiple IM-services.
+Of course it's possible to be logged into multiple IM-services at the same time.
 
 When finished, type help quickstart3 to continue.
 %
@@ -96,15 +84,14 @@ Gives usage information about a command
 Syntax: login <protocol> <username> <password> [<server>]
 
 Logs in to the given server with the specified protocol, username and password. Specifying the server is optional and principally only necessary when using oscar.
+The following protocols are supported at the moment: jabber, msn, yahoo and oscar (For AIM/ICQ. For AIM use server login.oscar.aol.com, for ICQ use server login.icq.com.)
 
 Example:
 
-00:10 < ctrlsoft> login jabber ctrlsoft@jabber.org secret
-00:10 < root> JABBER - Logging in: Connecting
-00:10 < root> JABBER - Logging in: Connected
-00:10 < root> JABBER - Logging in: Requesting Authentication Method
-00:10 < root> JABBER - Logging in: Authenticating
-00:10 < root> JABBER - Logged in
+22:49 @   wilmer| login oscar 72696705 blaataap login.icq.com
+22:49 @     root| ICQ - Logging in: Signon: 72696705
+22:49 @     root| ICQ - Logging in: Connection established, cookie sent
+22:49 @     root| ICQ - Logged in
 %
 ?slist
 Syntax: slist
@@ -139,7 +126,7 @@ Adds the given buddy at the specified connection to your buddy list. The connect
 Example:
 
 00:15 < ctrlsoft> add 3 gryp@jabber.org
-00:15 -!- gryp (gryp@jabber.org) has joined #bitlbee
+00:15 -!- gryp (gryp@jabber.org) has joined #bitlbee
 %
 ?info
 Syntax: info <connection> <handle>
@@ -158,7 +145,7 @@ Removes the specified nick from your buddy list.
 Example:
 
 00:14 < ctrlsoft> remove gryp
-00:14 -!- gryp [gryp@jabber.jabber.org] has quit [Leaving...]
+00:14 -!- gryp [gryp@jabber.jabber.org] has quit [Leaving...]
 %
 ?block
 Syntax: block <nick>
@@ -173,7 +160,7 @@ Puts the specified user on your ignore list. Either specify the users' nick when
 Reverse of block. Unignores the specified user or user handle on specified connection. Connection number can be retrieved using the slist command.
 %
 ?set
-Syntax: [<variable>] [<value>]
+Syntax: set [<variable>] [<value>]
 
 Without any arguments, this command lists all the set variables. You can also specify a single argument, a variable name, to get that variable's value. To change this value, specify the new value as the second argument.
 
@@ -192,13 +179,15 @@ This command saves all your nicks and accounts immediately. Handy if you have th
 Type: boolean
 Default: False
 
-If value is true, messages from users will appear in seperate query windows.  If false, messages from users will appear in #bitlbee.
+If value is true, messages from users will appear in seperate query windows. If false, messages from users will appear in #bitlbee.
+
+This setting is remembered (during one session) per-user, this setting only changes the default state. This option takes effect as soon as you reconnect.
 %
 ?set save_on_quit
 Type: boolean
 Default: True
 
-If enabled causes bitlbee to save all current settings and account details when user disconnects.
+If enabled causes BitlBee to save all current settings and account details when user disconnects. This is enabled by default, but at the moment it's handy to have this disabled if your IM services frequently disconnect.
 %
 ?set html
 Type: string
@@ -222,9 +211,7 @@ It's usual that messages meant for one specific person on an IRC channel are pre
 Type: boolean
 Default: False
 
-Sends you a /notice when a user starts typing a message (if the protocol supports it, MSN for example). This is a bug, not a feature. You don't want to use it. Really. In fact the typing-notification is just one of the least useful 'innovations' ever. It's just there because some guy will probably ask me about it anyway. ;-)
-
-(Actually it doesn't even seem to work yet..)
+Sends you a /notice when a user starts typing a message (if the protocol supports it, MSN for example). This is a bug, not a feature. (But please don't report it.. ;-) You don't want to use it. Really. In fact the typing-notification is just one of the least useful 'innovations' ever. It's just there because some guy will probably ask me about it anyway. ;-)
 %
 ?set ops
 Type: String
@@ -233,6 +220,14 @@ Sends you a /notice when a user starts typing a message (if the protocol support
 Some people prefer themself and root to have operator status in #bitlbee, other people don't. You can change these states using this setting.
 
 The value "both" means both user and root get ops. "root" means, well, just root. "user" means just the user. "none" means nobody will get operator status.
+%
+?rename
+Syntax: rename [<oldnick>] [<newnick>]
+
+Renick a user in your buddy list. Very useful, in fact just very important, if you got a lot of people with stupid account names (or hard ICQ numbers).
+
+<itsme> rename itsme_ you
+* itsme_ is now known as you
 %
 ?yes
 Syntax: yes
@@ -256,7 +251,8 @@ To identify yourself in later sessions, you can use the identify command.
 ?identify
 Syntax: identify <password>
 
-If you registered your nickname with the register command, you can identify yourself in later sessions using the identify command. After identifying, all your IM-network settings (and nicknames/aliases) will be read from disk and BitlBee will connect to the networks automatically.
+BitlBee saves all your settings (contacts, accounts, passwords) on-server. To prevent other users from just logging in as you and getting this information, you'll have to identify yourself with your password. You can register this password using the register command.
+Once you're registered, you can change your password using set password <password> (as always, without the brackets..).
 %
 ?blist
 Syntax: blist [all]

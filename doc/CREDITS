@@ -13,3 +13,9 @@ The authors thank the following people:
   for spreading the word of the Bee.
 - Han Boetes, for testing on and porting to OpenBSD.
 - Paul Foote for some hints on running BitlBee on FreeBSD.
+- Floris Kruisselbrink, for submitting the "help set ..." patch.
+
+- And all other users who help us by sending useful bug reports, positive
+  feedback, nice patches and cool addons. Mentioning you all would make
+  this list fill up the whole source tree, so please don't be offended
+  by don't seeing your name here.

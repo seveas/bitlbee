@@ -36,6 +36,7 @@ clean: $(subdirs)
 
 distclean: clean $(subdirs)
 	rm -f Makefile.settings config.h
+	find . -name 'DEADJOE' -o -name '*.orig' -o -name '*.rej' -o -name '*~' | xargs rm -f
 
 install-doc:
 	$(MAKE) -C doc install
@@ -64,7 +65,8 @@ $(subdirs):
 	$(MAKE) -C $@ $(MAKECMDGOALS)
 
 $(objects): %.o: %.c
-	$(CC) -c $(CFLAGS) $< -o $@
+	@echo Compiling $<
+	@$(CC) -c $(CFLAGS) $< -o $@
 
 $(objects): Makefile Makefile.settings config.h
 

@@ -48,8 +48,6 @@
 #define OPT_LOGGED_IN 0x00010000
 #define GAIM_AWAY_CUSTOM "Custom"
 
-extern char proto_name[16][8];
-
 /* ok. now the fun begins. first we create a connection structure */
 struct gaim_connection {
 	/* we need to do either oscar or TOC */
@@ -215,6 +213,8 @@ struct prpl {
 #define PROTO_GADUGADU	11
 #define PROTO_MAX	16
 
+extern char proto_name[PROTO_MAX][8];
+
 #define UC_UNAVAILABLE  1
 
 #define MSN_ONLINE  1
@@ -301,6 +301,9 @@ void oscar_init( struct prpl *ret );
 
 /* jabber.c */
 void jabber_init( struct prpl *ret );
+
+/* yahoo.c */
+void yahoo_init( struct prpl *ret );
 
 /* prefs.c */
 void build_block_list();

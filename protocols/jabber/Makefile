@@ -29,7 +29,8 @@ distclean: clean
 $(objects): ../../Makefile.settings Makefile
 
 $(objects): %.o: %.c
-	$(CC) -c $(CFLAGS) $< -o $@
+	@echo Compiling $<
+	@$(CC) -c $(CFLAGS) $< -o $@
 
 jabberr.o: $(objects)
 	$(LD) $(LFLAGS) $(objects) -o jabberr.o

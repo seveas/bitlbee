@@ -1,3 +1,42 @@
+Version 0.73:
+- Fixed the unable-to-remove-icq-users (actually users from any *local*
+  contact list) bug.
+- Fixed away bug in aim protocol.
+- Fixed the 'statistics' under the blist command output.
+- Removed the commands from the XML documentation because they're 'on-line'
+  already.
+- Added some signal handling; ignoring SIGPIPE should als get rid of some
+  crashes (for some weird reason this has to be done). Also, crashes because
+  of things like segfaults are a bit more verbose now. ;-)
+- Changed the select() timeout in main(), this might improve some latencies.
+  (At leasts it speeds up signing on (especially for ICQ) a lot!)
+- Made the own-QUIT messages more compliant, probably.
+- Fixed some memory-bugs, thanks to valgrind.
+- irc_write() now checks the write() return value, and tries to send the rest
+  of the string, if it could not write it completely the first time.
+- Hostname lookups also work on NetBSD now.
+  (Thanks to David.Edmondson*sun*com (hi spambot))
+- At last, a new protocol. Welcome to ... YAHOO!
+- Documentation and code cleanup. Somehow the helpfile documented register
+  and identify twice, now that's what I call over-documenting.. :-/
+- Added the rename command to the helpfile, somehow I forgot that one.
+- Been a bit pedantic about compiler warnings. They're all dead now.
+- Fixed a small Makefile problem which gave an error when a clean tree was
+  "made distclean"
+- Fixed a (possible) memory leak in nogaim.c:proto_away()
+- Fixed the way proto_away() calls proto_away_alias_find(), now it gives
+  the *whole* list of away states
+- proto_away() doesn't give a NULL message anymore because AIM didn't like
+  that
+- Got rid of the last goto in my code (without ruining the code)
+- Created a more samba-like compiling process (without the complete command
+  lines, just a simple echo)
+- "help set ops" works now too, without quoting the "set ops"
+- Trying to log in with a protocol without a prpl (ICQ and TOC, for example)
+  made previous versions crash
+
+Finished 13 Apr 2003
+
 Version 0.72:
 - Updated the documentation.
 - Improved the MSN friendlyname code. (Although it doesn't seem to be perfect
@@ -16,7 +55,7 @@ Version 0.72:
   configurable. (set ops)
 - Now the umode stuff actually works. Next step: Use those modes... (How?)
 
-Finished Dec 19 2002
+Finished 19 Dec 2002
 
 Version 0.71:
 - Fixed the help command output layout (alignment)
@@ -26,7 +65,7 @@ Version 0.71:
   instead of just '<user>: <message>'
 - Added a debug setting boolean: Set it to true for some debugging crap
   which used to be on by default..
-- Changed the /whois reply: In the server section you know see the
+- Changed the /whois reply: In the server section you now see the
   connection this user belongs to.
 - Added some root/permission checks.
 - configure script works correctly when the terminating / is forgotten for
@@ -69,4 +108,4 @@ Version 0.71:
   and because you can use /usr/sbin/tcpd as well.
 - The root user can be renamed now.
 
-Finished Sep 16 2002
+Finished 16 Sep 2002

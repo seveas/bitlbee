@@ -172,6 +172,9 @@ fi
 ## Yes, I know these are a bit bogus. If necessary, flags can be added
 ## for specific architectures. That's what these lines are for...
 
+## For Solaris we'll need some extra thingies here, for now we don't
+## know what so it's not supported...
+
 echo Architecture: $arch
 case "$arch" in
 Linux )
@@ -179,6 +182,9 @@ Linux )
 ;;
 *BSD )
 	echo 'Although our primary development system is Linux, BitlBee should run quite well on most BSD systems.'
+;;
+SunOS )
+	echo 'Solaris does not yet work. This will be fixed in future versions.'
 ;;
 * )
 	echo 'We haven'\''t tested BitlBee on many platforms yet, yours is untested. YMMV.'
@@ -189,19 +195,13 @@ echo
 echo Machine: $cpu
 case "$cpu" in
 i[0-9]86 )
-	echo 'i386 is our primary development platform, BitlBee should work well.'
+	echo 'x86 is our primary development platform, BitlBee should work well.'
 ;;
 sparc )
 	echo 'SPARC is our secondary development platform. BitlBee usually works quite well.'
 ;;
-m68k | mips | mipsel ) #ehhh :-)
-	echo 'This platform is untested. I don'\''t see why BitlBee shouldn'\''t run though.'
-;;
-axp | alpha | ia64 | sparc64 )
-	echo '64-bit platforms are completely untested. I hope nothing breaks.'
-;;
 * )
-	echo 'Hmmm.. Never heard of that one before.. :-)'
+	echo 'This platform is untested. Please report any problems to <wilmer@gaast.net>.'
 ;;
 esac
 echo

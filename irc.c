@@ -147,6 +147,11 @@ int irc_exec( irc_t *irc, char **cmd )
 		{
 			irc_reply( irc, 432, "You can't change your nick/user" );
 		}
+		else if( !nick_ok( cmd[1] ) )
+		{
+			/* [SH] Invalid characters. */
+			irc_reply( irc, 432, "This nick contains invalid characters" );
+		}
 		else
 		{
 			irc->nick = strdup( cmd[1] );

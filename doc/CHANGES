@@ -1,6 +1,14 @@
+Version 0.74a:
+- The music-festivals-are-bad-for-your-mind release.
+- This one actually contains the fix for the bug 0.74 claimed to have.
+
+Finished 11 Jun 2003
+
 Version 0.74:
 - Fixed a security leak, where using a / in the nickname causes the saved
   settings and account information to be stored in undesirable places.
+
+Finished 10 Jun 2003
 
 Version 0.73:
 - Fixed the unable-to-remove-icq-users (actually users from any *local*

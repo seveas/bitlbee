@@ -825,6 +825,10 @@ static int msn_process_main(struct gaim_connection *gc, char *buf)
 			if (b->proto_data)
 				g_free(b->proto_data);
 			b->proto_data = g_strdup(friend);
+			/* <BITLBEE> */
+			g_snprintf( b->show, sizeof( b->show ), "%s", friend );
+			handle_buddy_rename( b, b->name );
+			/* </BITLBEE> */
 		}
 
 		if (!g_strcasecmp(state, "BSY")) {
@@ -971,6 +975,10 @@ static int msn_process_main(struct gaim_connection *gc, char *buf)
 			if (b->proto_data)
 				g_free(b->proto_data);
 			b->proto_data = g_strdup(friend);
+			/* <BITLBEE> */
+			g_snprintf( b->show, sizeof( b->show ), "%s", friend );
+			handle_buddy_rename( b, b->name );
+			/* </BITLBEE> */
 		}
 
 		if (!g_strcasecmp(state, "BSY")) {

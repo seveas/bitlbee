@@ -7,3 +7,9 @@ The authors thank the following people:
   test things.
 - Ralph Slooten, for creating the RPM packages and testing the program.
 - Erik Hensema, for creating SuSE RPM packages and some patching.
+- Tony Vroon, for being a happy user and patch-submitter.
+- Lots of Twente University students (and of course all the other users,
+  it's just that BitlBee seems to be some sort of hype over there ;-),
+  for spreading the word of the Bee.
+- Han Boetes, for testing on and porting to OpenBSD.
+- Paul Foote for some hints on running BitlBee on FreeBSD.

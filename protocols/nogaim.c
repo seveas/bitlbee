@@ -24,8 +24,8 @@
 
 #include "nogaim.h"
 
-struct prpl *proto_prpl[16];
-char proto_name[16][8] = { "TOC", "OSCAR", "", "ICQ", "MSN", "", "", "", "JABBER" };
+struct prpl *proto_prpl[PROTO_MAX];
+char proto_name[PROTO_MAX][8] = { "TOC", "OSCAR", "", "ICQ", "MSN", "", "", "", "JABBER" };
 
 static char *proto_away_alias[6][8] =
 {
@@ -58,6 +58,7 @@ void nogaim_init()
 	jabber_init( proto_prpl[PROTO_JABBER] );
 	
 	set_add( IRC, "html", "nostrip", NULL );
+	set_add( IRC, "typing_notice", "false", set_eval_bool );
 }
 
 void strip_html( char *msg )
@@ -208,11 +209,13 @@ void hide_login_progress_error( struct gaim_connection *gc, char *msg )
 	irc_usermsg( gc->irc, "%s - Logged out: %s", proto_name[gc->protocol], msg );
 }
 
-static gboolean send_keepalive(gpointer d)
+static gboolean send_keepalive( gpointer d )
 {
 	struct gaim_connection *gc = d;
-	if (gc->prpl && gc->prpl->keepalive)
-		gc->prpl->keepalive(gc);
+	
+	if( gc->prpl && gc->prpl->keepalive )
+		gc->prpl->keepalive( gc );
+	
 	return TRUE;
 }
 
@@ -321,6 +324,11 @@ void add_buddy( struct gaim_connection *gc, char *group, char *handle, char *rea
 	user_t *u;
 	char nick[MAX_NICK_LENGTH+1];
 	char *s;
+	irc_t *irc = gc->irc;
+	
+	for( u = irc->users; u; u = u->next )
+		if( u->gc && u->handle && strcasecmp( u->handle, handle ) == 0 )
+			break;			/* Buddy already exists! */
 	
 	memset( nick, 0, MAX_NICK_LENGTH + 1 );
 	strcpy( nick, nick_get( gc->irc, handle, gc->protocol ) );
@@ -335,8 +343,6 @@ void add_buddy( struct gaim_connection *gc, char *group, char *handle, char *rea
 		s = strchr( handle, '@' );
 		if( !s ) s = handle; else s ++;
 		u->host = strdup( s );
-		// u->host = malloc( 5 + strlen( s ) );
-		// sprintf( u->host, "msn.%s", s );
 		if( s > handle )
 		{
 			*(s-1) = 0;
@@ -352,14 +358,17 @@ void add_buddy( struct gaim_connection *gc, char *group, char *handle, char *rea
 	{
 		u->host = strdup( gc->user->proto_opt[0] );
 		u->user = strdup( handle );
+		
+		/* s/ /_/ ... important for AOL screennames */
+		for( s = u->user; *s; s ++ )
+			if( *s == ' ' )
+				*s = '_';
 	}
 	else if( gc->protocol == PROTO_JABBER )
 	{
 		s = strchr( handle, '@' );
 		if( !s ) s = handle; else s ++;
 		u->host = strdup( s );
-		// u->host = malloc( 8 + strlen( s ) );
-		// sprintf( u->host, "jabber.%s", s );
 		if( s > handle )
 		{
 			*(s-1) = 0;
@@ -386,7 +395,7 @@ struct buddy *find_buddy( struct gaim_connection *gc, char *handle )
 	
 	while( u )
 	{
-		if( u->handle && u->gc == gc && ( strcmp( u->handle, handle ) == 0 ) )
+		if( u->handle && u->gc == gc && ( strcasecmp( u->handle, handle ) == 0 ) )
 			break;
 		u = u->next;
 	}
@@ -414,9 +423,20 @@ void signoff_blocked( struct gaim_connection *gc )
 
 /* buddy.c */
 
-void handle_buddy_rename( struct buddy *buddy, char *oldrealname )
+void handle_buddy_rename( struct buddy *buddy, char *handle )
 {
-	return;
+	user_t *u = buddy->gc->irc->users;
+	
+	while( u )
+	{
+		if( u->handle && ( strcasecmp( u->handle, handle ) == 0 ) )
+			break;
+		u = u->next;
+	}
+	if( !u ) return;
+	
+	if( u->realname != u->nick ) free( u->realname );
+	u->realname = strdup( buddy->show );
 }
 
 
@@ -449,13 +469,13 @@ void serv_got_update( struct gaim_connection *gc, char *handle, int loggedin, in
 	
 	while( u->next )
 	{
-		if( u->handle && u->gc == gc && ( strcmp( u->handle, handle ) == 0 ) )
+		if( u->handle && u->gc == gc && ( strcasecmp( u->handle, handle ) == 0 ) )
 			break;
 		u = u->next;
 	}
 	if( !u )
 	{
-		irc_usermsg( gc->irc, "serv_got_update() for unknown handle %s:", handle );
+		irc_usermsg( gc->irc, "serv_got_update() for unknown %s handle %s:", proto_name[gc->protocol], handle );
 		irc_usermsg( gc->irc, "loggedin = %d, type = %d", loggedin, type );
 		return;
 	}
@@ -501,8 +521,6 @@ void serv_got_update( struct gaim_connection *gc, char *handle, int loggedin, in
 	}
 	else
 		u->away = NULL;
-	
-	return;
 }
 
 void serv_got_im( struct gaim_connection *gc, char *handle, char *msg, guint32 flags, time_t mtime, gint len )
@@ -512,7 +530,7 @@ void serv_got_im( struct gaim_connection *gc, char *handle, char *msg, guint32 f
 	
 	while( u )
 	{
-		if( u->handle && u->gc == gc && ( strcmp( u->handle, handle ) == 0 ) )
+		if( u->handle && u->gc == gc && ( strcasecmp( u->handle, handle ) == 0 ) )
 			break;
 		u = u->next;
 	}
@@ -524,13 +542,24 @@ void serv_got_im( struct gaim_connection *gc, char *handle, char *msg, guint32 f
 	
 	if( strcasecmp( set_getstr( gc->irc, "html" ), "strip" ) == 0 ) strip_html( msg );
 	irc_msgfrom( irc, u->nick, msg );
-	
-	return;
 }
 
 void serv_got_typing( struct gaim_connection *gc, char *handle, int timeout )
 {
-	return;
+	irc_t *irc = gc->irc;
+	user_t *u = irc->users;
+	
+	if( !set_getint( gc->irc, "typing_notice" ) ) return;
+	
+	while( u )
+	{
+		if( u->handle && u->gc == gc && ( strcasecmp( u->handle, handle ) == 0 ) )
+			break;
+		u = u->next;
+	}
+	
+	if( u )
+		irc_noticefrom( irc, u->nick, "* Typing a message *" );
 }
 
 void serv_got_chat_left( struct gaim_connection *gc, int id )

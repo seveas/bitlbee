@@ -33,7 +33,7 @@ typedef struct irc
 	char *user;
 	char *host;
 	char *realname;
-	char *password; /* *ugh* */
+	char *password;
 
 	char umode[8];
 	
@@ -77,6 +77,7 @@ int irc_away( irc_t *irc, char *away );
 
 int irc_send( irc_t *irc, char *nick, char *s );
 int irc_msgfrom( irc_t *irc, char *nick, char *msg );
+int irc_noticefrom( irc_t *irc, char *nick, char *msg );
 
 int buddy_send_handler( irc_t *irc, user_t *u, char *msg );
 

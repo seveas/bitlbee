@@ -1,7 +1,7 @@
 #ifndef _BITLBEE_H
 #define _BITLBEE_H
 
-#define BITLBEE_VERSION "0.71"
+#define BITLBEE_VERSION "0.72"
 
 #include "config.h"
 
@@ -46,6 +46,8 @@ int root_command( irc_t *irc, char *command[] );
 int bitlbee_init( irc_t *irc );
 int bitlbee_load( irc_t *irc, char *password );	/* TODO Get rid of password arg? */
 int bitlbee_save( irc_t *irc );
+void http_encode( char *s );
+void http_decode( char *s );
 
 extern irc_t *IRC;
 

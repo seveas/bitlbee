@@ -214,10 +214,11 @@ static int gaim_memrequest       (aim_session_t *, aim_frame_t *, ...);
 static int gaim_selfinfo         (aim_session_t *, aim_frame_t *, ...);
 static int gaim_offlinemsg       (aim_session_t *, aim_frame_t *, ...);
 static int gaim_offlinemsgdone   (aim_session_t *, aim_frame_t *, ...);
-//static int gaim_simpleinfo       (aim_session_t *, aim_frame_t *, ...);
 //static int gaim_popup            (aim_session_t *, aim_frame_t *, ...);
 static int gaim_ssi_parserights  (aim_session_t *, aim_frame_t *, ...);
 static int gaim_ssi_parselist    (aim_session_t *, aim_frame_t *, ...);
+
+static int gaim_simpleinfo       (aim_session_t *, aim_frame_t *, struct aim_icq_simpleinfo *info );
 
 //static int gaim_update_ui       (aim_session_t *, aim_frame_t *, ...);
 
@@ -566,7 +567,7 @@ static int gaim_parse_auth_resp(aim_session_t *sess, aim_frame_t *fr, ...) {
 	aim_conn_addhandler(sess, bosconn, AIM_CB_FAM_ICQ, AIM_CB_ICQ_OFFLINEMSG, gaim_offlinemsg, 0);
 	aim_conn_addhandler(sess, bosconn, AIM_CB_FAM_ICQ, AIM_CB_ICQ_OFFLINEMSGCOMPLETE, gaim_offlinemsgdone, 0);
 //	aim_conn_addhandler(sess, bosconn, AIM_CB_FAM_POP, 0x0002, gaim_popup, 0);
-//	aim_conn_addhandler(sess, bosconn, AIM_CB_FAM_ICQ, AIM_CB_ICQ_SIMPLEINFO, gaim_simpleinfo, 0);
+	aim_conn_addhandler(sess, bosconn, AIM_CB_FAM_ICQ, AIM_CB_ICQ_SIMPLEINFO, gaim_simpleinfo, 0);
 	aim_conn_addhandler(sess, bosconn, AIM_CB_FAM_SSI, AIM_CB_SSI_RIGHTSINFO, gaim_ssi_parserights, 0);
 	aim_conn_addhandler(sess, bosconn, AIM_CB_FAM_SSI, AIM_CB_SSI_LIST, gaim_ssi_parselist, 0);
 	aim_conn_addhandler(sess, bosconn, AIM_CB_FAM_SSI, AIM_CB_SSI_NOLIST, gaim_ssi_parselist, 0);
@@ -2502,6 +2503,15 @@ static void oscar_format_screenname(struct gaim_connection *gc, char *nick) {
 }
 #endif
 
+static int gaim_simpleinfo( aim_session_t *x, aim_frame_t *y, struct aim_icq_simpleinfo *info )
+{
+	char s[400];
+	
+	snprintf( s, 399, "User info - UIN: %ld   Nick: %s   First/Last name: %s %s   E-mail: %s", info->uin, info->nick, info->first, info->last, info->email );
+	irc_usermsg( IRC, "%s", s );
+	return( 0 );
+}
+
 static struct prpl *my_protocol = NULL;
 
 void oscar_init(struct prpl *ret) {
@@ -2519,7 +2529,7 @@ void oscar_init(struct prpl *ret) {
 	ret->send_im = oscar_send_im;
 //	ret->send_typing = oscar_send_typing;
 //	ret->set_info = oscar_set_info;
-//	ret->get_info = oscar_get_info;
+	ret->get_info = oscar_get_info;
 	ret->set_away = oscar_set_away;
 	ret->get_away = oscar_get_away;
 //	ret->set_dir = oscar_set_dir;

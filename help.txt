@@ -3,7 +3,7 @@ BitlBee help system
 
 Type help quickstart for a quick introduction to the Bee. You can get help information for any command, just type help <command>. To get a list of commands, type help commands.
 
-BitlBee is written by Wilmer van der Gaast together with Sjoerd Hemminga. Jelmer Vernooij and others. Bug reports and other kinds of feedback can be sent by e-mail to wilmer@gaast.net. (There is no BitlBee mailing list)
+BitlBee is written by Wilmer van der Gaast together with Sjoerd Hemminga, Jelmer Vernooij and others. Bug reports and other kinds of feedback can be sent by e-mail to wilmer@gaast.net. (There is no BitlBee mailing list)
 %
 ?commands
 BitlBee commands:
@@ -13,8 +13,10 @@ BitlBee commands:
   login    - Log into an IM-service
   logout   - Log out from an IM-service
   slist    - List all the active IM-service connections
+  blist    - List all the buddies in your contact list
   add      - Add a buddy to your contact list
-  rename   - Rename a buddy
+  info     - Request user information
+  rename   - Rename (renick) a buddy
   remove   - Remove a buddy from your contact list
   block    - Block someone
   allow    - Unblock someone
@@ -139,6 +141,15 @@ Adds the given buddy at the specified connection to your buddy list. The connect
 00:15 < ctrlsoft> add 3 gryp@jabber.org
 00:15 -!- gryp (gryp@jabber.org) has joined #bitlbee
 %
+?info
+Syntax: info <connection> <handle>
+
+Requests IM-network-specific information about the specified user. At the moment only the Oscar/ICQ plugin supports this command.
+
+Example:
+00:20 < ctrlsoft> info 0 72696705
+00:20 < root> User info - UIN: 72696705   Nick: Lintux   First/Last name: Wilmer van der Gaast   E-mail: lintux@lintux.cx
+%
 ?remove
 Syntax: remove <nick>
 
@@ -165,6 +176,12 @@ Reverse of block. Unignores the specified user or user handle on specified conne
 Syntax: [<variable>] [<value>]
 
 Without any arguments, this command lists all the set variables. You can also specify a single argument, a variable name, to get that variable's value. To change this value, specify the new value as the second argument.
+
+To get more help information about a setting, try:
+
+00:25 < ctrlsoft> help "set private"
+
+Please don't forget the quotes.
 %
 ?save
 Syntax: save
@@ -201,6 +218,22 @@ Some debugging messages can be sent to the control channel if you wish. They're 
 
 It's usual that messages meant for one specific person on an IRC channel are prepended by his/her alias followed by a colon ':'. BitlBee does this by default. If you prefer a different character, you can set it using set to_char.
 %
+?set typing_notice
+Type: boolean
+Default: False
+
+Sends you a /notice when a user starts typing a message (if the protocol supports it, MSN for example). This is a bug, not a feature. You don't want to use it. Really. In fact the typing-notification is just one of the least useful 'innovations' ever. It's just there because some guy will probably ask me about it anyway. ;-)
+
+(Actually it doesn't even seem to work yet..)
+%
+?set ops
+Type: String
+Default: both
+
+Some people prefer themself and root to have operator status in #bitlbee, other people don't. You can change these states using this setting.
+
+The value "both" means both user and root get ops. "root" means, well, just root. "user" means just the user. "none" means nobody will get operator status.
+%
 ?yes
 Syntax: yes
 
@@ -210,4 +243,23 @@ Sometimes an IM-module might want to ask you a question. (Accept this user as yo
 Syntax: no
 
 Sometimes an IM-module might want to ask you a question. (Accept this user as your buddy or not?) To reject a question, use the no command.
+%
+?register
+Syntax: register <password>
+
+BitlBee can save your settings so you won't have to enter all your IM passwords every time you log in. If you want the Bee to save your settings, use the register command.
+
+Please do pick a secure password, don't just use your nick as your password. Please note that IRC is not an encrypted protocol, so the passwords still go over the network in plaintext. Evil people with evil sniffers will read it all. (So don't use your root password.. ;-)
+
+To identify yourself in later sessions, you can use the identify command.
+%
+?identify
+Syntax: identify <password>
+
+If you registered your nickname with the register command, you can identify yourself in later sessions using the identify command. After identifying, all your IM-network settings (and nicknames/aliases) will be read from disk and BitlBee will connect to the networks automatically.
+%
+?blist
+Syntax: blist [all]
+
+You can get a better readable buddy list using the blist command. If you want a complete list (including the offline users) you can use the all argument.
 %

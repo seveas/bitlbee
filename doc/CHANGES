@@ -1,3 +1,23 @@
+Version 0.72:
+- Updated the documentation.
+- Improved the MSN friendlyname code. (Although it doesn't seem to be perfect
+  yet..)
+- info-command added to get more information about ICQ users.
+- blist-command added to get a complete buddy list.
+- Fixed a bug which broke the AIM code when adding a screenname with a space
+  in it.
+- Added the NS alias for the NICKSERV command (Tony Vroon).
+- Fixed the USERHOST command implementation (Tony Vroon).
+- /me from IM-networks is now converted to a CTCP ACTION correctly.
+- Added an utils/ directory with some misc toys and handy things.
+- Added a /notice to the on_typing event. Don't use it though, the /notice
+  flood will just be a big annoyance. ;-)
+- Some people like root and themself to be ops, some don't. Now it's
+  configurable. (set ops)
+- Now the umode stuff actually works. Next step: Use those modes... (How?)
+
+Finished Dec 19 2002
+
 Version 0.71:
 - Fixed the help command output layout (alignment)
 - Added a sample xinetd file

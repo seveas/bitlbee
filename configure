@@ -177,6 +177,9 @@ case "$arch" in
 Linux )
 	echo 'Linux is our primary development platform, BitlBee should work well.'
 ;;
+*BSD )
+	echo 'Although our primary development system is Linux, BitlBee should run quite well on most BSD systems.'
+;;
 * )
 	echo 'We haven'\''t tested BitlBee on many platforms yet, yours is untested. YMMV.'
 ;;

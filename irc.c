@@ -2,6 +2,7 @@
 #include "crypting.h"
 
 static char *set_eval_to_char( irc_t *irc, set_t *set, char *value );
+static char *set_eval_ops( irc_t *irc, set_t *set, char *value );
 
 irc_t *irc_new( int fd )
 {
@@ -12,8 +13,8 @@ irc_t *irc_new( int fd )
 	
 	memset( irc, 0, sizeof( irc_t ) );
 	irc->fd = fd;
-	irc->mynick = ROOT_NICK;
-	irc->channel = "#bitlbee";
+	irc->mynick = strdup( ROOT_NICK );
+	irc->channel = strdup( "#bitlbee" );
 	strcpy( irc->umode, UMODE );
 	
 	i = sizeof( *sock );
@@ -34,8 +35,8 @@ irc_t *irc_new( int fd )
 #endif
 	}
 	
-	if( !irc->host ) irc->host = "localhost.";
-	if( !irc->myhost ) irc->myhost = "localhost.";
+	if( !irc->host ) irc->host = strdup( "localhost." );
+	if( !irc->myhost ) irc->myhost = strdup( "localhost." );
 	
 #ifndef NO_TCPD
 	if( !i )
@@ -48,13 +49,14 @@ irc_t *irc_new( int fd )
 	}
 #endif
 	
-	set_add( irc, "private", "0", set_eval_bool );
+	set_add( irc, "private", "false", set_eval_bool );
 #ifdef DEBUG
-	set_add( irc, "debug", "1", set_eval_bool );
+	set_add( irc, "debug", "true", set_eval_bool );
 #else
-	set_add( irc, "debug", "0", set_eval_bool );
+	set_add( irc, "debug", "false", set_eval_bool );
 #endif
 	set_add( irc, "to_char", ": ", set_eval_to_char );
+	set_add( irc, "ops", "both", set_eval_ops );
 	
 	return( irc );
 }
@@ -179,8 +181,8 @@ int irc_exec( irc_t *irc, char **cmd )
 			{
 				if( cmd[2] )
 					irc_umode_set( irc, irc->nick, cmd[2] );
-				else
-					irc_reply( irc, 221, "+%s", irc->umode );
+				
+				irc_reply( irc, 221, "+%s", irc->umode );
 			}
 			else
 				irc_reply( irc, 502, "Don't touch their modes" );
@@ -207,13 +209,13 @@ int irc_exec( irc_t *irc, char **cmd )
 			irc_reply( irc, 403, "%s :No such channel", cmd[1] );
 		}
 	}
-	else if( strcasecmp( cmd[0], "JOIN" ) == 0 )
+/*	else if( strcasecmp( cmd[0], "JOIN" ) == 0 )
 	{
 		if( cmd[1] )
 			irc_reply( irc, 403, "%s :No such channel", cmd[1] );
 		else
 			irc_reply( irc, 461, "%s :Need more parameters", cmd[0] );
-	}
+	} */
 	else if( strcasecmp( cmd[0], "PRIVMSG" ) == 0 )
 	{
 		if( !cmd[2] )
@@ -258,7 +260,21 @@ int irc_exec( irc_t *irc, char **cmd )
 	}
 	else if( strcasecmp( cmd[0], "USERHOST" ) == 0 )
 	{
-		irc_reply( irc, 302, ":" );
+		/* [TV] Usable USERHOST-implementation according to
+			RFC1459. Without this, mIRC shows an error
+			while connecting, and the used way of rejecting
+			breaks standards.
+		*/
+		user_t *u;
+		
+		for( i = 1; i < IRC_MAX_ARGS && cmd[i]; i ++ )
+			if( ( u = user_find( irc, cmd[i] ) ) )
+			{
+				if( u->online && u->away )
+					irc_reply( irc, 302, ":%s=-%s@%s", u->nick, u->user, u->host );
+				else
+					irc_reply( irc, 302, ":%s=+%s@%s", u->nick, u->user, u->host );
+			}
 	}
 	else if( strcasecmp( cmd[0], "ISON" ) == 0 )
 	{
@@ -267,10 +283,6 @@ int irc_exec( irc_t *irc, char **cmd )
 		for( i = 1; i < IRC_MAX_ARGS && cmd[i]; i ++ )
 			if( ( u = user_find( irc, cmd[i] ) ) && u->online )
 				irc_reply( irc, 303, ":%s", u->nick );
-	}
-	else if( strcasecmp( cmd[0], "MOTD" ) == 0 )
-	{
-		irc_reply( irc, 422, ":We don't need MOTDs." );
 	}
 	else if( strcasecmp( cmd[0], "TOPIC" ) == 0 )
 	{
@@ -296,9 +308,10 @@ int irc_exec( irc_t *irc, char **cmd )
 			irc_reply( irc, 461, "%s :Need more parameters", cmd[0] );
 		}
 	}
-	else if( strcasecmp( cmd[0], "NICKSERV" ) == 0 )
+	else if( ( strcasecmp( cmd[0], "NICKSERV" ) == 0 ) || ( strcasecmp( cmd[0], "NS" ) == 0 ) )
 	{
 		/* [SH] This aliases the NickServ command to PRIVMSG root */
+		/* [TV] This aliases the NS command to PRIVMSG root as well */
 		root_command( irc, cmd + 1 );
 	}
 	else if( set_getint( irc, "debug" ) )
@@ -333,7 +346,7 @@ int irc_usermsg( irc_t *irc, char *format, ... )
 	if( u ) private = u->private;
 	
 	va_start( params, format );
-	vsnprintf( text, 1024, format, params );
+	vsnprintf( text, 1023, format, params );
 	va_end( params );
 	
 	return( irc_msgfrom( irc, u->nick, text ) );
@@ -354,12 +367,27 @@ int irc_write( irc_t *irc, char *format, ... )
 void irc_names( irc_t *irc, char *channel )
 {
 	user_t *u;
+	char *s;
 	
 	u = irc->users;
 	while( u )
 	{
 		if( u->online )
-			irc_reply( irc, 353, "@ %s :%s", channel, u->nick );
+		{
+			if( u->gc )
+			{
+				irc_reply( irc, 353, "@ %s :%s%s", channel, "", u->nick );
+			}
+			else
+			{
+				s = "";
+				if( strcmp( u->nick, irc->mynick ) == 0 && ( strcmp( set_getstr( irc, "ops" ), "root" ) == 0 || strcmp( set_getstr( irc, "ops" ), "both" ) == 0 ) )
+					s = "@";
+				else if( strcmp( u->nick, irc->nick ) == 0 && ( strcmp( set_getstr( irc, "ops" ), "user" ) == 0 || strcmp( set_getstr( irc, "ops" ), "both" ) == 0 ) )
+					s = "@";
+				irc_reply( irc, 353, "@ %s :%s%s", channel, s, u->nick );
+			}
+		}
 		u = u->next;
 	}
 	irc_reply( irc, 366, "%s :End of /NAMES list", channel );
@@ -372,18 +400,18 @@ void irc_who( irc_t *irc, char *channel )
 	if( !channel || *channel == '0' || *channel == '*' || !*channel )
 		while( u )
 		{
-			irc_reply( irc, 352, "%s %s %s %s %s %c :0 %s", u->online?irc->channel:"*", u->user, u->host, irc->myhost, u->nick, u->online?u->away?'G':'H':'G', u->realname );
+			irc_reply( irc, 352, "%s %s %s %s %s %c :0 %s", u->online ? irc->channel : "*", u->user, u->host, irc->myhost, u->nick, u->online ? ( u->away ? 'G' : 'H' ) : 'G', u->realname );
 			u = u->next;
 		}
 	else if( strcasecmp( channel, irc->channel ) == 0 )
 		while( u )
 		{
 			if( u->online )
-				irc_reply( irc, 352, "%s %s %s %s %s %c :0 %s", channel, u->user, u->host, irc->myhost, u->nick, u->away?'G':'H', u->realname );
+				irc_reply( irc, 352, "%s %s %s %s %s %c :0 %s", channel, u->user, u->host, irc->myhost, u->nick, u->away ? 'G' : 'H', u->realname );
 			u = u->next;
 		}
 	else if( ( u = user_find( irc, channel ) ) )
-		irc_reply( irc, 352, "%s %s %s %s %s %c :0 %s", channel, u->user, u->host, irc->myhost, u->nick, u->online?u->away?'G':'H':'G', u->realname );
+		irc_reply( irc, 352, "%s %s %s %s %s %c :0 %s", channel, u->user, u->host, irc->myhost, u->nick, u->online ? ( u->away ? 'G' : 'H' ) : 'G', u->realname );
 	
 	irc_reply( irc, 315, "%s :End of /WHO list.", channel );
 }
@@ -421,6 +449,8 @@ void irc_login( irc_t *irc )
 	irc_spawn( irc, user_find( irc, irc->nick ) );
 	
 	bitlbee_init( irc );
+	
+	irc_usermsg( irc, "Welcome to the BitlBee gateway!\n\nIf you've never used BitlBee before, please do read the help information using the help command. Lots of FAQ's are answered there." );
 	
 	irc->status = USTATUS_LOGGED_IN;
 }
@@ -462,7 +492,7 @@ void irc_whois( irc_t *irc, char *nick )
 
 void irc_umode_set( irc_t *irc, char *who, char *s )
 {
-	char m[256], st = '+', *t;
+	char m[256], st = 1, *t;
 	int i;
 	
 	memset( m, 0, sizeof( m ) );
@@ -473,7 +503,7 @@ void irc_umode_set( irc_t *irc, char *who, char *s )
 	for( t = s; *t; t ++ )
 	{
 		if( *t == '+' || *t == '-' )
-			st = (*t=='+')?1:0;
+			st = *t == '+';
 		else
 			m[(int)*t] = st;
 	}
@@ -481,10 +511,8 @@ void irc_umode_set( irc_t *irc, char *who, char *s )
 	memset( irc->umode, 0, sizeof( irc->umode ) );
 	
 	for( i = 0; i < 256 && strlen( irc->umode ) < ( sizeof( irc->umode ) - 1 ); i ++ )
-		if( m[i] && strchr( UMODES, m[i] ) )
+		if( m[i] && strchr( UMODES, i ) )
 			irc->umode[strlen(irc->umode)] = i;
-	
-	irc_write( irc, ":%s MODE %s :%s", who, irc->nick, s );
 }
 
 int irc_away( irc_t *irc, char *away )
@@ -539,7 +567,6 @@ void irc_kill( irc_t *irc, user_t *u )
 int irc_send( irc_t *irc, char *nick, char *s )
 {
 	user_t *u = user_find( irc, nick );
-	struct gaim_connection *gc;
 	
 	if( !u )
 	{
@@ -570,7 +597,6 @@ int irc_send( irc_t *irc, char *nick, char *s )
 		}
 	}
 	
-	gc = u->gc;
 	u->private = irc->private;
 	
 	if( u->away )
@@ -586,7 +612,7 @@ int buddy_send_handler( irc_t *irc, user_t *u, char *msg )
 {
 	if( !u ) return( 0 );
 	if( !u->gc ) return( 0 );
-	((struct gaim_connection *)u->gc)->prpl->send_im( u->gc, u->handle, msg, strlen( msg ), 0 );
+	return( ((struct gaim_connection *)u->gc)->prpl->send_im( u->gc, u->handle, msg, strlen( msg ), 0 ) );
 }
 
 int irc_msgfrom( irc_t *irc, char *nick, char *msg )
@@ -594,11 +620,12 @@ int irc_msgfrom( irc_t *irc, char *nick, char *msg )
 	user_t *u = user_find( irc, nick );
 	static char *prefix = NULL;
 	char *s = msg, *line = msg;
+	char last = 0;
 	
 	if( !u ) return( 0 );
 	if( prefix && *prefix ) free( prefix );
 	
-	if( !u->private && strcasecmp( u->nick, irc->mynick ) )
+	if( !u->private && strcasecmp( u->nick, irc->mynick ) != 0 )
 	{
 		prefix = malloc( strlen( irc->nick) + 3 );
 		sprintf( prefix, "%s%s", irc->nick, set_getstr( irc, "to_char" ) );
@@ -608,19 +635,50 @@ int irc_msgfrom( irc_t *irc, char *nick, char *msg )
 		prefix = "";
 	}
 	
-	while( *s )
+	/* The almighty linesplitter .. woohoo!! */
+	while( !last )
 	{
-		if( *s == '\r' && *(s+1) == '\n' ) *(s++) = 0;
+		if( *s == '\r' && *(s+1) == '\n' )
+			*(s++) = 0;
 		if( *s == '\n' )
 		{
+			last = s[1] == 0;
 			*s = 0;
-			irc_write( irc, ":%s!%s@%s PRIVMSG %s :%s%s", u->nick, u->user, u->host, u->private?irc->nick:irc->channel, prefix, line );
+		}
+		else
+		{
+			last = s[0] == 0;
+		}
+		if( *s == 0 )
+		{
+			if( strncasecmp( line, "/me ", 4 ) == 0 && u->private )
+			{
+				irc_write( irc, ":%s!%s@%s PRIVMSG %s :\001ACTION %s\001", u->nick, u->user, u->host,
+				           irc->nick, line + 4 );
+			}
+			else
+			{
+				irc_write( irc, ":%s!%s@%s PRIVMSG %s :%s%s", u->nick, u->user, u->host,
+				           u->private ? irc->nick : irc->channel, prefix, line );
+			}
 			line = s + 1;
 		}
 		s ++;
 	}
-	if( *line )
-		irc_write( irc, ":%s!%s@%s PRIVMSG %s :%s%s", u->nick, u->user, u->host, u->private?irc->nick:irc->channel, prefix, line );
+	
+	return( 1 );
+}
+
+/* Sort-of same as irc_msgfrom, but limited because notices don't know
+   CTCP ACTION and because this one lacks multiline and in-channel support. */
+int irc_noticefrom( irc_t *irc, char *nick, char *msg )
+{
+	user_t *u = user_find( irc, nick );
+
+	if( u )
+		irc_write( irc, ":%s!%s@%s NOTICE %s :%s", u->nick, u->user, u->host, irc->nick, msg );
+	else
+		return( 0 );
 	
 	return( 1 );
 }
@@ -635,4 +693,30 @@ static char *set_eval_to_char( irc_t *irc, set_t *set, char *value )
 		sprintf( s, "%c ", *value );
 	
 	return( s );
+}
+
+static char *set_eval_ops( irc_t *irc, set_t *set, char *value )
+{
+	if( strcasecmp( value, "user" ) == 0 )
+	{
+		irc_write( irc, ":%s MODE %s %s %s %s", irc->myhost, irc->channel, "+o-o", irc->nick, irc->mynick );
+		return( value );
+	}
+	else if( strcasecmp( value, "root" ) == 0 )
+	{
+		irc_write( irc, ":%s MODE %s %s %s %s", irc->myhost, irc->channel, "-o+o", irc->nick, irc->mynick );
+		return( value );
+	}
+	else if( strcasecmp( value, "both" ) == 0 )
+	{
+		irc_write( irc, ":%s MODE %s %s %s %s", irc->myhost, irc->channel, "+oo", irc->nick, irc->mynick );
+		return( value );
+	}
+	else if( strcasecmp( value, "none" ) == 0 )
+	{
+		irc_write( irc, ":%s MODE %s %s %s %s", irc->myhost, irc->channel, "-oo", irc->nick, irc->mynick );
+		return( value );
+	}
+	
+	return( NULL );
 }

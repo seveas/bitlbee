@@ -42,7 +42,10 @@ responds to these commands.
 <para>Syntax: <command>help</command></para>
 
 <para>
-Gives a list of commands bitlbee supports with syntax
+Gives a list of commands bitlbee supports with syntax. You can get an
+up-to-date list of available commands using the <command>help commands</command>
+command. This information is usually more up-to-date than the information
+in this file.
 </para>
 
 </sect2>

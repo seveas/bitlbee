@@ -18,8 +18,9 @@ CFLAGS += -Wall
 
 all: $(OUTFILE)
 
-install: install-bin install-doc
 uninstall: uninstall-bin uninstall-doc
+install: install-bin install-doc
+	@if ! [ -d $(DESTDIR)$(CONFIG) ]; then echo -en '\n\nThe configuration directory $(DESTDIR)$(CONFIG) does not exist yet, don'\''t forget to create it!\n\n\n'; fi
 
 .PHONY:   install   install-bin   install-etc   install-doc \
         uninstall uninstall-bin uninstall-etc uninstall-doc \
@@ -31,7 +32,7 @@ Makefile.settings:
 	@echo
 
 clean: $(subdirs)
-	rm -f *.o $(OUTFILE) core
+	rm -f *.o $(OUTFILE) core utils/bitlbeed
 
 distclean: clean $(subdirs)
 	rm -f Makefile.settings config.h
@@ -43,15 +44,15 @@ uninstall-doc:
 	$(MAKE) -C doc uninstall
 
 install-bin:
-	mkdir -p $(DESTDIR)$(BINDIR)
-	cp $(OUTFILE) $(DESTDIR)$(BINDIR)/$(OUTFILE)
-	
-	mkdir -p $(DESTDIR)$(DATADIR)
-	cp help.txt $(DESTDIR)$(DATADIR)
+	install -p -d -m 0755 -o root -g 0 $(DESTDIR)$(BINDIR)
+	install -p -d -m 0755 -o root -g 0 $(DESTDIR)$(DATADIR)
+	install -p -m 0755 -o root -g 0 $(OUTFILE) $(DESTDIR)$(BINDIR)/$(OUTFILE)
+	install -p -m 0644 -o root -g 0 help.txt $(DESTDIR)$(DATADIR)/help.txt
 
 uninstall-bin:
 	rm -f $(DESTDIR)$(BINDIR)/$(OUTFILE)
-	rm -rf $(DESTDIR)$(DATADIR)
+	rm -f $(DESTDIR)$(DATADIR)/help.txt
+	rmdir $(DESTDIR)$(DATADIR)
 
 tar:
 	fakeroot debian/rules clean

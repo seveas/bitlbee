@@ -2,27 +2,38 @@ INSTALLATION
 ============
 
 If you installed BitlBee from a .deb or .rpm you probably don't have to do
-anything anymore for installation.
+anything anymore for installation. Just skip this section.
 
-If you want to compile BitlBee yourself, that's fine. If you want BitlBee
-to look up hosts in /etc/hosts.{allow,deny} you have to install Wietse
-Venema's TCP wrapper libraries. (But BitlBee works perfectly without
-them.) Then you can run ./configure to set up the build system. If
-configure succeeds, run make to build BitlBee. make install will move all
-the files to the right places.
+If you want to compile BitlBee yourself, that's fine. Just run ./configure
+to set up the build system. If configure succeeds, run make to build BitlBee.
+make install will move all the files to the right places.
 
 After installation you have to set up inetd (you got that one running,
-right?) to start BitlBee. You need to add BitlBee to inetd.conf, like so:
+right? If not, just take a look at utils/bitlbeed.c) to start BitlBee. You
+need to add BitlBee to inetd.conf, like this:
 
-6667    stream  tcp     nowait nobody /usr/sbin/bitlbee bitlbee
+6667 stream tcp nowait nobody /usr/sbin/tcpd /usr/sbin/bitlbee
 
-Creating a special BitlBee user and running BitlBee with that UID might be
-a good idea.
+Creating a special BitlBee user and running BitlBee with that UID (instead
+of just 'nobody') might be a good idea.
 
 Also, don't forget to create the configuration directory (/var/lib/bitlbee/
-by default) and chown it to the uid BitlBee is running as.
+by default) and chown it to the UID BitlBee is running as. Make sure this
+directory is read-/writable by this user only.
 
 (For xinetd users a xinetd configuration file is included: doc/bitlbee.xinetd)
+
+FREEBSD NOTE: It looks like FreeBSD does allow port numbers instead of service
+names in inetd.conf, as long as the service for this port exists in
+/etc/services. Linux isn't this strict. If you got problems in FreeBSD, just
+add a line for your chosen port number to /etc/services.
+
+
+USAGE
+=====
+
+Not much to say here, it's all documented elsewhere already. Just connect to
+the new BitlBee IRC server you've just installed and enjoy chatting.
 
 
 BACKGROUNDS

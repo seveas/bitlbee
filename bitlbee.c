@@ -17,7 +17,7 @@ int main( int argc, char *argv[] )
 		return( 1 );
 	
 	nogaim_init();
-	set_add( irc, "save_on_quit", "1", set_eval_bool );
+	set_add( irc, "save_on_quit", "true", set_eval_bool );
 	
 	while( 1 )
 	{
@@ -51,7 +51,7 @@ int bitlbee_init( irc_t *irc )
 		irc_usermsg( irc, "Permission problem: Can't read/write from/to %s", CONFIG );
 	
 	if( help_init( irc ) == NULL )
-		irc_usermsg( irc, "Error opening helpfile." );
+		irc_usermsg( irc, "Error opening helpfile: %s", HELP_FILE );
 	
 	return( 1 );
 }
@@ -63,7 +63,7 @@ int bitlbee_load( irc_t *irc, char* password )
 	int proto;
 	char nick[MAX_NICK_LENGTH+1];
 	FILE *fp;
-	user_t *ru = user_find( irc, "root" );
+	user_t *ru = user_find( irc, ROOT_NICK );
 	
 	if( irc->status == USTATUS_IDENTIFIED )
 		return( 1 );
@@ -90,7 +90,10 @@ int bitlbee_load( irc_t *irc, char* password )
 	fp = fopen( s, "r" );
 	if( !fp ) return( 0 );
 	while( fscanf( fp, "%s %d %s", s, &proto, nick ) > 0 )
+	{
+		http_decode( s );
 		nick_set( irc, s, proto, nick );
+	}
 	fclose( fp );
 	
 	irc->status = USTATUS_IDENTIFIED;
@@ -135,7 +138,10 @@ int bitlbee_save( irc_t *irc )
 	if( !fp ) return( 0 );
 	while( n )
 	{
-		fprintf( fp, "%s %d %s\n", n->handle, n->proto, n->nick );
+		strcpy( s, n->handle );
+		s[42] = 0; /* Prevent any overflow (42 == 128 / 3) */
+		http_encode( s );
+		fprintf( fp, "%s %d %s\n", s, n->proto, n->nick );
 		n = n->next;
 	}
 	fclose( fp );
@@ -158,7 +164,7 @@ int bitlbee_save( irc_t *irc )
 		if( gc->protocol == PROTO_MSN )
 			snprintf( s, sizeof( s ), "login msn %s %s", gc->user->username, gc->user->password );
 		else if( gc->protocol == PROTO_OSCAR || gc->protocol == PROTO_ICQ || gc->protocol == PROTO_TOC )
-			snprintf( s, sizeof( s ), "login oscar %s %s %s", gc->user->username, gc->user->password, gc->user->proto_opt[0] );
+			snprintf( s, sizeof( s ), "login oscar \"%s\" %s %s", gc->user->username, gc->user->password, gc->user->proto_opt[0] );
 		else if( gc->protocol == PROTO_JABBER )
 			snprintf( s, sizeof( s ), "login jabber %s %s", gc->user->username, gc->user->password );
 		
@@ -242,7 +248,66 @@ int root_command( irc_t *irc, char *cmd[] )
 			return( 1 );
 		}
 	
-	irc_usermsg( irc, "Unknown command: %s", cmd[0] );
+	irc_usermsg( irc, "Unknown command: %s. Please use help commands to get a list of available commands.", cmd[0] );
 	
 	return( 1 );
+}
+
+/* Decode%20a%20file%20name						*/
+void http_decode( char *s )
+{
+	char *t;
+	int i, j, k;
+	
+	t = malloc( strlen( s ) + 1 );
+	
+	for( i = j = 0; s[i]; i ++, j ++ )
+	{
+		if( s[i] == '%' )
+		{
+			if( sscanf( s + i + 1, "%2x", &k ) )
+			{
+				t[j] = k;
+				i += 2;
+			}
+			else
+			{
+				*t = 0;
+				break;
+			}
+		}
+		else
+		{
+			t[j] = s[i];
+		}
+	}
+	t[j] = 0;
+	
+	strcpy( s, t );
+	free( t );
+}
+
+void http_encode( char *s )
+{
+	char *t;
+	int i, j;
+	
+	t = malloc( strlen( s ) * 3 + 1 );
+	
+	for( i = j = 0; s[i]; i ++, j ++ )
+	{
+		if( s[i] <= ' ' || ((unsigned char *)s)[i] >= 128 || s[i] == '%' )
+		{
+			sprintf( t + j, "%%%02X", s[i] );
+			j += 2;
+		}
+		else
+		{
+			t[j] = s[i];
+		}
+	}
+	t[j] = 0;
+	
+	strcpy( s, t );
+	free( t );
 }

@@ -6,21 +6,23 @@
 #include <unistd.h>
 
 command_t commands[] = {
-	{ "help",	"This information",					0, cmd_help }, 
-	{ "identify",	"identify <password>",					1, cmd_identify },
-	{ "register",	"register <password>",					1, cmd_register },
-	{ "login",	"login <protocol> <username> <password> [<server>]",	3, cmd_login },
-	{ "logout",	"logout <protocol>",					1, cmd_logout }, 
-	{ "slist",	"Server (connection) list",				0, cmd_slist },
-	{ "add",	"add <connection> <handle>",				2, cmd_add },
-	{ "rename",	"rename <oldnick> <newnick>",				2, cmd_rename },
-	{ "remove",	"remove <nick>",					1, cmd_remove },
-	{ "block",	"block <connection> <handle> or block <nick>",		1, cmd_block },
-	{ "allow",	"allow <connection> <handle> or allow <nick>",		1, cmd_allow },
-	{ "save",	"Save configuration",					0, cmd_save },
-	{ "set",	"Set configuration option",				0, cmd_set },
-	{ "yes",	"Accept request",					0, cmd_yesno },
-	{ "no",		"Deny request",						0, cmd_yesno },
+	{ "help",       0, cmd_help }, 
+	{ "identify",   1, cmd_identify },
+	{ "register",   1, cmd_register },
+	{ "login",      3, cmd_login },
+	{ "logout",     1, cmd_logout }, 
+	{ "slist",      0, cmd_slist },
+	{ "add",        2, cmd_add },
+	{ "info",       1, cmd_info },
+	{ "rename",     2, cmd_rename },
+	{ "remove",     1, cmd_remove },
+	{ "block",      1, cmd_block },
+	{ "allow",      1, cmd_allow },
+	{ "save",       0, cmd_save },
+	{ "set",        0, cmd_set },
+	{ "yes",        0, cmd_yesno },
+	{ "no",         0, cmd_yesno },
+	{ "blist",      0, cmd_blist },
 	{ NULL }
 };
 
@@ -48,15 +50,13 @@ int cmd_help( irc_t *irc, char **cmd )
 int cmd_login( irc_t *irc, char **cmd )
 {
 	struct aim_user *u;
-	int prot = -1;
-
-	if( strcasecmp( cmd[1], "msn" ) == 0 )
-		prot = PROTO_MSN;
-	else if( strcasecmp( cmd[1], "oscar" ) == 0 )
-		prot = PROTO_OSCAR;
-	else if( strcasecmp( cmd[1], "jabber" ) == 0 )
-		prot = PROTO_JABBER;
-	else
+	int prot;
+	
+	for( prot = 0; prot < PROTO_MAX; prot ++ )
+		if( proto_name[prot] && *proto_name[prot] && strcasecmp( proto_name[prot], cmd[1] ) == 0 )
+			break;
+	
+	if( prot == PROTO_MAX )
 	{
 		irc_usermsg( irc, "Unknown protocol" );
 		return( 1 );
@@ -110,7 +110,7 @@ int cmd_slist( irc_t *irc, char **cmd )
 	{
 		gc = c->data;
 		c = c->next;
-
+		
 		if( gc->protocol == PROTO_MSN )
 			irc_usermsg( irc, "%2d. MSN, %s", i, gc->user->username );
 		else if( gc->protocol == PROTO_OSCAR || gc->protocol == PROTO_ICQ || gc->protocol == PROTO_TOC )
@@ -140,10 +140,42 @@ int cmd_add( irc_t *irc, char **cmd )
 	return( 0 );
 }
 
+int cmd_info( irc_t *irc, char **cmd )
+{
+	struct gaim_connection *gc;
+	int i;
+	
+	if( !cmd[2] )
+	{
+		user_t *u = user_find( irc, cmd[1] );
+		if( !u || !u->gc )
+		{
+			irc_usermsg( irc, "Nick '%s' does not exist", cmd[1] );
+			return( 1 );
+		}
+		gc = u->gc;
+		cmd[2] = u->handle;
+	}
+	else if( !cmd[1] || !sscanf( cmd[1], "%d", &i ) || !( gc = gc_nr( i ) ) )
+	{
+		irc_usermsg( irc, "Incorrect connection number" );
+		return( 1 );
+	}
+	
+	if( !gc->prpl->get_info )
+	{
+		irc_usermsg( irc, "info-command not implemented for this protocol" );
+		return( 1 );
+	}
+	gc->prpl->get_info( gc, cmd[2] );
+	
+	return( 0 );
+}
+
 int cmd_rename( irc_t *irc, char **cmd)
 {
 	user_t *u;
-
+	
 	if( ( strcasecmp( cmd[1], irc->nick ) == 0 ) ) // || ( strcasecmp( cmd[1], irc->mynick ) == 0 ) )
 	{
 		irc_usermsg( irc, "Nick '%s' can't be changed", cmd[1] );
@@ -170,7 +202,7 @@ int cmd_rename( irc_t *irc, char **cmd)
 	irc_write( irc, ":%s!%s@%s NICK %s", cmd[1], u->user, u->host, cmd[2] );
 	if( strcasecmp( cmd[1], irc->mynick ) == 0 )
 	{
-		// free( irc->mynick ); // SMALL MEMORY LEAK
+		free( irc->mynick );
 		irc->mynick = strdup( cmd[2] );
 	}
 	else
@@ -184,8 +216,8 @@ int cmd_rename( irc_t *irc, char **cmd)
 int cmd_remove( irc_t *irc, char **cmd )
 {
 	user_t *u;
-
-	if( !( u = user_find( irc, cmd[1] ) ) )
+	
+	if( !( u = user_find( irc, cmd[1] ) ) || !u->gc )
 	{
 		irc_usermsg( irc, "Buddy '%s' not found", cmd[1] );
 		return( 1 );
@@ -204,7 +236,7 @@ int cmd_block( irc_t *irc, char **cmd )
 	if( !cmd[2] )
 	{
 		user_t *u = user_find( irc, cmd[1] );
-		if( !u )
+		if( !u || !u->gc )
 		{
 			irc_usermsg( irc, "Nick '%s' does not exist", cmd[1] );
 			return( 1 );
@@ -239,7 +271,7 @@ int cmd_allow( irc_t *irc, char **cmd )
 	if( !cmd[2] )
 	{
 		user_t *u = user_find( irc, cmd[1] );
-		if( !u )
+		if( !u || !u->gc )
 		{
 			irc_usermsg( irc, "Nick '%s' does not exist", cmd[1] );
 			return( 1 );
@@ -269,7 +301,7 @@ int cmd_allow( irc_t *irc, char **cmd )
 int cmd_yesno( irc_t *irc, char **cmd )
 {
 	query_t *q = irc->queries;
-
+	
 	if( !q )
 	{
 		irc_usermsg( irc, "Did I ask you something?" );
@@ -307,14 +339,16 @@ int cmd_set( irc_t *irc, char **cmd )
 	if( cmd[1] ) /* else 'forgotten' on purpose.. */
 	{
 		char *s = set_getstr( irc, cmd[1] );
-		irc_usermsg( irc, "%s = '%s'", cmd[1], s );
+		if( s )
+			irc_usermsg( irc, "%s = '%s'", cmd[1], s );
 	}
 	else
 	{
 		set_t *s = irc->set;
 		while( s )
 		{
-			irc_usermsg( irc, "%s = `%s'", s->key, s->value?s->value:s->def );
+			if( s->value || s->def )
+				irc_usermsg( irc, "%s = `%s'", s->key, s->value?s->value:s->def );
 			s = s->next;
 		}
 	}
@@ -370,7 +404,7 @@ int cmd_register( irc_t *irc, char **cmd )
 	}
 	else
 	{
-		char checkie;
+		int checkie;
 		
 		char *str = (char *) malloc( strlen( irc->nick ) +
 			strlen( CONFIG ) +
@@ -398,6 +432,44 @@ int cmd_register( irc_t *irc, char **cmd )
 			irc_usermsg( irc, "Nick is already registered" );
 		}
 	}
+	
+	return( 0 );
+}
+
+int cmd_blist( irc_t *irc, char **cmd )
+{
+	int all = 0;
+	user_t *u;
+	char s[31];
+	int n_online = 0, n_away = 0, n_offline = 0;
+	
+	if( cmd[1] && strcasecmp( cmd[1], "all" ) == 0 )
+		all = 1;
+	
+	irc_usermsg( irc, "%-16.16s  %-40.40s  %s", "Nickname", "User/Host/Network", "Status" );
+	
+	for( u = irc->users; u; u = u->next ) if( u->gc && u->online && !u->away )
+	{
+		snprintf( s, 30, "%s@%s (%s)", u->user, u->host, proto_name[u->gc->user->protocol] );
+		irc_usermsg( irc, "%-16.16s  %-40.40s  %s", u->nick, s, "Online" );
+		n_online ++;
+	}
+	
+	for( u = irc->users; u; u = u->next ) if( u->gc && u->online && u->away )
+	{
+		snprintf( s, 30, "%s@%s (%s)", u->user, u->host, proto_name[u->gc->user->protocol] );
+		irc_usermsg( irc, "%-16.16s  %-40.40s  %s", u->nick, s, u->away );
+		n_away ++;
+	}
+	
+	if( all ) for( u = irc->users; u; u = u->next ) if( u->gc && !u->online )
+	{
+		snprintf( s, 30, "%s@%s (%s)", u->user, u->host, proto_name[u->gc->user->protocol] );
+		irc_usermsg( irc, "%-16.16s  %-40.40s  %s", u->nick, s, "Offline" );
+		n_offline ++;
+	}
+	
+	irc_usermsg( irc, "%d buddies (%d available, %d away, %d offline)", n_online, n_away, n_offline );
 	
 	return( 0 );
 }

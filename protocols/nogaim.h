@@ -211,8 +211,9 @@ struct prpl {
 #define PROTO_VGATE	7
 #define PROTO_JABBER	8
 #define PROTO_NAPSTER	9
-#define PROTO_ZEPHYR   10
-#define PROTO_GADUGADU 11
+#define PROTO_ZEPHYR	10
+#define PROTO_GADUGADU	11
+#define PROTO_MAX	16
 
 #define UC_UNAVAILABLE  1
 
@@ -264,7 +265,7 @@ void do_export( struct gaim_connection *gc );
 void signoff_blocked( struct gaim_connection *gc );
 
 /* buddy.c */
-void handle_buddy_rename( struct buddy *buddy, char *oldrealname );
+void handle_buddy_rename( struct buddy *buddy, char *handle );
 
 /* buddy_chat.c */
 void add_chat_buddy( struct conversation *b, char *handle );

@@ -49,6 +49,7 @@ command_t commands[] = {
 	{ "yes",        0, cmd_yesno },
 	{ "no",         0, cmd_yesno },
 	{ "blist",      0, cmd_blist },
+	{ "nick",       1, cmd_nick },
 	{ NULL }
 };
 
@@ -108,10 +109,17 @@ int cmd_identify( irc_t *irc, char **cmd )
 int cmd_register( irc_t *irc, char **cmd )
 {
 	int checkie;
+	char *str;
 	
-	char *str = (char *) malloc( strlen( irc->nick ) +
-	            strlen( CONFIG ) +
-	            strlen( ".accounts" ) + 1 );
+	if( conf->authmode == REGISTERED )
+	{
+		irc_usermsg( irc, "This server does not allow registering new accounts" );
+		return( 0 );
+	}
+	
+	str = (char *) malloc( strlen( irc->nick ) +
+	      strlen( CONFIG ) +
+	      strlen( ".accounts" ) + 1 );
 	
 	strcpy( str, CONFIG );
 	strcat( str, irc->nick );
@@ -143,6 +151,12 @@ int cmd_account( irc_t *irc, char **cmd )
 	account_t *a;
 	int i;
 	
+	if( conf->authmode == REGISTERED && irc->status < USTATUS_IDENTIFIED )
+	{
+		irc_usermsg( irc, "This server only accepts registered users" );
+		return( 0 );
+	}
+	
 	if( strcasecmp( cmd[1], "add" ) == 0 )
 	{
 		int prot;
@@ -163,6 +177,38 @@ int cmd_account( irc_t *irc, char **cmd )
 			return( 0 );
 		}
 		
+#ifndef WITH_MSN
+		if( prot == PROTO_MSN )
+		{
+			irc_usermsg( irc, NO_MSN );
+			return( 0 );
+		}
+#endif
+
+#ifndef WITH_OSCAR
+		if( prot == PROTO_OSCAR )
+		{
+			irc_usermsg( irc, NO_OSCAR );
+			return( 0 );
+		}
+#endif
+
+#ifndef WITH_JABBER
+		if( prot == PROTO_JABBER )
+		{
+			irc_usermsg( irc, NO_JABBER );
+			return( 0 );
+		}
+#endif
+
+#ifndef WITH_YAHOO
+		if( prot == PROTO_YAHOO )
+		{
+			irc_usermsg( irc, NO_YAHOO );
+			return( 0 );
+		}
+#endif
+
 		if( prot == PROTO_OSCAR && cmd[5] == NULL )
 		{
 			irc_usermsg( irc, "Not enough parameters" );
@@ -206,6 +252,8 @@ int cmd_account( irc_t *irc, char **cmd )
 			
 			if( a->gc )
 				con = " (connected)";
+			else if( a->reconnect )
+				con = " (awaiting reconnect)";
 			else
 				con = "";
 			
@@ -224,6 +272,38 @@ int cmd_account( irc_t *irc, char **cmd )
 		{
 			if( ( sscanf( cmd[2], "%d", &i ) == 1 ) && ( a = account_get( irc, i ) ) )
 			{
+#ifndef WITH_MSN
+				if( a->protocol == PROTO_MSN )
+				{
+					irc_usermsg( irc, NO_MSN );
+					return( 0 );
+				}
+#endif
+
+#ifndef WITH_OSCAR
+				if( a->protocol == PROTO_OSCAR )
+				{
+					irc_usermsg( irc, NO_OSCAR );
+					return( 0 );
+				}
+#endif
+
+#ifndef WITH_JABBER
+				if( a->protocol == PROTO_JABBER )
+				{
+					irc_usermsg( irc, NO_JABBER );
+					return( 0 );
+				}
+#endif
+
+#ifndef WITH_YAHOO
+				if( a->protocol == PROTO_YAHOO )
+				{
+					irc_usermsg( irc, NO_YAHOO );
+					return( 0 );
+				}
+#endif
+
 				if( a->gc )
 				{
 					irc_usermsg( irc, "Account already online" );
@@ -259,14 +339,51 @@ int cmd_account( irc_t *irc, char **cmd )
 		
 		if( ( sscanf( cmd[2], "%d", &i ) == 1 ) && ( a = account_get( irc, i ) ) )
 		{
-			if( !a->gc )
+#ifndef WITH_MSN
+			if( a->protocol == PROTO_MSN )
 			{
-				irc_usermsg( irc, "Account already offline" );
+				irc_usermsg( irc, NO_MSN );
 				return( 0 );
+			}
+#endif
+
+#ifndef WITH_OSCAR
+			if( a->protocol == PROTO_OSCAR )
+			{
+				irc_usermsg( irc, NO_OSCAR );
+				return( 0 );
+			}
+#endif
+
+#ifndef WITH_JABBER
+			if( a->protocol == PROTO_JABBER )
+			{
+				irc_usermsg( irc, NO_JABBER );
+				return( 0 );
+			}
+#endif
+
+#ifndef WITH_YAHOO
+			if( a->protocol == PROTO_YAHOO )
+			{
+				irc_usermsg( irc, NO_YAHOO );
+				return( 0 );
+			}
+#endif
+			if( a->gc )
+			{
+				account_off( irc, a );
+			}
+			else if( a->reconnect )
+			{
+				irc_usermsg( irc, "Reconnect for connection %d cancelled", i );
+				a->reconnect->account = NULL;
+				a->reconnect = NULL;
 			}
 			else
 			{
-				account_off( irc, a );
+				irc_usermsg( irc, "Account already offline" );
+				return( 0 );
 			}
 		}
 		else
@@ -316,8 +433,27 @@ int cmd_add( irc_t *irc, char **cmd )
 		irc_usermsg( irc, "Incorrect connection number" );
 		return( 1 );
 	}
+	if( cmd[3] )
+	{
+		if( !nick_ok( cmd[3] ) )
+		{
+			irc_usermsg( irc, "The requested nickname '%s' is invalid", cmd[3] );
+			return( 0 );
+		}
+		else if( user_find( irc, cmd[3] ) )
+		{
+			irc_usermsg( irc, "The requested nickname '%s' already exists", cmd[3] );
+			return( 0 );
+		}
+		else
+		{
+			nick_set( irc, cmd[2], gc->protocol, cmd[3] );
+		}
+	}
 	gc->prpl->add_buddy( gc, cmd[2] );
 	add_buddy( gc, NULL, cmd[2], cmd[2] );
+	
+	irc_usermsg( irc, "User '%s' added to your contact list as %s", cmd[2], user_findhandle( gc, cmd[2] )->nick );
 	
 	return( 0 );
 }
@@ -393,21 +529,29 @@ int cmd_rename( irc_t *irc, char **cmd)
 		nick_set( irc, u->handle, ((struct gaim_connection *)u->gc)->protocol, cmd[2] );
 	}
 	
+	irc_usermsg( irc, "Nickname successfully changed" );
+	
 	return( 0 );
 }
 
 int cmd_remove( irc_t *irc, char **cmd )
 {
 	user_t *u;
+	char *s;
 	
 	if( !( u = user_find( irc, cmd[1] ) ) || !u->gc )
 	{
 		irc_usermsg( irc, "Buddy '%s' not found", cmd[1] );
 		return( 1 );
 	}
+	s = strdup( u->handle );
+	
 	((struct gaim_connection *)u->gc)->prpl->remove_buddy( u->gc, u->handle, NULL );
 	user_del( irc, cmd[1] );
 	nick_del( irc, cmd[1] );
+	
+	irc_usermsg( irc, "Buddy '%s' (nick %s) removed from contact list", s, cmd[1] );
+	free( s );
 	
 	return( 0 );
 }
@@ -435,13 +579,15 @@ int cmd_block( irc_t *irc, char **cmd )
 	}
 	if( !gc->prpl->add_deny || !gc->prpl->rem_permit )
 	{
-		irc_usermsg( irc, "Command not supported by this protocol" );
+		irc_usermsg( irc, "Command `%s' not supported by this protocol", cmd[0] );
 		return( 1 );
 	}
 	else
 	{
 		gc->prpl->rem_permit( gc, cmd[2] );
 		gc->prpl->add_deny( gc, cmd[2] );
+		
+		irc_usermsg( irc, "Buddy '%s' moved from your permit- to your deny-list", cmd[2] );
 	}
 	
 	return( 0 );
@@ -470,13 +616,15 @@ int cmd_allow( irc_t *irc, char **cmd )
 	}
 	if( !gc->prpl->rem_deny || !gc->prpl->add_permit )
 	{
-		irc_usermsg( irc, "Command not supported by this protocol" );
+		irc_usermsg( irc, "Command `%s' not supported by this protocol", cmd[0] );
 		return( 1 );
 	}
 	else
 	{
 		gc->prpl->rem_deny( gc, cmd[2] );
 		gc->prpl->add_permit( gc, cmd[2] );
+		
+		irc_usermsg( irc, "Buddy '%s' moved from your deny- to your permit-list", cmd[2] );
 	}
 	
 	return( 0 );
@@ -551,31 +699,39 @@ int cmd_save( irc_t *irc, char **cmd )
 
 int cmd_blist( irc_t *irc, char **cmd )
 {
-	int all = 0;
+	int online = 0, away = 0, offline = 0;
 	user_t *u;
 	char s[64];
 	int n_online = 0, n_away = 0, n_offline = 0;
 	
 	if( cmd[1] && strcasecmp( cmd[1], "all" ) == 0 )
-		all = 1;
+		online = offline = away = 1;
+	else if( cmd[1] && strcasecmp( cmd[1], "offline" ) == 0 )
+		offline = 1;
+	else if( cmd[1] && strcasecmp( cmd[1], "away" ) == 0 )
+		away = 1;
+	else if( cmd[1] && strcasecmp( cmd[1], "online" ) == 0 )
+		online = 1;
+	else
+		online =  away = 1;
 	
 	irc_usermsg( irc, "%-16.16s  %-40.40s  %s", "Nickname", "User/Host/Network", "Status" );
 	
-	for( u = irc->users; u; u = u->next ) if( u->gc && u->online && !u->away )
+	if( online == 1 ) for( u = irc->users; u; u = u->next ) if( u->gc && u->online && !u->away )
 	{
 		snprintf( s, 63, "%s@%s (%s)", u->user, u->host, proto_name[u->gc->user->protocol] );
 		irc_usermsg( irc, "%-16.16s  %-40.40s  %s", u->nick, s, "Online" );
 		n_online ++;
 	}
-	
-	for( u = irc->users; u; u = u->next ) if( u->gc && u->online && u->away )
+
+	if( away == 1 ) for( u = irc->users; u; u = u->next ) if( u->gc && u->online && u->away )
 	{
 		snprintf( s, 63, "%s@%s (%s)", u->user, u->host, proto_name[u->gc->user->protocol] );
 		irc_usermsg( irc, "%-16.16s  %-40.40s  %s", u->nick, s, u->away );
 		n_away ++;
 	}
 	
-	if( all ) for( u = irc->users; u; u = u->next ) if( u->gc && !u->online )
+	if( offline == 1 ) for( u = irc->users; u; u = u->next ) if( u->gc && !u->online )
 	{
 		snprintf( s, 63, "%s@%s (%s)", u->user, u->host, proto_name[u->gc->user->protocol] );
 		irc_usermsg( irc, "%-16.16s  %-40.40s  %s", u->nick, s, "Offline" );
@@ -583,6 +739,35 @@ int cmd_blist( irc_t *irc, char **cmd )
 	}
 	
 	irc_usermsg( irc, "%d buddies (%d available, %d away, %d offline)", n_online + n_away + n_offline, n_online, n_away, n_offline );
+	
+	return( 0 );
+}
+
+int cmd_nick( irc_t *irc, char **cmd ) 
+{
+	int i;
+	struct gaim_connection *gc;
+
+	if ( !cmd[1] || !sscanf( cmd[1], "%d", &i ) || !( gc = gc_nr(i)) )
+	{
+		irc_usermsg( irc, "Incorrect connection number");
+		return( 1 );
+	}
+
+	if ( !cmd[2] ) 
+	{
+		irc_usermsg( irc, "Your name is `%s'" , gc->displayname ? gc->displayname : "NULL" );
+	}
+	else if ( !gc->prpl->set_info ) 
+	{
+		irc_usermsg( irc, "Command `%s' not supported by this protocol", cmd[0] );
+		return( 1 );
+	}
+	else
+	{
+		irc_usermsg( irc, "Setting your name on connection %d to `%s'", i, cmd[2] );
+		gc->prpl->set_info( gc, cmd[2] );
+	}
 	
 	return( 0 );
 }

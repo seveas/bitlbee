@@ -63,25 +63,37 @@ void nogaim_init()
 {
 	proto_prpl[PROTO_MSN] = malloc( sizeof( struct prpl ) );
 	memset( proto_prpl[PROTO_MSN], 0, sizeof( struct prpl ) );
+#ifdef WITH_MSN
 	msn_init( proto_prpl[PROTO_MSN] );
+#endif
 
 	proto_prpl[PROTO_OSCAR] = malloc( sizeof( struct prpl ) );
 	memset( proto_prpl[PROTO_OSCAR], 0, sizeof( struct prpl ) );
+#ifdef WITH_OSCAR
 	oscar_init( proto_prpl[PROTO_OSCAR] );
+#endif
 	
 	proto_prpl[PROTO_YAHOO] = malloc( sizeof( struct prpl ) );
 	memset( proto_prpl[PROTO_YAHOO], 0, sizeof( struct prpl ) );
+#ifdef WITH_YAHOO
 	yahoo_init( proto_prpl[PROTO_YAHOO] );
+#endif
 	
 	proto_prpl[PROTO_JABBER] = malloc( sizeof( struct prpl ) );
 	memset( proto_prpl[PROTO_JABBER], 0, sizeof( struct prpl ) );
+#ifdef WITH_JABBER
 	jabber_init( proto_prpl[PROTO_JABBER] );
+#endif
 	
 	set_add( IRC, "html", "nostrip", NULL );
 	set_add( IRC, "typing_notice", "false", set_eval_bool );
 	set_add( IRC, "away_devoice", "true", set_eval_away_devoice );
-	set_add( IRC, "charset", "none", NULL );
+#ifdef ICONV
+	set_add( IRC, "charset", "none", set_eval_charset );
+#endif
 	set_add( IRC, "handle_unknown", "root", NULL );
+	set_add( IRC, "auto_reconnect", "false", set_eval_bool );
+	set_add( IRC, "reconnect_delay", "300", set_eval_int );
 }
 
 struct gaim_connection *gc_nr( int i )
@@ -105,7 +117,7 @@ int proto_away( struct gaim_connection *gc, char *away )
 	
 	while( m )
 	{
-		if( away && *away )
+		if( *away )
 		{
 			if( strcasecmp( m->data, away ) == 0 )
 				break;
@@ -122,7 +134,7 @@ int proto_away( struct gaim_connection *gc, char *away )
 	
 	if( m )
 	{
-		gc->prpl->set_away( gc, m->data, ( away && *away ) ? away : NULL );
+		gc->prpl->set_away( gc, m->data, *away ? away : NULL );
 	}
 	else
 	{
@@ -150,7 +162,7 @@ static char *proto_away_alias_find( GList *gcm, char *away )
 	for( i = 0; *proto_away_alias[i]; i ++ )
 	{
 		for( j = 0; proto_away_alias[i][j]; j ++ )
-			if( strcasecmp( away, proto_away_alias[i][j] ) == 0 )
+			if( strncasecmp( away, proto_away_alias[i][j], strlen( proto_away_alias[i][j] ) ) == 0 )
 				break;
 		
 		if( !proto_away_alias[i][j] )	/* If we reach the end, this row */
@@ -178,6 +190,7 @@ static char *proto_away_alias_find( GList *gcm, char *away )
 struct gaim_connection *new_gaim_conn( struct aim_user *user )
 {
 	struct gaim_connection *gc;
+	account_t *a;
 	
 	gc = malloc( sizeof( struct gaim_connection ) );
 	memset( gc, 0, sizeof( struct gaim_connection ) );
@@ -195,6 +208,14 @@ struct gaim_connection *new_gaim_conn( struct aim_user *user )
 
 	user->gc = gc;
 	gc->user = user;
+	
+	// Find the account_t so we can set it's gc pointer
+	for( a = gc->irc->accounts; a; a = a->next )
+		if( ( struct aim_user * ) a->gc == user )
+		{
+			a->gc = gc;
+			break;
+		}
 
 	return( gc );
 }
@@ -267,8 +288,24 @@ void account_online( struct gaim_connection *gc )
 	if( u && u->away ) proto_away( gc, u->away );
 }
 
+gboolean auto_reconnect( gpointer data )
+{
+	reconnect_t *r = data;
+	account_t *a;
+	
+	if( ( a = r->account ) )
+	{
+		a->reconnect = NULL;
+		account_on( (irc_t *) NULL, a );
+	}
+	free( r );
+	
+	return( FALSE );	/* Only have to run the timeout once */
+}
+
 void account_offline( struct gaim_connection *gc )
 {
+	gc->wants_to_die = TRUE;
 	signoff( gc );
 }
 
@@ -276,6 +313,7 @@ void signoff( struct gaim_connection *gc )
 {
 	irc_t *irc = gc->irc;
 	user_t *t, *u = irc->users;
+	account_t *a;
 	
 	irc_usermsg( gc->irc, "%s - Signing off..", proto_name[gc->protocol] );
 
@@ -294,6 +332,27 @@ void signoff( struct gaim_connection *gc )
 		}
 		else
 			u = u->next;
+	}
+	
+	for( a = irc->accounts; a; a = a->next )
+		if( a->gc == gc )
+			break;
+	
+	if( !a )
+	{
+		/* Uhm... This is very sick. */
+	}
+	else if( !gc->wants_to_die && set_getint( irc, "auto_reconnect" ) )
+	{
+		int delay = set_getint( irc, "reconnect_delay" );
+		irc_usermsg( gc->irc, "%s - Reconnecting in %d seconds..", proto_name[gc->protocol], delay);
+		a->reconnect = malloc( sizeof( reconnect_t ) );
+		a->reconnect->account = a;
+		g_timeout_add( delay * 1000, auto_reconnect, a->reconnect );
+	}
+	else
+	{
+		a->reconnect = NULL;
 	}
 	
 	destroy_gaim_conn( gc );
@@ -354,12 +413,18 @@ void add_buddy( struct gaim_connection *gc, char *group, char *handle, char *rea
 	char *s;
 	irc_t *irc = gc->irc;
 	
-	for( u = irc->users; u; u = u->next )
-		if( u->gc && u->handle && strcasecmp( u->handle, handle ) == 0 )
-		{
-			return;
-			/* Buddy seems to exist already. Let's ignore this request then... */
-		}
+	if( set_getint( irc, "debug" ) )
+		irc_usermsg( irc, "Receiving user add from protocol: %s", handle );
+	
+	if( user_findhandle( gc, handle ) )
+	{
+		if( set_getint( irc, "debug" ) )
+			irc_usermsg( irc, "User already exists, ignoring add request: %s", handle );
+		
+		return;
+		
+		/* Buddy seems to exist already. Let's ignore this request then... */
+	}
 	
 	memset( nick, 0, MAX_NICK_LENGTH + 1 );
 	strcpy( nick, nick_get( gc->irc, handle, gc->protocol ) );
@@ -403,8 +468,6 @@ struct buddy *find_buddy( struct gaim_connection *gc, char *handle )
 {
 	static struct buddy b[1];
 	user_t *u;
-	
-	if( !gc ) return( NULL );
 	
 	u = user_findhandle( gc, handle );
 	
@@ -463,8 +526,21 @@ void serv_got_update( struct gaim_connection *gc, char *handle, int loggedin, in
 	
 	if( !u )
 	{
-		irc_usermsg( gc->irc, "serv_got_update() for unknown %s handle %s:", proto_name[gc->protocol], handle );
-		irc_usermsg( gc->irc, "loggedin = %d, type = %d", loggedin, type );
+		if( strcasecmp( set_getstr( gc->irc, "handle_unknown" ), "add" ) == 0 )
+		{
+			add_buddy( gc, NULL, handle, NULL );
+			u = user_findhandle( gc, handle );
+		}
+		else if( strcasecmp( set_getstr( gc->irc, "handle_unknown" ), "ignore" ) == 0 )
+		{
+			if( set_getint( gc->irc, "debug" ) || strcasecmp( set_getstr( gc->irc, "handle_unknown" ), "ignore" ) != 0 )
+			{
+				irc_usermsg( gc->irc, "serv_got_update() for unknown %s handle %s:", proto_name[gc->protocol], handle );
+				irc_usermsg( gc->irc, "loggedin = %d, type = %d", loggedin, type );
+			}
+			
+			return;
+		}
 		return;
 	}
 	
@@ -541,6 +617,9 @@ void serv_got_im( struct gaim_connection *gc, char *handle, char *msg, guint32 f
 {
 	irc_t *irc = gc->irc;
 	user_t *u;
+#ifdef ICONV
+	char buf[8192];
+#endif
 	
 	u = user_findhandle( gc, handle );
 	
@@ -567,6 +646,12 @@ void serv_got_im( struct gaim_connection *gc, char *handle, char *msg, guint32 f
 	
 	if( strcasecmp( set_getstr( gc->irc, "html" ), "strip" ) == 0 )
 		strip_html( msg );
+
+#ifdef ICONV
+	if (strncasecmp(set_getstr(irc, "charset"), "none", 4)
+	    && do_iconv(set_getstr(irc, "charset"), "UTF-8", msg, buf, 8192) != -1)
+		msg = buf;
+#endif
 	
 	irc_msgfrom( irc, u->nick, msg );
 }
@@ -620,6 +705,9 @@ void serv_got_chat_in( struct gaim_connection *gc, int id, char *who, int whispe
 {
 	struct conversation *c;
 	user_t *u;
+#ifdef ICONV
+	char buf[8192];
+#endif
 	
 	/* Gaim sends own messages through this too. IRC doesn't want this, so kill them */
 	if( strcasecmp( who, gc->user->username ) == 0 )
@@ -627,6 +715,12 @@ void serv_got_chat_in( struct gaim_connection *gc, int id, char *who, int whispe
 	
 	u = user_findhandle( gc, who );
 	for( c = gc->conversations; c && c->id != id; c = c->next );
+	
+#ifdef ICONV
+	if (strncasecmp(set_getstr(gc->irc, "charset"), "none", 4)
+	    && do_iconv(set_getstr(gc->irc, "charset"), "UTF-8", msg, buf, 8192) != -1)
+		msg = buf;
+#endif
 	
 	if( c && u )
 		irc_privmsg( gc->irc, u, "PRIVMSG", c->channel, "", msg );
@@ -842,3 +936,70 @@ static char *set_eval_away_devoice( irc_t *irc, set_t *set, char *value )
 	
 	return( set_eval_bool( irc, set, value ) );
 }
+
+int serv_send_im(irc_t *irc, user_t *u, char *msg)
+{
+#ifdef ICONV
+	char buf[8192];
+	
+	if (strncasecmp(set_getstr(irc, "charset"), "none", 4)
+	    && do_iconv("UTF-8", set_getstr(irc, "charset"), msg, buf, 8192) != -1)
+		msg = buf;
+#endif
+	
+	return( ((struct gaim_connection *)u->gc)->prpl->send_im( u->gc, u->handle, msg, strlen( msg ), 0 ) );
+}
+
+int serv_send_chat(irc_t *irc, struct gaim_connection *gc, int id, char *msg )
+{
+#ifdef ICONV
+	char buf[8192];
+	
+	if (strncasecmp(set_getstr(irc, "charset"), "none", 4)
+	    && do_iconv("UTF-8", set_getstr(irc, "charset"), msg, buf, 8192) != -1)
+		msg = buf;
+#endif
+	
+	return( gc->prpl->chat_send( gc, id, msg ) );
+}
+
+#ifdef ICONV
+int do_iconv(char *to, char *from, char *src, char *dst, size_t size)
+{
+	iconv_t cd;
+	size_t res;
+	size_t inbytesleft, outbytesleft;
+	char *inbuf = src;
+	char *outbuf = dst;
+
+	cd = iconv_open(to, from);
+	if (cd == (iconv_t)(-1))
+		return -1;
+
+	inbytesleft = strlen(src);
+	outbytesleft = size - 1;
+	res = iconv(cd, &inbuf, &inbytesleft, &outbuf, &outbytesleft);
+	*outbuf= '\0';
+	iconv_close(cd);
+
+	if (res == (size_t)(-1))
+		return -1;
+
+	return 0;
+}
+
+char *set_eval_charset(irc_t *irc, set_t *set, char *value)
+{
+	iconv_t cd;
+
+	if (!strncasecmp(value, "none", 4))
+		return value;
+
+	cd = iconv_open("UTF-8", value);
+	if (cd == (iconv_t)(-1))
+		return NULL;
+
+	iconv_close(cd);
+	return value;
+}
+#endif

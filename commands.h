@@ -54,6 +54,7 @@ int cmd_yesno( irc_t *irc, char **args );
 int cmd_identify( irc_t *irc, char **args );
 int cmd_register( irc_t *irc, char **args );
 int cmd_blist( irc_t *irc, char **cmd );
+int cmd_nick( irc_t *irc, char **cmd );
 
 extern command_t commands[];
 

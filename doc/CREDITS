@@ -21,10 +21,14 @@ The authors thank the following people:
   bug reports.
 - Bryan Williams, for the help in getting BitlBee to run on Cygwin.
 - Peter van Dijk for discovering a security leak in BitlBee.
-- Maurits Dijkstra, for some coding, bug finding, and the standalone
-  daemon patch.
 - Christian Häggeström, for the fix for the Jabber barf on high ASCII
   characters in away messages.
+- James Ray, for some testing, development and patching.
+- Yuri Pimenov, for writing the charset/iconv code, requested by a
+  lot of people.
+- Wouter Paesen, for the MSN friendlyname code.
+- Tony Perrie, for the RPM's and the Yahoo! patch.
+- Andrej Kacian/Ticho for some patches.
 
 - And all other users who help us by sending useful bug reports, positive
   feedback, nice patches and cool addons. Mentioning you all would make

@@ -56,11 +56,16 @@
 #define PERMIT_SOME     3
 #define DENY_SOME       4
 
-#define WEBSITE "http://www.lintux.cx/bitlbee.html"
+#define WEBSITE "http://www.bitlee.org/"
 #define IM_FLAG_AWAY 0x0020
 #define OPT_CONN_HTML 0x00000001
 #define OPT_LOGGED_IN 0x00010000
 #define GAIM_AWAY_CUSTOM "Custom"
+
+#define GAIM_LOGO	0
+#define GAIM_ERROR	1
+#define GAIM_WARNING	2
+#define GAIM_INFO	3
 
 /* ok. now the fun begins. first we create a connection structure */
 struct gaim_connection {
@@ -255,6 +260,15 @@ extern GSList *connections;
 extern struct prpl *proto_prpl[16];
 
 /* nogaim.c */
+int serv_send_im(irc_t *irc, user_t *u, char *msg);
+int serv_send_chat(irc_t *irc, struct gaim_connection *gc, int id, char *msg );
+
+#ifdef ICONV
+#include <iconv.h>
+int do_iconv(char *to, char *from, char *src, char *dst, size_t size);
+char *set_eval_charset(irc_t *irc, set_t *set, char *value);
+#endif
+
 void nogaim_init();
 struct gaim_connection *gc_nr( int i );
 int proto_away( struct gaim_connection *gc, char *away );
@@ -311,17 +325,25 @@ char *normalize( const char *s );
 time_t get_time( int year, int month, int day, int hour, int min, int sec );
 void strip_html( char *msg );
 
+#ifdef WITH_MSN
 /* msn.c */
 void msn_init( struct prpl *ret );
+#endif
 
+#ifdef WITH_OSCAR
 /* oscar.c */
 void oscar_init( struct prpl *ret );
+#endif
 
+#ifdef WITH_JABBER
 /* jabber.c */
 void jabber_init( struct prpl *ret );
+#endif
 
+#ifdef WITH_YAHOO
 /* yahoo.c */
 void yahoo_init( struct prpl *ret );
+#endif
 
 /* prefs.c */
 void build_block_list();

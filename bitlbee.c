@@ -32,6 +32,7 @@
 #include <signal.h>
 
 irc_t *IRC;	/* :-( */
+conf_t *conf;
 
 static void sighandler( int signal );
 
@@ -62,6 +63,9 @@ int main( int argc, char *argv[] )
 	
 	nogaim_init();
 	set_add( irc, "save_on_quit", "true", set_eval_bool );
+	
+	conf = conf_load( argc, argv );
+	conf_loaddefaults( irc );
 	
 	while( 1 )
 	{
@@ -140,8 +144,11 @@ int bitlbee_load( irc_t *irc, char* password )
 	}
 	fclose( fp );
 	
-	strcpy( s, "account on" );	/* Can't do this directly because r_c_s alters the string */
-	root_command_string( irc, ru, s );
+	if( set_getint( IRC, "auto_connect" ) )
+	{
+		strcpy( s, "account on" );	/* Can't do this directly because r_c_s alters the string */
+		root_command_string( irc, ru, s );
+	}
 	
 	irc->status = USTATUS_IDENTIFIED;
 	
@@ -176,7 +183,7 @@ int bitlbee_save( irc_t *irc )
 	line = hashpass( irc );
 	if( line == NULL )
 	{
-		irc_usermsg( irc, "Please register yourself with NickServ if you want to save your settings." );
+		irc_usermsg( irc, "Please register yourself if you want to save your settings." );
 		return( 0 );
 	}
 	

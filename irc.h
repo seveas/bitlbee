@@ -26,8 +26,6 @@
 #ifndef _IRC_H
 #define _IRC_H
 
-#define MOTDFILE ETCDIR "/motd.txt"
-
 #define IRC_MAX_LINE 512
 #define IRC_MAX_ARGS 8
 
@@ -48,6 +46,7 @@ typedef struct query
 typedef enum
 {
 	USTATUS_OFFLINE,
+	USTATUS_AUTHORIZED,
 	USTATUS_LOGGED_IN,
 	USTATUS_IDENTIFIED
 } irc_status_t;

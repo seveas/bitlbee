@@ -412,12 +412,19 @@ static int msn_process_switch(struct msn_switchboard *ms, char *buf)
 		ms->total++;
 		while (ms->txqueue) {
 			char *send = add_cr(ms->txqueue->data);
+#ifndef ICONV
 			char *utf8 = str_to_utf8(send);
 			g_free(send);
 			g_snprintf(sendbuf, sizeof(sendbuf), "MSG %d N %d\r\n%s%s", ++ms->trId,
 					strlen(MIME_HEADER) + strlen(utf8),
 					MIME_HEADER, utf8);
 			g_free(utf8);
+#else
+			g_snprintf(sendbuf, sizeof(sendbuf), "MSG %d N %d\r\n%s%s", ++ms->trId,
+					strlen(MIME_HEADER) + strlen(send),
+					MIME_HEADER, send);
+			g_free(send);
+#endif
 			g_free(ms->txqueue->data);
 			ms->txqueue = g_slist_remove(ms->txqueue, ms->txqueue->data);
 			if (msn_write(ms->fd, sendbuf, strlen(sendbuf)) < 0) {
@@ -495,7 +502,10 @@ static void msn_unescape(char *text) {
 
 static void msn_process_switch_msg(struct msn_switchboard *ms, char *msg)
 {
-	char *content, *utf;
+	char *content;
+#ifndef ICONV
+	char *utf;
+#endif
 	int flags = 0;
 
 	content = strstr(msg, "Content-Type: ");
@@ -516,6 +526,7 @@ static void msn_process_switch_msg(struct msn_switchboard *ms, char *msg)
 			return;
 		}
 		skiphead += 4;
+#ifndef ICONV
 		utf = utf8_to_str(skiphead);
 		strip_linefeed(utf);
 		
@@ -525,6 +536,58 @@ static void msn_process_switch_msg(struct msn_switchboard *ms, char *msg)
 			serv_got_im(ms->gc, ms->msguser, utf, flags, time(NULL), -1);
 
 		g_free(utf);
+#else
+		strip_linefeed(skiphead);
+		
+		if (ms->chat)
+			serv_got_chat_in(ms->gc, ms->chat->id, ms->msguser, flags, skiphead, time(NULL));
+		else
+			serv_got_im(ms->gc, ms->msguser, skiphead, flags, time(NULL), -1);
+#endif
+	} else if( !g_strncasecmp(content, "Content-Type: text/x-msmsgsinvite",
+	                          strlen("Content-Type: text/x-msmsgsinvite"))) {
+		char *type = strstr( msg, "Application-Name: " );
+		char msg[512];
+		
+		if( !type )
+		{
+			strcpy( msg, "<< BitlBee - Corrupted MSN invitation message >>" );
+		}
+		else if( !g_strncasecmp( type, "Application-Name: File Transfer", strlen( "Application-Name: File Transfer" ) ) )
+		{
+			char *file, *size;
+			
+			file = strstr( type, "Application-File: " );
+			size = strstr( type, "Application-FileSize: " );
+			
+			if( file && size )
+			{
+				file += strlen( "Application-File: " );
+				size += strlen( "Application-FileSize: " );
+				
+				file = g_strndup( file, strchr( file, '\r' ) - file );
+				size = g_strndup( size, strchr( size, '\r' ) - size );
+				
+				snprintf( msg, 511, "<< BitlBee - Filetransfer: `%s', %s bytes >>\n"
+				                     "Filetransfers are not supported by BitlBee for now...", file, size );
+				
+				free( file );
+				free( size );
+			}
+			else
+			{
+				strcpy( msg, "<< BitlBee - Corrupted MSN filetransfer invitation message >>" );
+			}
+		}
+		else
+		{
+			type = g_strndup( type, strchr( type, '\r' ) - type );
+			
+			snprintf( msg, 511, "<< BitlBee - Unknown MSN invitation - %s >>", type );
+			
+			free( type );
+		}
+		serv_got_im( ms->gc, ms->msguser, msg, flags, time(NULL), -1 );
 	}
 }
 
@@ -1193,7 +1256,10 @@ static int msn_process_main(struct gaim_connection *gc, char *buf)
 static void msn_process_main_msg(struct gaim_connection *gc, char *msg)
 {
 	struct msn_data *md = gc->proto_data;
-	char *skiphead, *utf;
+	char *skiphead;
+#ifndef ICONV
+	char *utf;
+#endif
 	char *content;
 
 	content = strstr(msg, "Content-Type: ");
@@ -1244,12 +1310,17 @@ static void msn_process_main_msg(struct gaim_connection *gc, char *msg)
 	if (!skiphead || !skiphead[4])
 		return;
 	skiphead += 4;
+#ifndef ICONV
 	utf = utf8_to_str(skiphead);
 	strip_linefeed(utf);
 
 	serv_got_im(gc, md->msguser, utf, 0, time(NULL), -1);
 
 	g_free(utf);
+#else
+	strip_linefeed(skiphead);
+	serv_got_im(gc, md->msguser, skiphead, 0, time(NULL), -1);
+#endif
 }
 
 static void msn_callback(gpointer data, gint source, GaimInputCondition cond)
@@ -1649,7 +1720,10 @@ static int msn_send_im(struct gaim_connection *gc, char *who, char *message, int
 	char buf[MSN_BUF_LEN];
 
 	if (ms) {
-		char *utf8, *send;
+#ifndef ICONV
+		char *utf8;
+#endif
+		char *send;
 
 		if (ms->txqueue) {
 			ms->txqueue = g_slist_append(ms->txqueue, g_strdup(message));
@@ -1657,12 +1731,19 @@ static int msn_send_im(struct gaim_connection *gc, char *who, char *message, int
 		}
 
 		send = add_cr(message);
+#ifndef ICONV
 		utf8 = str_to_utf8(send);
 		g_free(send);
 		g_snprintf(buf, sizeof(buf), "MSG %d N %d\r\n%s%s", ++ms->trId,
 				strlen(MIME_HEADER) + strlen(utf8),
 				MIME_HEADER, utf8);
 		g_free(utf8);
+#else
+		g_snprintf(buf, sizeof(buf), "MSG %d N %d\r\n%s%s", ++ms->trId,
+				strlen(MIME_HEADER) + strlen(send),
+				MIME_HEADER, send);
+		g_free(send);
+#endif
 		if (msn_write(ms->fd, buf, strlen(buf)) < 0)
 			msn_kill_switch(ms);
 	} else if (strcmp(who, gc->username)) {
@@ -1689,18 +1770,28 @@ static int msn_chat_send(struct gaim_connection *gc, int id, char *message)
 {
 	struct msn_switchboard *ms = msn_find_switch_by_id(gc, id);
 	char buf[MSN_BUF_LEN];
-	char *utf8, *send;
+#ifndef ICONV
+	char *utf8;
+#endif
+	char *send;
 
 	if (!ms)
 		return -EINVAL;
 
 	send = add_cr(message);
+#ifndef ICONV
 	utf8 = str_to_utf8(send);
 	g_free(send);
 	g_snprintf(buf, sizeof(buf), "MSG %d N %d\r\n%s%s", ++ms->trId,
 			strlen(MIME_HEADER) + strlen(utf8),
 			MIME_HEADER, utf8);
 	g_free(utf8);
+#else
+	g_snprintf(buf, sizeof(buf), "MSG %d N %d\r\n%s%s", ++ms->trId,
+			strlen(MIME_HEADER) + strlen(send),
+			MIME_HEADER, send);
+	g_free(send);
+#endif
 	if (msn_write(ms->fd, buf, strlen(buf)) < 0) {
 		msn_kill_switch(ms);
 		return 0;
@@ -1880,19 +1971,19 @@ static void msn_rem_buddy(struct gaim_connection *gc, char *who, char *group)
 	}
 }
 
-#if 0
-static void msn_act_id(gpointer data, char *entry)
+//#if 0
+//static void msn_act_id(gpointer data, char *entry)
+static void msn_set_info( struct gaim_connection *gc, char *txt )
 {
-	struct gaim_connection *gc = data;
 	struct msn_data *md = gc->proto_data;
 	char buf[MSN_BUF_LEN];
 
-	if (strlen(url_encode(entry)) >= BUDDY_ALIAS_MAXLEN) {
+	if (strlen(url_encode(txt)) >= BUDDY_ALIAS_MAXLEN) {
 		do_error_dialog("Friendly name too long.", "MSN Error");
 		return;
 	}
 	
-	g_snprintf(buf, sizeof(buf), "REA %d %s %s\r\n", ++md->trId, gc->username, url_encode(entry));
+	g_snprintf(buf, sizeof(buf), "REA %d %s %s\r\n", ++md->trId, gc->username, url_encode(txt));
 	if (msn_write(md->fd, buf, strlen(buf)) < 0) {
 		hide_login_progress(gc, "Write error");
 		signoff(gc);
@@ -1900,6 +1991,7 @@ static void msn_act_id(gpointer data, char *entry)
 	}
 }
 
+#if 0
 static void msn_do_action(struct gaim_connection *gc, char *act)
 {
 	if (!strcmp(act, "Set Friendly Name")) {
@@ -2137,6 +2229,7 @@ void msn_init(struct prpl *ret)
 	ret->away_states = msn_away_states;
 	ret->set_away = msn_set_away;
 	ret->set_idle = msn_set_idle;
+	ret->set_info = msn_set_info;
 	ret->add_buddy = msn_add_buddy;
 	ret->remove_buddy = msn_rem_buddy;
 	ret->chat_send = msn_chat_send;

@@ -87,6 +87,9 @@ void account_del( irc_t *irc, int nr )
 			free( t->user );
 			free( t->pass );
 			if( t->server ) free( t->server );
+			if( t->reconnect )	/* This prevents any reconnect still queued to happen */
+				t->reconnect->account = NULL;
+			free( t );
 			
 			break;
 		}
@@ -95,7 +98,12 @@ void account_del( irc_t *irc, int nr )
 void account_on( irc_t *irc, account_t *a )
 {
 	struct aim_user *u;
-	GSList *l;
+	
+	if( a->gc )
+	{
+		/* Trying to enable an already-enabled account */
+		return;
+	}
 	
 	u = malloc( sizeof( struct aim_user ) );
 	memset( u, 0, sizeof( *u ) );
@@ -104,24 +112,16 @@ void account_on( irc_t *irc, account_t *a )
 	strcpy( u->password, a->pass );
 	if( a->server) strcpy( u->proto_opt[0], a->server );
 	
-	proto_prpl[a->protocol]->login( u );
+	// Bit hackish :/
+	a->gc = ( struct gaim_connection * ) u;
+	a->reconnect = NULL;
 	
-	/* Search for the connection now and link it to the account_t */
-	for( l = connections; l; l = l->next )
-	{
-		struct gaim_connection *gc = l->data;
-		
-		if( gc->user == u )
-		{
-			a->gc = gc;
-			break;
-		}
-	}
-	// if( !l ) scream for help
+	proto_prpl[a->protocol]->login( u );
 }
 
 void account_off( irc_t *irc, account_t *a )
 {
 	account_offline( a->gc );
 	a->gc = NULL;
+	a->reconnect = NULL;
 }

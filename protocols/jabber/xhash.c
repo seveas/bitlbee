@@ -39,7 +39,7 @@
  * 
  * --------------------------------------------------------------------------*/
 
-#include "lib.h"
+#include "../lib.h"
 
 
 /* Generates a hash code for a string.

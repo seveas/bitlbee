@@ -26,7 +26,7 @@
 #ifndef _BITLBEE_H
 #define _BITLBEE_H
 
-#define BITLBEE_VERSION "0.80"
+#define BITLBEE_VERSION "0.81"
 
 #include "config.h"
 
@@ -52,20 +52,32 @@
 #define _( x ) x
 
 #define ROOT_NICK "root"
+#define ROOT_CHAN "#bitlbee"
 #define ROOT_FN "User manager"
+
+#define NS_NICK "NickServ"
+
 #define DEFAULT_AWAY "Away from computer"
 #define CONTROL_TOPIC "Welcome to the control channel. Type help for help information."
-#define IRCD_INFO "BitlBee <http://www.lintux.cx/bitlbee.html>"
+#define IRCD_INFO "BitlBee <http://www.bitlbee.org/>"
 
 #define MAX_NICK_LENGTH 12
 
-#define HELP_FILE DATADIR "help.txt"
+#define HELP_FILE DATADIR "/help.txt"
+#define CONF_FILE ETCDIR "/bitlbee.conf"
+#define MOTD_FILE ETCDIR "/motd.txt"
+
+#define NO_MSN		"This Bitlbee is compiled without MSN support, sorry."
+#define NO_OSCAR	"This Bitlbee is compiled without Oscar support, sorry."
+#define NO_JABBER	"This Bitlbee is compiled without Jabber support, sorry."
+#define NO_YAHOO	"This Bitlbee is compiled without Yahoo support, sorry."
 
 #include "irc.h"
 #include "set.h"
 #include "protocols/nogaim.h"
 #include "commands.h"
 #include "account.h"
+#include "conf.h"
 
 int root_command_string( irc_t *irc, user_t *u, char *command );
 int root_command( irc_t *irc, char *command[] );
@@ -76,5 +88,6 @@ void http_encode( char *s );
 void http_decode( char *s );
 
 extern irc_t *IRC;
+extern conf_t *conf;
 
 #endif

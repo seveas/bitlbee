@@ -1,7 +1,7 @@
 Welcome to the BitlBee server at %h.
 
 This server is running BitlBee version %v.
-The newest version can be found on http://www.lintux.cx/bitlbee.html
+The newest version can be found on http://www.bitlbee.org/
 
 You are getting this message because the server administrator has not
 yet had the time (or need) to change it.
@@ -13,6 +13,6 @@ information.
 
 The developers of the Bee hope you have a zooming time.
 
-* BitlBee development team: wilmer, lucumo
+* BitlBee development team: wilmer, lucumo, Maurits
  
 ... Zooming, haha, get it?

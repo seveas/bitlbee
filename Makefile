@@ -9,7 +9,7 @@
 -include Makefile.settings
 
 # Program variables
-objects = irc.o bitlbee.o user.o nick.o set.o commands.o crypting.o help.o account.o
+objects = irc.o bitlbee.o user.o nick.o set.o commands.o crypting.o help.o account.o ini.o conf.o
 subdirs = protocols
 
 # Expansion of variables
@@ -60,9 +60,11 @@ uninstall-bin:
 install-etc:
 	mkdir -p $(DESTDIR)$(ETCDIR)
 	install -m 0644 motd.txt $(DESTDIR)$(ETCDIR)/motd.txt
+	install -m 0644 bitlbee.conf $(DESTDIR)$(ETCDIR)/bitlbee.conf
 
 uninstall-etc:
 	rm -f $(DESTDIR)$(ETCDIR)/motd.txt
+	rm -f $(DESTDIR)$(ETCDIR)/bitlbee.conf
 	-rmdir $(DESTDIR)$(ETCDIR)
 
 tar:

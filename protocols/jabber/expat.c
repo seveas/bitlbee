@@ -39,7 +39,7 @@
  * 
  * --------------------------------------------------------------------------*/
 
-#include "lib.h"
+#include "../lib.h"
 
 void expat_startElement(void* userdata, const char* name, const char** atts)
 {

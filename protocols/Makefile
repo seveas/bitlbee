@@ -9,14 +9,14 @@
 -include ../Makefile.settings
 
 # [SH] Program variables
-objects = md5.o nogaim.o proxy.o util.o
+objects = md5.o nogaim.o proxy.o util.o sha.o snprintf.o
 
 # [SH] The next two lines should contain the directory name (in $(subdirs))
 #      and the name of the object file, which should be linked into
 #      protocols.o (in $(subdirobjs)). These need to be in order, i.e. the
 #      first object file should be in the first directory.
-subdirs = msn jabber oscar yahoo
-subdirobjs = msn.o jabberr.o oscarr.o yahooo.o
+subdirs = $(PROTOCOLS)
+subdirobjs = $(PROTOOBJS)
 
 # Expansion of variables
 subdirobjs := $(join $(subdirs),$(addprefix /,$(subdirobjs)))

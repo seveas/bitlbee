@@ -38,7 +38,7 @@
  * 
  * 
  * --------------------------------------------------------------------------*/
-#include "lib.h"
+#include "../lib.h"
 
 void karma_copy(struct karma *new, struct karma *old)
 {

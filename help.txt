@@ -3,7 +3,7 @@ BitlBee help system
 
 Type help quickstart for a quick introduction to the Bee. You can get help information for any command, just type help <command>. To get a list of commands, type help commands. For a list of all available help topics, try help index.
 
-BitlBee is written by Wilmer van der Gaast together with Sjoerd Hemminga, Jelmer Vernooij and others. Bug reports and other kinds of feedback can be sent by e-mail to wilmer@gaast.net. (There is no BitlBee mailing list)
+BitlBee is written by Wilmer van der Gaast together with Sjoerd Hemminga, Maurits Dijkstra and others. Bug reports and other kinds of feedback can be sent by e-mail to wilmer@gaast.net. (There is no BitlBee mailing list)
 Or just join #BitlBee on OFTC (irc.oftc.net) (OFTC, *not* FreeNode! Some people accidentally joined #BitlBee on FreeNode already, which is just an empty channel) and flame us right in the face. :-)
 %
 ?index
@@ -11,6 +11,7 @@ These are the available help subjects:
 
   quickstart - A short introduction into BitlBee
   commands   - All available commands and settings
+  away       - About setting away states
   smileys    - A summary of some non-standard smileys you might find and fail to understand
   groupchats - How to work with groupchats on BitlBee
 
@@ -33,6 +34,7 @@ BitlBee commands:
   set      - Miscellaneous settings
   yes      - Accept a request
   no       - Deny a request
+  nick     - Change friendly name, nick
 %
 ?quickstart
 Welcome to BitlBee, your IRC gateway to ICQ, MSN and other IM systems.
@@ -132,14 +134,16 @@ Try account list if you don't know what account number you want.
 This command gives you a list of all the accounts known by BitlBee, including the numbers you'll need for most account commands.
 %
 ?add
-Syntax: add <connection> <handle>
+Syntax: add <connection> <handle> [<nick>]
 
 Adds the given buddy at the specified connection to your buddy list. The connection number can be retrieved with the account list command.
 
+If you want, you can also tell BitlBee what nick to give the new contact. Of course you can also use the rename command for that, but sometimes this might be more convenient.
+
 Example:
 
-00:15 < ctrlsoft> add 3 gryp@jabber.org
-00:15 -!- gryp (gryp@jabber.org) has joined #bitlbee
+00:15 < ctrlsoft> add 3 gryp@jabber.org grijp
+00:15 -!- grijp (gryp@jabber.org) has joined #bitlbee
 %
 ?info
 Syntax: info <connection> <handle>
@@ -165,7 +169,7 @@ Removes the specified nick from your buddy list.
 Syntax: block <nick>
         block <connection> <handle>
 
-Puts the specified user on your ignore list. Either specify the users' nick when you have him/her in your contact list or a connection number and a user handle. The connection number can be retrieved with the account list command.
+Puts the specified user on your ignore list. Either specify the user's nick when you have him/her in your contact list or a connection number and a user handle. The connection number can be retrieved with the account list command.
 %
 ?allow
 Syntax: allow <nick>
@@ -191,7 +195,7 @@ This command saves all your nicks and accounts immediately. Handy if you have th
 Type: boolean
 Default: False
 
-If value is true, messages from users will appear in seperate query windows. If false, messages from users will appear in #bitlbee.
+If value is true, messages from users will appear in separate query windows. If false, messages from users will appear in #bitlbee.
 
 This setting is remembered (during one session) per-user, this setting only changes the default state. This option takes effect as soon as you reconnect.
 %
@@ -206,7 +210,7 @@ If enabled causes BitlBee to save all current settings and account details when 
 Default: nostrip
 Possible values: strip, nostrip
 
-Determines what bitlbee should do with HTML in messages. If set to nostrip, HTML in messages will not be touched. If set to strip, all html will be stripped from messages. Unfortunately this sometimes strips too much.
+Determines what BitlBee should do with HTML in messages. If set to nostrip, HTML in messages will not be touched. If set to strip, all HTML will be stripped from messages. Unfortunately this sometimes strips too much.
 %
 ?set debug
 Type: boolean
@@ -244,7 +248,7 @@ With this option enabled, the root user devoices people when they go away (just 
 ?set handle_unknown
 Type: string
 Default: root
-Possible values: echo, add, ignore
+Possible values: root, add, ignore
 
 Messages from unknown users are echoed like this by default:
 
@@ -252,6 +256,28 @@ Messages from unknown users are echoed like this by default:
 <root> j0000! 1 4m l33t h4x0r! kill me!
 
 If you want this lame user to be added automatically, you can set this setting to "add". If you prefer to ignore messages from people you don't know, you can set this one to "ignore".
+%
+?set auto_connect
+Type: boolean
+Default: true
+
+With this option enabled, when you identify BitlBee will automaticly connect to your accounts, with this disabled it will not do this.
+%
+?set auto_reconnect
+Type: boolean
+Default: false
+
+If an IM-connections breaks, you're supposed to bring it back up yourself. Having BitlBee do this automatically might not always be a good idea, for several reasons. If you want the connections to be restored automatically, you can enable this setting.
+
+See also the reconnect_delay setting.
+%
+?set reconnect_delay
+Type: integer (seconds)
+Default: 300
+
+Tell BitlBee after how many seconds it should attempt to bring an IM-connection back up after a crash. It's not a good idea to set this value very low, it will cause too much useless traffic when an IM-server is down for a few hours.
+
+See also the auto_reconnect setting.
 %
 ?rename
 Syntax: rename <oldnick> <newnick>
@@ -287,9 +313,18 @@ BitlBee saves all your settings (contacts, accounts, passwords) on-server. To pr
 Once you're registered, you can change your password using set password <password> (as always, without the brackets..).
 %
 ?blist
-Syntax: blist [all]
+Syntax: blist [all|online|offline|away]
 
 You can get a better readable buddy list using the blist command. If you want a complete list (including the offline users) you can use the all argument.
+%
+?nick
+Syntax: nick <connection> [<new nick>]
+
+This command allows to set the friendly name of an im account. If no new name is specified the command will report the current name.
+When the name contains spaces, don't forget to quote the whole nick in double quotes. Currently this command is only supported by the MSN protocol.
+
+<wouter> nick 1 "Wouter Paesen"
+<root> Setting your name on connection 1 to `Wouter Paesen'
 %
 ?smileys
 All MSN smileys (except one) are case insensitive and work without the nose too.
@@ -352,4 +387,20 @@ About the virtual channel names (#chat_xxx): Please just learn to live with th
 If BitlBee fails to create the channel (root should tell you about it), there might not be an available 'switchbox' to the person you chose. Just send the person an ordinary message then, and the switchbox will be created. You can retry the join then.
 
 Have fun! Please keep in mind that this is 'fresh' funtionality, so things might go wrong. Please warn me if anything weird happens.
+%
+?away
+As you might've expected, you can just use the /away command in your IRC client to set an away-state. BitlBee supports most away-states supported by the protocols.
+
+Not all away states are supported by all protocols, and some protocols have different names for them. BitlBee will try to pick the best available alias from this list for every connection:
+
+- Away from computer, Away, Extended away
+- NA, N/A, Not available
+- Busy, Do not disturb, DND, Occupied
+- Be right back, BRB
+- On the phone, Phone, On phone
+- Out to lunch, Lunch, Food
+
+So /away Food will set your state to "Out to lunch" on your MSN connection, and for most other connections the default, "Away" or "Away from computer" will be chosen.
+
+You can also add more information to your away message. Setting it to "Busy - Fixing BitlBee bugs" will set your IM-away-states to Busy, but your away message will be more descriptive for people on IRC. Protocols like Yahoo! and Jabber will also show this complete away message to your buddies.
 %

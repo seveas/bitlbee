@@ -4,7 +4,7 @@
   * Copyright 2002-2003 Wilmer van der Gaast and others                *
   \********************************************************************/
 
-/* Account management functions                                         */
+/* INI file reading code						*/
 
 /*
   This program is free software; you can redistribute it and/or modify
@@ -23,32 +23,20 @@
   Suite 330, Boston, MA  02111-1307  USA
 */
 
-#ifndef _ACCOUNT_H
-#define _ACCOUNT_H
-
-typedef struct reconnect
-{
-	struct account *account;
-} reconnect_t;
-
-typedef struct account
-{
-	int protocol;
-	char *user;
-	char *pass;
-	char *server;
-	reconnect_t *reconnect;	/* Keep this to prevent double reconnects,
-	                           reconnecting removed accounts and all
-	                           other scary things. */
-	
-	struct gaim_connection *gc;
-	struct account *next;
-} account_t;
-
-account_t *account_add( irc_t *irc, int protocol, char *user, char *pass );
-account_t *account_get( irc_t *irc, int nr );
-void account_del( irc_t *irc, int nr );
-void account_on( irc_t *irc, account_t *a );
-void account_off( irc_t *irc, account_t *a );
-
+#ifndef MAX_STRING
+#define MAX_STRING 128
 #endif
+
+typedef struct
+{
+	FILE *fp;
+	int line;
+	char c_section[MAX_STRING];
+	char section[MAX_STRING];
+	char key[MAX_STRING];
+	char value[MAX_STRING];
+} ini_t;
+
+ini_t *ini_open( char *file );
+int ini_read( ini_t *file );
+void ini_close( ini_t *file );

@@ -26,7 +26,7 @@
 #include "bitlbee.h"
 #include "help.h"
 
-#define BUFSIZE 1024
+#define BUFSIZE 1100
 
 help_t *help_init( irc_t *irc )
 {

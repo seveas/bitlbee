@@ -34,9 +34,9 @@ void nick_set( irc_t *irc, char *handle, int proto, char *nick )
 		if( ( strcasecmp( n->handle, handle ) == 0 ) && n->proto == proto )
 		{
 			free( n->nick );
-			n->nick = malloc( strlen( nick ) + 1 );
-			strcpy( n->nick, nick );
+			n->nick = strdup( nick );
 			nick_strip( n->nick );
+			
 			return;
 		}
 		n = ( m = n )->next;	// :-P
@@ -51,12 +51,12 @@ void nick_set( irc_t *irc, char *handle, int proto, char *nick )
 	n->handle = strdup( handle );
 	n->proto = proto;
 	n->nick = strdup( nick );
+	
 	nick_strip( n->nick );
 }
 
 char *nick_get( irc_t *irc, char *handle, int proto )
 {
-	char *s;
 	static char nick[MAX_NICK_LENGTH+1];
 	nick_t *n = irc->nicks;
 	
@@ -70,13 +70,12 @@ char *nick_get( irc_t *irc, char *handle, int proto )
 	
 	if( !n )
 	{
+		char *s;
+		
 		snprintf( nick, MAX_NICK_LENGTH, "%s", handle );
-		if( ( s = strchr( nick, ' ' ) ) ) *s = 0;
 		if( ( s = strchr( nick, '@' ) ) ) *s = 0;
 		nick_strip( nick );
 	}
-	
-	if( !nick_ok( nick ) ) strcpy( nick, "_" );
 	
 	while( !nick_ok( nick) || user_find( irc, nick ) )
 		if( strlen( nick ) < MAX_NICK_LENGTH )
@@ -136,6 +135,10 @@ void nick_strip( char * nick )
 int nick_ok( char *nick )
 {
 	char *s;
+	
+	/* Empty nicks are not allowed */
+	if( !*nick )
+		return( 0 );
 	
 	for( s = nick; *s; s ++ )
 		if( !strchr( nick_lc_chars, *s ) && !strchr( nick_uc_chars, *s ) )

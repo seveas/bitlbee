@@ -39,7 +39,7 @@
  * 
  * --------------------------------------------------------------------------*/
 
-#include "lib.h"
+#include "../lib.h"
 
 /*** stubs that hook back to new xhash */
 

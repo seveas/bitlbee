@@ -39,7 +39,7 @@ irc_t *irc_new( int fd )
 	memset( irc, 0, sizeof( irc_t ) );
 	irc->fd = fd;
 	irc->mynick = strdup( ROOT_NICK );
-	irc->channel = strdup( "#bitlbee" );
+	irc->channel = strdup( ROOT_CHAN );
 	strcpy( irc->umode, UMODE );
 	
 	i = sizeof( *sock );
@@ -74,6 +74,7 @@ irc_t *irc_new( int fd )
 	}
 #endif
 	
+	set_add( irc, "auto_connect", "true", set_eval_bool );
 	set_add( irc, "private", "false", set_eval_bool );
 #ifdef DEBUG
 	set_add( irc, "debug", "true", set_eval_bool );
@@ -173,6 +174,31 @@ int irc_exec( irc_t *irc, char **cmd )
 {	
 	int i;
 	
+	if( conf->authmode == CLOSED && irc->status < USTATUS_AUTHORIZED )
+	{
+		if( strcasecmp( cmd[0], "PASS" ) == 0 )
+		{
+			if( !cmd[1] )
+			{
+				irc_reply( irc, 461, "%s :Need more parameters", cmd[0] );
+			}
+			else if( strcmp( cmd[1], conf->password ) == 0 )
+			{
+				irc->status = USTATUS_AUTHORIZED;
+			}
+			else
+			{
+				irc_reply( irc, 464, ":Nope, maybe you should try it again..." );
+			}
+		}
+		else
+		{
+			irc_reply( irc, 464, ":Uhh, fine, but I want the password first." );
+		}
+		
+		return( 1 );
+	}
+	
 	if( strcasecmp( cmd[0], "USER" ) == 0 )
 	{
 		if( !cmd[4] )
@@ -181,7 +207,7 @@ int irc_exec( irc_t *irc, char **cmd )
 		}
 		else if( irc->user )
 		{
-			irc_reply( irc, 432, "You can't change your nick/userinfo" );
+			irc_reply( irc, 462, ":You can't change your nick/userinfo" );
 		}
 		else
 		{
@@ -199,29 +225,23 @@ int irc_exec( irc_t *irc, char **cmd )
 		}
 		else if( irc->nick )
 		{
-			irc_reply( irc, 432, "You can't change your nick/userinfo" );
+			irc_reply( irc, 438, ":The hand of the deity is upon thee, thy nick may not change" );
 		}
 		/* This is not clean, but for now it'll have to be like this... */
-		else if( ( nick_cmp( cmd[1], irc->mynick ) == 0 ) || ( nick_cmp( cmd[1], "nickserv" ) == 0 ) )
+		else if( ( nick_cmp( cmd[1], irc->mynick ) == 0 ) || ( nick_cmp( cmd[1], NS_NICK ) == 0 ) )
 		{
-			irc_reply( irc, 433, "This nick is already in use" );
+			irc_reply( irc, 433, ":This nick is already in use" );
 		}
 		else if( !nick_ok( cmd[1] ) )
 		{
 			/* [SH] Invalid characters. */
-			irc_reply( irc, 432, "This nick contains invalid characters" );
+			irc_reply( irc, 432, ":This nick contains invalid characters" );
 		}
 		else
 		{
 			irc->nick = strdup( cmd[1] );
 			if( irc->user ) irc_login( irc );
 		}
-		return( 1 );
-	}
-	else if( strcasecmp( cmd[0], "PASS" ) == 0 )
-	{
-		/* Ignore this one for now, just accept it in case the
-		   client insists on sending this.. */
 		return( 1 );
 	}
 	
@@ -259,7 +279,7 @@ int irc_exec( irc_t *irc, char **cmd )
 				irc_reply( irc, 221, "+%s", irc->umode );
 			}
 			else
-				irc_reply( irc, 502, "Don't touch their modes" );
+				irc_reply( irc, 502, ":Don't touch their modes" );
 		}
 	}
 	else if( strcasecmp( cmd[0], "NAMES" ) == 0 )
@@ -349,6 +369,8 @@ int irc_exec( irc_t *irc, char **cmd )
 		{
 			if( strcasecmp( cmd[1], irc->channel ) == 0 )
 			{
+				unsigned int i;
+				
 				cmd[1] = irc->mynick;
 				for( i = 0; i < strlen( cmd[2] ); i ++ )
 				{
@@ -426,6 +448,23 @@ int irc_exec( irc_t *irc, char **cmd )
 		if( cmd[1] )
 		{
 			irc_whois( irc, cmd[1] );
+		}
+		else
+		{
+			irc_reply( irc, 461, "%s :Need more parameters", cmd[0] );
+		}
+	}
+	else if( strcasecmp( cmd[0], "WHOWAS" ) == 0 )
+	{
+		/* For some reason irssi tries a whowas when whois fails. We can
+		   ignore this, but then the user never gets a "user not found"
+		   message from irssi which is a bit annoying. So just respond
+		   with not-found and irssi users will get better error messages */
+		
+		if( cmd[1] )
+		{
+			irc_reply( irc, 406, "%s :Nick does not exist", cmd[1] );
+			irc_reply( irc, 369, "%s :End of WHOWAS", cmd[1] );
 		}
 		else
 		{
@@ -611,7 +650,7 @@ void irc_login( irc_t *irc )
 	u->send_handler = root_command_string;
 	irc_spawn( irc, u );
 	
-	u = user_add( irc, "NickServ" );
+	u = user_add( irc, NS_NICK );
 	u->host = irc->myhost;
 	u->realname = ROOT_FN;
 	u->online = 0;
@@ -636,7 +675,7 @@ void irc_motd( irc_t *irc )
 {
 	int fd;
 	
-	fd = open( MOTDFILE, O_RDONLY );
+	fd = open( MOTD_FILE, O_RDONLY );
 	if( fd == -1 )
 	{
 		irc_reply( irc, 422, ":We don't need MOTDs." );
@@ -863,7 +902,7 @@ int irc_send( irc_t *irc, char *nick, char *s )
 	
 	if( *s == 1 && s[strlen(s)-1] == 1 )
 	{
-		if( strncasecmp( s+1, "ACTION", 6 ) == 0 )
+		if( strncasecmp( s + 1, "ACTION", 6 ) == 0 )
 		{
 			if( s[7] == ' ' ) s ++;
 			s += 3;
@@ -873,6 +912,11 @@ int irc_send( irc_t *irc, char *nick, char *s )
 			*(s++) = ' ';
 			s -= 4;
 			s[strlen(s)-1] = 0;
+		}
+		else if( strncasecmp( s + 1, "VERSION", 7 ) == 0 )
+		{
+			irc_privmsg( irc, u, "NOTICE", irc->nick, "", "\001VERSION BitlBee " BITLBEE_VERSION " " ARCH "/" CPU "\001" );
+			return( 0 );
 		}
 		else
 		{
@@ -884,7 +928,7 @@ int irc_send( irc_t *irc, char *nick, char *s )
 	if( u && u->send_handler )
 		return( u->send_handler( irc, u, s ) );
 	else if( c && c->gc && c->gc->prpl )
-		c->gc->prpl->chat_send( c->gc, c->id, s );
+		return( serv_send_chat( irc, c->gc, c->id, s ) );
 	
 	return( 1 );
 }
@@ -892,7 +936,7 @@ int irc_send( irc_t *irc, char *nick, char *s )
 int buddy_send_handler( irc_t *irc, user_t *u, char *msg )
 {
 	if( !u || !u->gc ) return( 0 );
-	return( ((struct gaim_connection *)u->gc)->prpl->send_im( u->gc, u->handle, msg, strlen( msg ), 0 ) );
+	return( serv_send_im( irc, u, msg ) );
 }
 
 int irc_privmsg( irc_t *irc, user_t *u, char *type, char *to, char *prefix, char *msg )

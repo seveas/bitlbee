@@ -14,18 +14,25 @@ mandir='$prefix/share/man/'
 datadir='$prefix/share/bitlbee/'
 config='/var/lib/bitlbee/'
 
+msn=1
+jabber=1
+oscar=1
+yahoo=1
+
 debug=0
 strip=1
 tcpd=0
+iconv=1
 
 arch=`uname -s`
 cpu=`uname -m`
 
+echo BitlBee configure
+
 while [ -n "$1" ]; do
-	e="`expr "$1" : '--\(.*=.*\)'`"
+	e="`expr "X$1" : 'X--\(.*=.*\)'`"
 	if [ -z "$e" ]; then
 		cat<<EOF
-BitlBee configure
 
 Usage: $0 [OPTIONS]
 
@@ -38,9 +45,15 @@ Option		Description				Default
 --datadir=...						$datadir
 --config=...						$config
 
+--msn=0/1	Disable/enable MSN part			$msn
+--jabber=0/1	Disable/enable Jabber part		$jabber
+--oscar=0/1	Disable/enable Oscar part (ICQ, AIM)	$oscar
+--yahoo=0/1	Disable/enable Yahoo part		$yahoo
+
 --debug=0/1	Disable/enable debugging		$debug
 --strip=0/1	Disable/enable binary stripping		$strip
 
+--iconv=0/1	Character set conversion		$iconv
 --tcpd=0/1	/etc/hosts.{allow,deny} support		$tcpd
 EOF
 		exit;
@@ -113,6 +126,11 @@ if type glib-config > /dev/null 2> /dev/null; then
 LFLAGS+=`glib-config --libs`
 CFLAGS+=`glib-config --cflags`
 EOF
+elif type pkg-config > /dev/null 2>/dev/null && pkg-config glib-2.0; then
+	cat<<EOF>>Makefile.settings
+LFLAGS+=`pkg-config --libs glib-2.0`
+CFLAGS+=`pkg-config --cflags glib-2.0`
+EOF
 else
 	echo 'Cannot find glib development libraries, aborting. (Install libglib-dev?)'
 	exit 1;
@@ -124,24 +142,42 @@ LFLAGS+=-lwrap
 EOF
 elif [ -e /usr/local/include/tcpd.h -a "$tcpd" = "1" ]; then
 	cat<<EOF>>Makefile.settings
-LFLAGS+=-L/usr/local/lib
+LFLAGS+=-L/usr/local/lib -lwrap
 CFLAGS+=-I/usr/local/include
 EOF
 else
 	if ! [ "$tcpd" = 0 ]; then
 		tcpd=0
-		echo 'Compiling without tcpd support, /etc/hosts.{allow,deny} will be ignored!'
-		echo;
+		echo
+		echo 'Compiling without tcpd support, /etc/hosts.{allow,deny} will be ignored!';
 	fi
 	echo '#define NO_TCPD' >> config.h
+fi
+
+echo '#define ICONV' >> config.h
+if [ -e /usr/include/iconv.h -a "$iconv" = "1" ]; then
+	:;
+	## no-op
+elif [ -e /usr/local/include/iconv.h -a "$iconv" = "1" ]; then
+	cat<<EOF>>Makefile.settings
+LFLAGS+=-L/usr/local/lib
+CFLAGS+=-I/usr/local/include
+EOF
+else
+	if ! [ "$iconv" = 0 ]; then
+		iconv=0
+		echo
+		echo 'Compiling without iconv support, could not find include file.';
+	fi
+	echo '#undef ICONV' >> config.h
 fi
 
 if [ "$strip" = 0 ]; then
 	echo "STRIP=\# skip strip" >> Makefile.settings;
 else
 	if [ "$debug" = 1 ]; then
-		echo 'Stripping binaries does not make sense when debugging. Stripping disabled.'
 		echo
+		echo 'Stripping binaries does not make sense when debugging. Stripping disabled.'
 		echo 'STRIP=\# skip strip' >> Makefile.settings
 		strip=0;
 	elif type strip > /dev/null 2> /dev/null; then
@@ -149,25 +185,69 @@ else
 	elif /bin/test -x /usr/ccs/bin/strip; then
 		echo "STRIP=/usr/ccs/bin/strip" >> Makefile.settings;
 	else
+		echo
 		echo 'No strip utility found, cannot remove unnecessary parts from executable.'
-		echo ''
 		echo 'STRIP=\# skip strip' >> Makefile.settings
 		strip=0;
 	fi;
 fi
 
 if [ "$strip" = 1 ]; then
-	echo 'The strip option is enabled. This should not be a problem usually, but on some'
-	echo 'systems it breaks stuff.'
 	echo
+	echo 'The strip option is enabled. This should not be a problem usually, but on some'
+	echo 'systems it breaks stuff.';
 fi
 
 if [ -n "$BITLBEE_VERSION" ]; then
-	echo 'Spoofing version number: '$BITLBEE_VERSION
 	echo
+	echo 'Spoofing version number: '$BITLBEE_VERSION
 	echo '#undef BITLBEE_VERSION' >> config.h
 	echo '#define BITLBEE_VERSION '$BITLBEE_VERSION >> config.h;
 fi
+
+protocols=''
+protoobjs=''
+
+if [ "$msn" = 0 ]; then
+	echo '#undef WITH_MSN' >> config.h
+else
+	echo '#define WITH_MSN' >> config.h
+	protocols=$protocols'msn '
+	protoobjs=$protoobjs'msn.o '
+fi
+
+if [ "$jabber" = 0 ]; then
+	echo '#undef WITH_JABBER' >> config.h
+else
+	echo '#define WITH_JABBER' >> config.h
+	protocols=$protocols'jabber '
+	protoobjs=$protoobjs'jabberr.o '
+fi
+
+if [ "$oscar" = 0 ]; then
+	echo '#undef WITH_OSCAR' >> config.h
+else
+	echo '#define WITH_OSCAR' >> config.h
+	protocols=$protocols'oscar '
+	protoobjs=$protoobjs'oscarr.o '
+fi
+
+if [ "$yahoo" = 0 ]; then
+	echo '#undef WITH_YAHOO' >> config.h
+else
+	echo '#define WITH_YAHOO' >> config.h
+	protocols=$protocols'yahoo '
+	protoobjs=$protoobjs'yahooo.o '
+fi
+
+if [ "$protocols" = "PROTOCOLS = " ]; then
+	echo
+	echo "WARNING: You haven't selected any communication protocol to compile!"
+	echo "         Bitlbee will run, but you will be unable to connect to IM servers!"
+fi
+
+echo "PROTOCOLS = $protocols" >> Makefile.settings
+echo "PROTOOBJS = $protoobjs" >> Makefile.settings
 
 ## Yes, I know these are a bit bogus. If necessary, flags can be added
 ## for specific architectures. That's what these lines are for...
@@ -175,6 +255,7 @@ fi
 ## For Solaris we'll need some extra thingies here, for now we don't
 ## know what so it's not supported...
 
+echo
 echo Architecture: $arch
 case "$arch" in
 Linux )
@@ -201,8 +282,8 @@ CYGWIN* )
 	echo 'We haven'\''t tested BitlBee on many platforms yet, yours is untested. YMMV. Please report any problems to <wilmer@gaast.net>.'
 ;;
 esac
-echo
 
+echo
 echo Machine: $cpu
 case "$cpu" in
 i[0-9]86 )
@@ -218,8 +299,8 @@ sparc )
 	echo 'This platform is untested. Please report any problems to <wilmer@gaast.net>.'
 ;;
 esac
-echo
 
+echo
 echo 'Configuration done:'
 if [ "$debug" = "1" ]; then
 	echo '  Debugging enabled.';
@@ -235,4 +316,16 @@ if [ "$tcpd" = "0" ]; then
 	echo '  Tcpd support disabled.';
 else
 	echo '  Tcpd support enabled.';
+fi
+
+if [ "$iconv" = "0" ]; then
+	echo '  iconv support disabled.';
+else
+	echo '  iconv support enabled.';
+fi
+
+if [ -n "$protocols" ]; then
+	echo '  Building with these protocols:' $protocols;
+else
+	echo '  Building without IM-protocol support.';
 fi

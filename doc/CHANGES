@@ -1,3 +1,28 @@
+Version 0.81:
+- Added a configuration file.
+- Added support for the PASS command to restrict access to the daemon to
+  only the people who know this password.
+- Only allowing registered people to use the daemon is possible too.
+- In case you, at some time, need to check the currently running BitlBee
+  version, just CTCP-VERSION someone in the channel.
+- Added the auto_connect setting for people who don't want the program
+  to connect to IM-networks automatically.
+- Extended the blist command.
+- Applied the auto-reconnect patch from G-Lite.
+- Applied the iconv patch from Yuri Pimenov.
+- Imported the MSN-friendlyname patch from Wouter Paesen.
+- Away-message aliasing code now just parses the beginning of the string,
+  not the whole string. This allows you to have a more descriptive away
+  message like "Busy - Fixing bugs in BitlBee" and all the IM connections
+  will have a busy-like away-state.
+- Added some information about away states to the help system.
+- MSN file transfers aren't silently ignored anymore.
+- Integrated the Yahoo protocol fix from Cerulean Studios (Trillian).
+  (Thanks to Tony Perrie!)
+- Made all protocol plugins optional. (Patch from Andrej Kacian/Ticho)
+
+Finished 15 Oct 2003
+
 Version 0.80:
 - Fixed a very stupid bug in the MSN away-state reading.
 - nick_cmp() now actually works, RFC-compliant.

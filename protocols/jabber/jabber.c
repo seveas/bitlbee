@@ -814,7 +814,9 @@ static void jabber_handlemessage(gjconn gjc, jpacket p)
 			msg = xmlnode_get_data(y);
 		}
 
+#ifndef ICONV
 		msg = utf8_to_str(msg);
+#endif
 
 		if (!from)
 			return;
@@ -858,8 +860,10 @@ static void jabber_handlemessage(gjconn gjc, jpacket p)
 			}
 		}
 
+#ifndef ICONV
 		if (msg)
 			g_free(msg);
+#endif
 
 	} else if (!strcasecmp(type, "error")) {
 		if ((y = xmlnode_get_tag(p->x, "error"))) {
@@ -1689,10 +1693,15 @@ static int jabber_send_im(struct gaim_connection *gc, char *who, char *message, 
 	xmlnode_put_attrib(x, "type", "chat");
 
 	if (message && strlen(message)) {
+#ifndef ICONV
 		char *utf8 = str_to_utf8(message);
 		y = xmlnode_insert_tag(x, "body");
 		xmlnode_insert_cdata(y, utf8, -1);
 		g_free(utf8);
+#else
+		y = xmlnode_insert_tag(x, "body");
+		xmlnode_insert_cdata(y, message, -1);
+#endif
 	}
 
 	gjab_send(((struct jabber_data *)gc->proto_data)->gjc, x);

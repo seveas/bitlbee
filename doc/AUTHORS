@@ -4,9 +4,14 @@ Wilmer van der Gaast <wilmer@gaast.net>
 	Main developer
 
 Sjoerd 'lucumo' Hemminga <sjoerd@hemminga-online.nl>
-	Secondary developer, NickServ
+	NickServ, documentation
+
+Maurits Dijkstra <mauritsd@xs4all.nl>
+	Daemon dude, plus some other stuff
+
 
 Retired developer:
+
 Jelmer 'ctrlsoft' Vernooij <jelmer@nl.linux.org>
 	Documentation, general hacking
 

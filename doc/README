@@ -34,13 +34,17 @@ add a line for your chosen port number to /etc/services.
 
 Darwin/Mac OS X is even more strict; you should add a bitlbee service to
 /etc/services and use that name in inetd.conf. Not really a problem, since
-that's the cleanest way of doing this on any operating system anyway.
+that's the cleanest way of doing this on any operating system anyway. On
+my Jaguar machine the OSCAR module usually fails to connect, YMMV.
 
 Cygwin NOTE: You'll need a glib installation to run BitlBee. However, Cygwin
 doesn't provide a glib package. You can download a binary tar.gz from:
 <http://my.dreamwiz.com/jbdoll/>. When you installed it, BitlBee should work
 fine. You'll probably like bitlbeed or xinetd to get it running on the
 network.
+
+On some BSD systems the program still suffers from some random bugs. Please
+do report them, we might be able to fix them if they're not too mysterious.
 
 
 USAGE
@@ -72,7 +76,7 @@ WEBSITE
 =======
 
 You can find new releases of BitlBee at:
-http://www.lintux.cx/bitlbee.html
+http://www.bitlbee.org/
 
 
 A NOTE ON ENCRYPTION

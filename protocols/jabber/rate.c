@@ -39,7 +39,7 @@
  * 
  * --------------------------------------------------------------------------*/
 
-#include "lib.h"
+#include "../lib.h"
 
 jlimit jlimit_new(int maxt, int maxp)
 {

@@ -28,9 +28,10 @@ typedef struct
 	char *key;
 	char *value;
 	char *def;	/* Default */
+	
 	/* Eval: Returns NULL if the value is incorrect. Can return a
-	   corrected value. set_setstr() should be able to free() this
-	   string! */
+	   corrected value. set_setstr() should be able to free() the
+	   returned string! */
 	char *(*eval) ( irc_t *irc, void *set, char *value );
 	void *next;
 } set_t;

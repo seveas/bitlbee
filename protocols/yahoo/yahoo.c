@@ -49,7 +49,7 @@ extern char *yahoo_crypt(char *, char *);
 #define USEROPT_MAIL 0
 
 #define USEROPT_PAGERHOST 3
-#define YAHOO_PAGER_HOST "scs.yahoo.com"
+#define YAHOO_PAGER_HOST "scs.msg.yahoo.com"
 #define USEROPT_PAGERPORT 4
 #define YAHOO_PAGER_PORT 5050
 
@@ -1351,7 +1351,7 @@ static void yahoo_login(struct aim_user *user) {
 	yd->games = g_hash_table_new(g_str_hash, g_str_equal);
         if (!g_strncasecmp(user->proto_opt[USEROPT_PAGERHOST], "cs.yahoo.com", strlen("cs.yahoo.com"))) {
                 /* Figured out the new auth method -- cs.yahoo.com likes to disconnect on buddy remove and add now */
-                g_snprintf(user->proto_opt[USEROPT_PAGERHOST], strlen("scs.yahoo.com") + 1, "scs.yahoo.com");
+                g_snprintf(user->proto_opt[USEROPT_PAGERHOST], strlen("scs.msg.yahoo.com") + 1, "scs.msg.yahoo.com");
 //              save_prefs();
         }
 

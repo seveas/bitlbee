@@ -34,6 +34,7 @@
 */
 
 #include "nogaim.h"
+#include <ctype.h>
 
 struct prpl *proto_prpl[PROTO_MAX];
 char proto_name[PROTO_MAX][8] = { "TOC", "OSCAR", "YAHOO", "ICQ", "MSN", "", "", "", "JABBER", "", "", "", "", "", "", "" };
@@ -184,6 +185,43 @@ static char *proto_away_alias_find( GList *gcm, char *away )
 	return( NULL );
 }
 
+/* Compare two handles for a specific protocol. For most protocols,
+   strcasecmp is okay, but for AIM, for example, it's not. This really
+   should be a compare function inside the PRPL module, but I do it this
+   way for now because I don't want to touch the Gaim code too much since
+   it's not going to be here for too long anymore. */
+int handle_cmp( char *a, char *b, int protocol )
+{
+	if( protocol == PROTO_TOC )
+	{
+		/* AIM, being teh evil, thinks it's cool that users can put
+		   random spaces in screennames. But "A B" and "AB" are
+		   equal. Hrmm, okay. */
+		while( 1 )
+		{
+			while( *a == ' ' ) a ++;
+			while( *b == ' ' ) b ++;
+			
+			if( *a && *b )
+			{
+				if( tolower( *a ) != tolower( *b ) )
+					return( 1 );
+			}
+			else if( *a || *b )
+				return( 1 );
+			else
+				return( 0 );
+			
+			a ++;
+			b ++;
+		}
+	}
+	else
+	{
+		return( strcasecmp( a, b ) );
+	}
+}
+
 
 /* multi.c */
 
@@ -274,7 +312,8 @@ void account_online( struct gaim_connection *gc )
 	gc->keepalive = g_timeout_add( 60000, send_keepalive, gc );
 	gc->flags |= OPT_LOGGED_IN;
 	
-	if( gc->protocol == PROTO_OSCAR || gc->protocol == PROTO_ICQ || gc->protocol == PROTO_TOC )
+//	if( gc->protocol == PROTO_OSCAR || gc->protocol == PROTO_ICQ || gc->protocol == PROTO_TOC )
+	if( gc->protocol == PROTO_ICQ )
 		while( n )
 		{
 			if( n->proto == gc->protocol )
@@ -575,7 +614,7 @@ void serv_got_update( struct gaim_connection *gc, char *handle, int loggedin, in
 		else if( ( type & 30 ) == ( MSN_LUNCH << 1 ) )
 			u->away = "Out to lunch";
 		else // if( ( type & 30 ) == ( MSN_AWAY << 1 ) )
-			u->away = "Away from the computer";
+			u->away = "Away";
 	}
 	else if( ( type & UC_UNAVAILABLE ) && ( gc->protocol == PROTO_OSCAR || gc->protocol == PROTO_ICQ || gc->protocol == PROTO_TOC ) )
 	{

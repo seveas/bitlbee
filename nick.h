@@ -40,3 +40,4 @@ int nick_ok( char *nick );
 int nick_lc( char *nick );
 int nick_uc( char *nick );
 int nick_cmp( char *a, char *b );
+char *nick_dup( char *nick );

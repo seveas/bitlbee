@@ -26,7 +26,7 @@
 #ifndef _BITLBEE_H
 #define _BITLBEE_H
 
-#define BITLBEE_VERSION "0.82"
+#define BITLBEE_VERSION "0.83"
 
 #include "config.h"
 
@@ -61,7 +61,7 @@
 #define CONTROL_TOPIC "Welcome to the control channel. Type help for help information."
 #define IRCD_INFO "BitlBee <http://www.bitlbee.org/>"
 
-#define MAX_NICK_LENGTH 12
+#define MAX_NICK_LENGTH 24
 
 #define HELP_FILE DATADIR "/help.txt"
 #define CONF_FILE ETCDIR "/bitlbee.conf"
@@ -81,6 +81,7 @@ int bitlbee_load( irc_t *irc, char *password );
 int bitlbee_save( irc_t *irc );
 void http_encode( char *s );
 void http_decode( char *s );
+double gettime();
 
 extern irc_t *IRC;
 extern conf_t *conf;

@@ -1165,6 +1165,26 @@ static int incomingim_chan4(aim_session_t *sess, aim_conn_t *conn, aim_userinfo_
 			g_free(message);
 		} break;
 
+		case 0x0004: { /* Someone sent you a URL */
+		  	char *uin, *message;
+			char **m;
+	
+			uin = g_strdup_printf("%lu", args->uin);
+			m = g_strsplit(args->msg, "\376", 2);
+
+			if ((strlen(m[0]) != 0)) {
+			  message = g_strjoinv(" -- ", m);
+			} else {
+			  message = m[1];
+			}
+
+			strip_linefeed(message);
+			serv_got_im(gc, uin, message, 0, time(NULL), -1);
+			g_free(uin);
+			g_free(m);
+			g_free(message);
+		} break;
+		
 		case 0x0006: { /* Someone requested authorization */
 			gaim_icq_authask(gc, args->uin, args->msg);
 		} break;
@@ -1848,6 +1868,28 @@ static int gaim_offlinemsg(aim_session_t *sess, aim_frame_t *fr, ...) {
 			g_free(dialog_msg);
 		} break;
 
+		case 0x0004: { /* Someone sent you a URL */
+		  	char sender[32];
+		  	char *dialog_msg;
+			char **m;
+
+			time_t t = get_time(msg->year, msg->month, msg->day, msg->hour, msg->minute, 0);
+			g_snprintf(sender, sizeof(sender), "%lu", msg->sender);
+
+			m = g_strsplit(msg->msg, "\376", 2);
+
+			if ((strlen(m[0]) != 0)) {
+			  dialog_msg = g_strjoinv(" -- ", m);
+			} else {
+			  dialog_msg = m[1];
+			}
+
+			strip_linefeed(dialog_msg);
+			serv_got_im(gc, sender, dialog_msg, 0, t, -1);
+			g_free(dialog_msg);
+			g_free(m);
+		} break;
+		
 		case 0x0006: { /* Authorization request */
 			gaim_icq_authask(gc, msg->sender, msg->msg);
 		} break;

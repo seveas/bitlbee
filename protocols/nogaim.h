@@ -273,6 +273,7 @@ char *set_eval_charset(irc_t *irc, set_t *set, char *value);
 void nogaim_init();
 struct gaim_connection *gc_nr( int i );
 int proto_away( struct gaim_connection *gc, char *away );
+int handle_cmp( char *a, char *b, int protocol );
 
 gboolean auto_reconnect( gpointer data );
 void cancel_auto_reconnect( struct account *a );

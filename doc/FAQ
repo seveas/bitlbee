@@ -51,6 +51,10 @@ A: Short answer: we don't need it.
    additional changes. This has the consistency advantage of a one-person
    project while having the capacity of more people available. The system
    works and we are kind of attached to it.
+   
+   Additional answer: There's a read-only CVS available now, for people
+   who prefer that over downloading a devel tarball. For more information,
+   see http://alioth.debian.org/projects/bitlbee/
 
 Q: When is $random_feature going to be implemented?
 A: Please do consult doc/TODO before asking. You're not going to be the
@@ -60,3 +64,21 @@ A: Please do consult doc/TODO before asking. You're not going to be the
    
    If your fabulous feature seems not to be requested before, just join
    #bitlbee on irc.oftc.net and tell us the news.
+
+Q: EEK! They're sending me HTML messages!
+A: help set html ... And please take a good look at the list of settings
+   (you can get them all with the set command without any arguments)
+   before asking us about a feature. There are some features which aren't
+   enabled by default because they're not always wanted. For a lot of
+   non-English people, help set charset is probably also interesting, for
+   example...
+
+Q: What's that Gaim doing in BitlBee error messages and my Jabber resource?
+A: Ah, well, as you probably know we use Gaim's IM-modules, and we don't
+   think it's worth our time to do a search-and-replace over the whole
+   source to get rid of every reference to Gaim. In fact, we don't want to,
+   since we don't want to pretend we wrote all that code.
+   
+   About Jabber: If you want a different resource string, you can set it
+   when logging in by appending it to your Jabber ID, like:
+   lintux@jabber.com/BitlBee

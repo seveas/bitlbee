@@ -34,7 +34,7 @@ void nick_set( irc_t *irc, char *handle, int proto, char *nick )
 		if( ( strcasecmp( n->handle, handle ) == 0 ) && n->proto == proto )
 		{
 			free( n->nick );
-			n->nick = strdup( nick );
+			n->nick = nick_dup( nick );
 			nick_strip( n->nick );
 			
 			return;
@@ -50,7 +50,7 @@ void nick_set( irc_t *irc, char *handle, int proto, char *nick )
 	
 	n->handle = strdup( handle );
 	n->proto = proto;
-	n->nick = strdup( nick );
+	n->nick = nick_dup( nick );
 	
 	nick_strip( n->nick );
 }
@@ -59,6 +59,7 @@ char *nick_get( irc_t *irc, char *handle, int proto )
 {
 	static char nick[MAX_NICK_LENGTH+1];
 	nick_t *n = irc->nicks;
+	int inf_protection = 256;
 	
 	memset( nick, 0, MAX_NICK_LENGTH + 1 );
 	
@@ -79,11 +80,36 @@ char *nick_get( irc_t *irc, char *handle, int proto )
 		nick_strip( nick );
 	}
 	
-	while( !nick_ok( nick) || user_find( irc, nick ) )
-		if( strlen( nick ) < MAX_NICK_LENGTH )
-			nick[strlen(nick)] = '_';
+	while( !nick_ok( nick ) || user_find( irc, nick ) )
+	{
+		if( strlen( nick ) > 4 )
+			nick[strlen(nick)-1] = 0;
 		else
 			nick[0] ++;
+		
+		if( inf_protection-- == 0 )
+		{
+			int i;
+			
+			irc_usermsg( irc, "WARNING: Almost had an infinite loop in nick_get()! "
+			                  "This used to be a fatal BitlBee bug, but we tried to fix it. "
+			                  "This message should *never* appear anymore. "
+			                  "If it does, please *do* send us a bug report! "
+			                  "Please send all the following lines in your report:" );
+			
+			irc_usermsg( irc, "Trying to get a sane nick for handle %s", handle );
+			for( i = 0; i < MAX_NICK_LENGTH; i ++ )
+				irc_usermsg( irc, "Char %d: %c/%d", i, nick[i], nick[i] );
+			
+			irc_usermsg( irc, "FAILED. Returning an insane nick now. Things might break. "
+			                  "Good luck, and please don't forget to paste the lines up here "
+			                  "in #bitlbee on OFTC or in a mail to wilmer@gaast.net" );
+			
+			snprintf( nick, MAX_NICK_LENGTH + 1, "xx%x", rand() );
+			
+			break;
+		}
+	}
 	
 	return( nick );
 }
@@ -114,7 +140,9 @@ void nick_del( irc_t *irc, char *nick )
 
 /* Character maps, _lc_[x] == _uc_[x] (but uppercase), according to the RFC's
 
-   Actually, the RFC forbids -, but I think - being an lowercase _ looks better... */
+   Actually, the RFC forbids -, but I think - being an lowercase _ looks better...
+   And, every IRCd allows dashes in nicks, people once flamed us when BitlBee didn't.
+   So we were forced to be naughty and ignore RFC here. Sorry. ;-) */
 
 static char *nick_lc_chars = "0123456789abcdefghijklmnopqrstuvwxyz{}^-|";
 static char *nick_uc_chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ[]~_\\";
@@ -132,7 +160,8 @@ void nick_strip( char * nick )
 			j++;
 		}
 	}
-	nick[j] = '\0';
+	while( j < MAX_NICK_LENGTH )
+		nick[j++] = '\0';
 }
 
 int nick_ok( char *nick )
@@ -203,4 +232,15 @@ int nick_cmp( char *a, char *b )
 	free( bb );
 	
 	return( res );
+}
+
+char *nick_dup( char *nick )
+{
+	char *cp;
+	
+	cp = malloc( MAX_NICK_LENGTH + 1 );
+	memset( cp, 0, MAX_NICK_LENGTH + 1 );
+	strncpy( cp, nick, MAX_NICK_LENGTH );
+	
+	return( cp );
 }

@@ -141,6 +141,10 @@ static int conf_loadini( conf_t *conf, char *file )
 			{
 				conf->password = strdup( ini->value );
 			}
+			else if( strcasecmp( ini->key, "hostname" ) == 0 )
+			{
+				conf->hostname = strdup( ini->value );
+			}
 			else
 			{
 				/* For now just ignore unknown keys... */

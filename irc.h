@@ -29,6 +29,11 @@
 #define IRC_MAX_LINE 512
 #define IRC_MAX_ARGS 8
 
+#define IRC_LOGIN_TIMEOUT 60
+#define IRC_PING_INTERVAL 180
+#define IRC_PING_TIMEOUT 300
+#define IRC_PING_STRING "PinglBee"
+
 #define UMODES "ais"
 #define CMODES "nt"
 #define CMODE "nt"
@@ -59,6 +64,9 @@ typedef struct channel
 typedef struct irc
 {
 	int fd;
+	irc_status_t status;
+	double last_pong;
+	int pinging;
 	
 	char *nick;
 	char *user;
@@ -75,7 +83,6 @@ typedef struct irc
 	int c_id;
 	
 	char private;
-	irc_status_t status;
 	query_t *queries;
 	struct account *accounts;
 	
@@ -117,6 +124,8 @@ int irc_send( irc_t *irc, char *nick, char *s );
 int irc_privmsg( irc_t *irc, user_t *u, char *type, char *to, char *prefix, char *msg );
 int irc_msgfrom( irc_t *irc, char *nick, char *msg );
 int irc_noticefrom( irc_t *irc, char *nick, char *msg );
+
+int irc_userping( irc_t *irc );
 
 int buddy_send_handler( irc_t *irc, user_t *u, char *msg );
 

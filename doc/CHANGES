@@ -1,3 +1,30 @@
+Version 0.83:
+- Fixed a crash bug on connecting to unsupported accounts.
+- Fixed a problem with connecting to MSN accounts with empty buddy
+  lists.
+- Fixed another inifite-loop bug in nick_get() and added a piece
+  of code which detects the infinite loop and asks the user to send
+  a bug report.
+- Fixed iconv-Solaris linking issues.
+- Fixed all the problems with spaces in AIM screennames now, we hope.
+- Fixed a buffer overflow in the nick handling code. Buffers are
+  overflowed with static data (nulls), so we don't think it's exploitable.
+- Added server-client pinging, useful for remote servers.
+- Added the hostname setting.
+- Some bitlbeed changes.
+- Added a little part to the on-line quickstart about the settings and
+  other help topics, this hopefully answers a lot of FAQ's.
+- Fixed the signal handler to re-raise the signal after the handler quits.
+  This makes sure the default handler is called after our handler sends
+  the user a bye-message, so core dumps are created and the parent will
+  get more useful information back from wait().
+- Added support for ICQ URL messages.
+- Fixed strip_html() behaviour on unknown &entities;.
+- Fixed a possible problem with Yahoo!
+- Fixed a problem with logging into more than one MSN account at once.
+
+Finished 31 Dec 2003
+
 Version 0.82:
 - Fixed a little bug in nick.c which could cause a complete hang for
   some tricky buddylists. (Thanks to Geert Hauwaerts for helping with

@@ -38,12 +38,17 @@ irc_t *irc_new( int fd )
 	
 	memset( irc, 0, sizeof( irc_t ) );
 	irc->fd = fd;
+	irc->status = USTATUS_OFFLINE;
+	irc->last_pong = gettime();
+	
+	strcpy( irc->umode, UMODE );
 	irc->mynick = strdup( ROOT_NICK );
 	irc->channel = strdup( ROOT_CHAN );
-	strcpy( irc->umode, UMODE );
 	
 	i = sizeof( *sock );
-	if( getsockname( irc->fd, (struct sockaddr*) sock, &i ) == 0 )
+	if( conf->hostname )
+		irc->myhost = strdup( conf->hostname );
+	else if( getsockname( irc->fd, (struct sockaddr*) sock, &i ) == 0 )
 		if( ( peer = gethostbyaddr( (char*) &sock->sin_addr, sizeof(sock->sin_addr), AF_INET ) ) )
 			irc->myhost = strdup( peer->h_name );
 	
@@ -481,7 +486,20 @@ int irc_exec( irc_t *irc, char **cmd )
 	{
 		irc_motd( irc );
 	}
-	else if( set_getint( irc, "debug" ) )
+	else if( strcasecmp( cmd[0], "PONG" ) == 0 )
+	{
+		/* We could check the value we get back from the user, but in
+		   fact we don't care, we're just happy he's still alive. */
+		irc->last_pong = gettime();
+		irc->pinging = 0;
+	}
+/*	Yeah, this is absolutely sick, but we use it from time to time to test
+	the ulimit stuff and make it dump some nice cores...
+	else if( strcasecmp( cmd[0], "CRASH" ) == 0 )
+	{
+		while( 1 );
+	}
+*/	else if( set_getint( irc, "debug" ) )
 	{
 		irc_usermsg( irc, "\002--- Unknown command:" );
 		for( i = 0; i < IRC_MAX_ARGS && cmd[i]; i ++ ) irc_usermsg( irc, "%s", cmd[i] );
@@ -629,7 +647,7 @@ void irc_who( irc_t *irc, char *channel )
 	else if( ( u = user_find( irc, channel ) ) )
 		irc_reply( irc, 352, "%s %s %s %s %s %c :0 %s", channel, u->user, u->host, irc->myhost, u->nick, u->online ? ( u->away ? 'G' : 'H' ) : 'G', u->realname );
 	
-	irc_reply( irc, 315, "%s :End of /WHO list.", channel );
+	irc_reply( irc, 315, "%s :End of /WHO list.", channel?channel:"**" );
 }
 
 void irc_login( irc_t *irc )
@@ -1056,4 +1074,39 @@ static char *set_eval_ops( irc_t *irc, set_t *set, char *value )
 	}
 	
 	return( NULL );
+}
+
+/* Returns 0 if everything seems to be okay, a number >0 when there was a
+   timeout. The number returned is the number of seconds we received no
+   pongs from the user. When not connected yet, we don't ping but drop the
+   connection when the user fails to connect in IRC_LOGIN_TIMEOUT secs. */
+int irc_userping( irc_t *irc )
+{
+	int rv = 0;
+	
+	if( irc->status < USTATUS_LOGGED_IN )
+	{
+		if( gettime() > ( irc->last_pong + IRC_LOGIN_TIMEOUT ) )
+			rv = gettime() - irc->last_pong;
+	}
+	else
+	{
+		if( ( gettime() > ( irc->last_pong + IRC_PING_INTERVAL ) ) && !irc->pinging )
+		{
+			irc_write( irc, "PING :%s", IRC_PING_STRING );
+			irc->pinging = 1;
+		}
+		else if( gettime() > ( irc->last_pong + IRC_PING_TIMEOUT ) )
+		{
+			rv = gettime() - irc->last_pong;
+		}
+	}
+	
+	if( rv > 0 )
+	{
+		irc_write( irc, "ERROR :Closing Link: Ping Timeout: %d seconds", rv );
+		close( irc->fd );
+	}
+	
+	return( rv );
 }

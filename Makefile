@@ -75,7 +75,7 @@ tar:
 	fakeroot debian/rules clean || make distclean
 	x=`pwd | sed -e 's/\/.*\///'`; \
 	cd ..; \
-	tar czf $$x.tar.gz --exclude=debian $$x
+	tar czf $$x.tar.gz --exclude=debian --exclude=CVS $$x
 
 $(subdirs):
 	@$(MAKE) -C $@ $(MAKECMDGOALS)

@@ -39,9 +39,8 @@ static int msn_next_convo_id = 0;
 struct msn_data {
 	int fd;
 	int trId;
- 
+
 	int inpa;
-        char* email;
 	char *rxqueue;
 	int rxlen;
 	gboolean msg;
@@ -64,7 +63,7 @@ struct msn_data {
 struct msn_switchboard {
 	struct gaim_connection *gc;
 	struct conversation *chat;
-	int fd;                         /* connection fd */
+	int fd;			/* connection fd */
 	int inpa;
 
 	char *rxqueue;
@@ -77,14 +76,14 @@ struct msn_switchboard {
 	char *auth;
 	int trId;
 	int total;
-	char *user;                    /* user we talk to  probably */
+	char *user;		/* user we talk to  probably */
 	GSList *txqueue;
 };
 
 struct msn_buddy {
 	char *user;
 	char *friend;
-        int group;
+	int group;
 };
 
 static void msn_login_callback(gpointer, gint, GaimInputCondition);
@@ -124,10 +123,11 @@ static char *url_decode(const char *msg)
 			buf[j++] = msg[i];
 			continue;
 		}
-		strncpy(hex, msg + ++i, 2); hex[2] = 0;
+		strncpy(hex, msg + ++i, 2);
+		hex[2] = 0;
 		/* i is pointing to the start of the number */
-		i++; /* now it's at the end and at the start of the for loop
-			will be at the next character */
+		i++;		/* now it's at the end and at the start of the for loop
+				   will be at the next character */
 		buf[j++] = strtol(hex, NULL, 16);
 	}
 	buf[j] = 0;
@@ -145,7 +145,7 @@ static char *url_encode(const char *msg)
 		if (isalnum(msg[i]))
 			buf[j++] = msg[i];
 		else {
-			sprintf(buf + j, "%%%02x", (unsigned char)msg[i]);
+			sprintf(buf + j, "%%%02x", (unsigned char) msg[i]);
 			j += 3;
 		}
 	}
@@ -163,125 +163,128 @@ static char *handle_errcode(char *buf, gboolean show)
 	errcode = atoi(buf);
 
 	switch (errcode) {
-		case 200:
-			g_snprintf(msg, sizeof(msg), "Syntax Error (probably a Gaim bug)");
-			break;
-		case 201:
-			g_snprintf(msg, sizeof(msg), "Invalid Parameter (probably a Gaim bug)");
-			break;
-		case 205:
-			g_snprintf(msg, sizeof(msg), "Invalid User");
-			break;
-		case 206:
-			g_snprintf(msg, sizeof(msg), "Fully Qualified Domain Name missing");
-			break;
-		case 207:
-			g_snprintf(msg, sizeof(msg), "Already Login");
-			break;
-		case 208:
-			g_snprintf(msg, sizeof(msg), "Invalid Username");
-			break;
-		case 209:
-			g_snprintf(msg, sizeof(msg), "Invalid Friendly Name");
-			break;
-		case 210:
-			g_snprintf(msg, sizeof(msg), "List Full");
-			break;
-		case 215:
-			g_snprintf(msg, sizeof(msg), "Already there");
-			break;
-		case 216:
-			g_snprintf(msg, sizeof(msg), "Not on list");
-			break;
-		case 217:
-			g_snprintf(msg, sizeof(msg), "User is offline");
-			break;
-		case 218:
-			g_snprintf(msg, sizeof(msg), "Already in the mode");
-			break;
-		case 219:
-			g_snprintf(msg, sizeof(msg), "Already in opposite list");
-			break;
-		case 280:
-			g_snprintf(msg, sizeof(msg), "Switchboard failed");
-			break;
-		case 281:
-			g_snprintf(msg, sizeof(msg), "Notify Transfer failed");
-			break;
+	case 200:
+		g_snprintf(msg, sizeof(msg), "Syntax Error (probably a Gaim bug)");
+		break;
+	case 201:
+		g_snprintf(msg, sizeof(msg), "Invalid Parameter (probably a Gaim bug)");
+		break;
+	case 205:
+		g_snprintf(msg, sizeof(msg), "Invalid User");
+		break;
+	case 206:
+		g_snprintf(msg, sizeof(msg), "Fully Qualified Domain Name missing");
+		break;
+	case 207:
+		g_snprintf(msg, sizeof(msg), "Already Login");
+		break;
+	case 208:
+		g_snprintf(msg, sizeof(msg), "Invalid Username");
+		break;
+	case 209:
+		g_snprintf(msg, sizeof(msg), "Invalid Friendly Name");
+		break;
+	case 210:
+		g_snprintf(msg, sizeof(msg), "List Full");
+		break;
+	case 215:
+		g_snprintf(msg, sizeof(msg), "Already there");
+		break;
+	case 216:
+		g_snprintf(msg, sizeof(msg), "Not on list");
+		break;
+	case 217:
+		g_snprintf(msg, sizeof(msg), "User is offline");
+		break;
+	case 218:
+		g_snprintf(msg, sizeof(msg), "Already in the mode");
+		break;
+	case 219:
+		g_snprintf(msg, sizeof(msg), "Already in opposite list");
+		break;
+	case 280:
+		g_snprintf(msg, sizeof(msg), "Switchboard failed");
+		break;
+	case 281:
+		g_snprintf(msg, sizeof(msg), "Notify Transfer failed");
+		break;
 
-		case 300:
-			g_snprintf(msg, sizeof(msg), "Required fields missing");
-			break;
-		case 302:
-			g_snprintf(msg, sizeof(msg), "Not logged in");
-			break;
+	case 300:
+		g_snprintf(msg, sizeof(msg), "Required fields missing");
+		break;
+	case 302:
+		g_snprintf(msg, sizeof(msg), "Not logged in");
+		break;
 
-		case 500:
-			g_snprintf(msg, sizeof(msg), "Internal server error");
-			break;
-		case 501:
-			g_snprintf(msg, sizeof(msg), "Database server error");
-			break;
-		case 510:
-			g_snprintf(msg, sizeof(msg), "File operation error");
-			break;
-		case 520:
-			g_snprintf(msg, sizeof(msg), "Memory allocation error");
-			break;
+	case 500:
+		g_snprintf(msg, sizeof(msg), "Internal server error");
+		break;
+	case 501:
+		g_snprintf(msg, sizeof(msg), "Database server error");
+		break;
+	case 510:
+		g_snprintf(msg, sizeof(msg), "File operation error");
+		break;
+	case 520:
+		g_snprintf(msg, sizeof(msg), "Memory allocation error");
+		break;
 
-		case 600:
-			g_snprintf(msg, sizeof(msg), "Server busy");
-			break;
-		case 601:
-			g_snprintf(msg, sizeof(msg), "Server unavailable");
-			break;
-		case 602:
-			g_snprintf(msg, sizeof(msg), "Peer Notification server down");
-			break;
-		case 603:
-			g_snprintf(msg, sizeof(msg), "Database connect error");
-			break;
-		case 604:
-			g_snprintf(msg, sizeof(msg), "Server is going down (abandon ship)");
-			break;
+	case 600:
+		g_snprintf(msg, sizeof(msg), "Server busy");
+		break;
+	case 601:
+		g_snprintf(msg, sizeof(msg), "Server unavailable");
+		break;
+	case 602:
+		g_snprintf(msg, sizeof(msg), "Peer Notification server down");
+		break;
+	case 603:
+		g_snprintf(msg, sizeof(msg), "Database connect error");
+		break;
+	case 604:
+		g_snprintf(msg, sizeof(msg), "Server is going down (abandon ship)");
+		break;
 
-		case 707:
-			g_snprintf(msg, sizeof(msg), "Error creating connection");
-			break;
-		case 711:
-			g_snprintf(msg, sizeof(msg), "Unable to write");
-			break;
-		case 712:
-			g_snprintf(msg, sizeof(msg), "Session overload");
-			break;
-		case 713:
-			g_snprintf(msg, sizeof(msg), "User is too active");
-			break;
-		case 714:
-			g_snprintf(msg, sizeof(msg), "Too many sessions");
-			break;
-		case 715:
-			g_snprintf(msg, sizeof(msg), "Not expected");
-			break;
-		case 717:
-			g_snprintf(msg, sizeof(msg), "Bad friend file");
-			break;
+	case 707:
+		g_snprintf(msg, sizeof(msg), "Error creating connection");
+		break;
+	case 711:
+		g_snprintf(msg, sizeof(msg), "Unable to write");
+		break;
+	case 712:
+		g_snprintf(msg, sizeof(msg), "Session overload");
+		break;
+	case 713:
+		g_snprintf(msg, sizeof(msg), "User is too active");
+		break;
+	case 714:
+		g_snprintf(msg, sizeof(msg), "Too many sessions");
+		break;
+	case 715:
+		g_snprintf(msg, sizeof(msg), "Not expected");
+		break;
+	case 717:
+		g_snprintf(msg, sizeof(msg), "Bad friend file");
+		break;
 
-		case 911:
-			g_snprintf(msg, sizeof(msg), "Authentication failed");
-			break;
-		case 913:
-			g_snprintf(msg, sizeof(msg), "Not allowed when offline");
-			break;
-	        case 920:
-			g_snprintf(msg, sizeof(msg), "Not accepting new users");
-			break;
-	        case 924:
-			g_snprintf(msg, sizeof(msg), "User unverified");
-			break;
-		default:
-			g_snprintf(msg, sizeof(msg), "Unknown Error Code");
-			break;
+	case 910:
+		g_snprintf(msg, sizeof(msg), "Server too busy");
+		break;
+	case 911:
+		g_snprintf(msg, sizeof(msg), "Authentication failed");
+		break;
+	case 913:
+		g_snprintf(msg, sizeof(msg), "Not allowed when offline");
+		break;
+	case 920:
+		g_snprintf(msg, sizeof(msg), "Not accepting new users");
+		break;
+	case 924:
+		g_snprintf(msg, sizeof(msg), "User unverified");
+		break;
+	default:
+		g_snprintf(msg, sizeof(msg), "Unknown Error Code");
+		break;
 	}
 
 	if (show)
@@ -343,8 +346,8 @@ static void msn_kill_switch(struct msn_switchboard *ms)
 
 
 	/* added logout procedure */
-	g_snprintf( buf, sizeof(buf), "BYE %d %s\r\n", ++md->trId, md->email );
-	msn_write(ms->fd, buf, strlen(buf));	
+	g_snprintf(buf, sizeof(buf), "BYE %d %s\r\n", ++md->trId, md->msguser);
+	msn_write(ms->fd, buf, strlen(buf));
 
 	if (ms->inpa)
 		gaim_input_remove(ms->inpa);
@@ -405,7 +408,8 @@ static int msn_process_switch(struct msn_switchboard *ms, char *buf)
 
 		if (ms->total > 1) {
 			if (!ms->chat)
-				ms->chat = serv_got_joined_chat(gc, ++msn_next_convo_id, "MSN Chat");
+				ms->chat =
+				    serv_got_joined_chat(gc, ++msn_next_convo_id, "MSN Chat");
 			add_chat_buddy(ms->chat, user);
 		}
 	} else if (!g_strncasecmp(buf, "JOI", 3)) {
@@ -430,13 +434,11 @@ static int msn_process_switch(struct msn_switchboard *ms, char *buf)
 			char *utf8 = str_to_utf8(send);
 			g_free(send);
 			g_snprintf(sendbuf, sizeof(sendbuf), "MSG %d N %d\r\n%s%s", ++ms->trId,
-					strlen(MIME_HEADER) + strlen(utf8),
-					MIME_HEADER, utf8);
+				   strlen(MIME_HEADER) + strlen(utf8), MIME_HEADER, utf8);
 			g_free(utf8);
 #else
 			g_snprintf(sendbuf, sizeof(sendbuf), "MSG %d N %d\r\n%s%s", ++ms->trId,
-					strlen(MIME_HEADER) + strlen(send),
-					MIME_HEADER, send);
+				   strlen(MIME_HEADER) + strlen(send), MIME_HEADER, send);
 			g_free(send);
 #endif
 			g_free(ms->txqueue->data);
@@ -490,7 +492,8 @@ static int msn_process_switch(struct msn_switchboard *ms, char *buf)
 
 /* [SH] Not needed now */
 #if 0
-static void msn_unescape(char *text) {
+static void msn_unescape(char *text)
+{
 	char *cpy = g_strdup(text);
 	char *cur = cpy;
 	int c = 0;
@@ -498,7 +501,7 @@ static void msn_unescape(char *text) {
 
 	while (*cur) {
 		if (*cur == '%') {
-			if (sscanf (cur, "%%%x;", &c) == 1 && c != 0) {
+			if (sscanf(cur, "%%%x;", &c) == 1 && c != 0) {
 				*text = c;
 				cur = cur + 3;
 			}
@@ -526,8 +529,8 @@ static void msn_process_switch_msg(struct msn_switchboard *ms, char *msg)
 	if (!content)
 		return;
 	if (!g_strncasecmp(content, "Content-Type: text/x-msmsgscontrol\r\n",
-			   strlen(  "Content-Type: text/x-msmsgscontrol\r\n"))) {
-		if (strstr(content,"TypingUser: ")) {
+			   strlen("Content-Type: text/x-msmsgscontrol\r\n"))) {
+		if (strstr(content, "TypingUser: ")) {
 			serv_got_typing(ms->gc, ms->msguser, MSN_TYPING_RECV_TIMEOUT);
 			return;
 		}
@@ -543,7 +546,7 @@ static void msn_process_switch_msg(struct msn_switchboard *ms, char *msg)
 #ifndef ICONV
 		utf = utf8_to_str(skiphead);
 		strip_linefeed(utf);
-		
+
 		if (ms->chat)
 			serv_got_chat_in(ms->gc, ms->chat->id, ms->msguser, flags, utf, time(NULL));
 		else
@@ -552,56 +555,54 @@ static void msn_process_switch_msg(struct msn_switchboard *ms, char *msg)
 		g_free(utf);
 #else
 		strip_linefeed(skiphead);
-		
+
 		if (ms->chat)
-			serv_got_chat_in(ms->gc, ms->chat->id, ms->msguser, flags, skiphead, time(NULL));
+			serv_got_chat_in(ms->gc, ms->chat->id, ms->msguser, flags, skiphead,
+					 time(NULL));
 		else
 			serv_got_im(ms->gc, ms->msguser, skiphead, flags, time(NULL), -1);
 #endif
-	} else if( !g_strncasecmp(content, "Content-Type: text/x-msmsgsinvite",
-	                          strlen("Content-Type: text/x-msmsgsinvite"))) {
-		char *type = strstr( msg, "Application-Name: " );
+	} else if (!g_strncasecmp(content, "Content-Type: text/x-msmsgsinvite",
+				  strlen("Content-Type: text/x-msmsgsinvite"))) {
+		char *type = strstr(msg, "Application-Name: ");
 		char msg[512];
-		
-		if( !type )
-		{
-			strcpy( msg, "<< BitlBee - Corrupted MSN invitation message >>" );
-		}
-		else if( !g_strncasecmp( type, "Application-Name: File Transfer", strlen( "Application-Name: File Transfer" ) ) )
-		{
+
+		if (!type) {
+			strcpy(msg, "<< BitlBee - Corrupted MSN invitation message >>");
+		} else
+		    if (!g_strncasecmp
+			(type, "Application-Name: File Transfer",
+			 strlen("Application-Name: File Transfer"))) {
 			char *file, *size;
-			
-			file = strstr( type, "Application-File: " );
-			size = strstr( type, "Application-FileSize: " );
-			
-			if( file && size )
-			{
-				file += strlen( "Application-File: " );
-				size += strlen( "Application-FileSize: " );
-				
-				file = g_strndup( file, strchr( file, '\r' ) - file );
-				size = g_strndup( size, strchr( size, '\r' ) - size );
-				
-				snprintf( msg, 511, "<< BitlBee - Filetransfer: `%s', %s bytes >>\n"
-				                     "Filetransfers are not supported by BitlBee for now...", file, size );
-				
-				free( file );
-				free( size );
+
+			file = strstr(type, "Application-File: ");
+			size = strstr(type, "Application-FileSize: ");
+
+			if (file && size) {
+				file += strlen("Application-File: ");
+				size += strlen("Application-FileSize: ");
+
+				file = g_strndup(file, strchr(file, '\r') - file);
+				size = g_strndup(size, strchr(size, '\r') - size);
+
+				snprintf(msg, 511, "<< BitlBee - Filetransfer: `%s', %s bytes >>\n"
+					 "Filetransfers are not supported by BitlBee for now...",
+					 file, size);
+
+				free(file);
+				free(size);
+			} else {
+				strcpy(msg,
+				       "<< BitlBee - Corrupted MSN filetransfer invitation message >>");
 			}
-			else
-			{
-				strcpy( msg, "<< BitlBee - Corrupted MSN filetransfer invitation message >>" );
-			}
+		} else {
+			type = g_strndup(type, strchr(type, '\r') - type);
+
+			snprintf(msg, 511, "<< BitlBee - Unknown MSN invitation - %s >>", type);
+
+			free(type);
 		}
-		else
-		{
-			type = g_strndup( type, strchr( type, '\r' ) - type );
-			
-			snprintf( msg, 511, "<< BitlBee - Unknown MSN invitation - %s >>", type );
-			
-			free( type );
-		}
-		serv_got_im( ms->gc, ms->msguser, msg, flags, time(NULL), -1 );
+		serv_got_im(ms->gc, ms->msguser, msg, flags, time(NULL), -1);
 	}
 }
 
@@ -611,7 +612,7 @@ static void msn_switchboard_callback(gpointer data, gint source, GaimInputCondit
 	char buf[MSN_BUF_LEN];
 	int cont = 1;
 	int len;
-	
+
 	/* This is really stupid and I hate to put this here. */
 	if (ms->fd != source)
 		ms->fd = source;
@@ -660,7 +661,8 @@ static void msn_switchboard_callback(gpointer data, gint source, GaimInputCondit
 			while (i + 1 < ms->rxlen) {
 				if (*end == '\r' && end[1] == '\n')
 					break;
-				end++; i++;
+				end++;
+				i++;
 			}
 			if (i + 1 == ms->rxlen)
 				return;
@@ -704,7 +706,8 @@ static void msn_rng_connect(gpointer data, gint source, GaimInputCondition cond)
 	if (ms->fd != source)
 		ms->fd = source;
 
-	g_snprintf(buf, sizeof(buf), "ANS %d %s %s %s\r\n", ++ms->trId, gc->username, ms->auth, ms->sessid);
+	g_snprintf(buf, sizeof(buf), "ANS %d %s %s %s\r\n", ++ms->trId, gc->username, ms->auth,
+		   ms->sessid);
 	if (msn_write(ms->fd, buf, strlen(buf)) < 0) {
 		close(ms->fd);
 		g_free(ms->sessid);
@@ -756,7 +759,8 @@ static void msn_accept_add(gpointer w, struct msn_add_permit *map)
 	struct msn_data *md = map->gc->proto_data;
 	char buf[MSN_BUF_LEN];
 
-	g_snprintf(buf, sizeof(buf), "ADD %d AL %s %s\r\n", ++md->trId, map->user, url_encode(map->friend));
+	g_snprintf(buf, sizeof(buf), "ADD %d AL %s %s\r\n", ++md->trId, map->user,
+		   url_encode(map->friend));
 	if (msn_write(md->fd, buf, strlen(buf)) < 0) {
 		hide_login_progress(map->gc, "Write error");
 		signoff(map->gc);
@@ -774,16 +778,17 @@ static void msn_cancel_add(gpointer w, struct msn_add_permit *map)
 	char buf[MSN_BUF_LEN];
 
 	if (*(map->user)) {
-		g_snprintf(buf, sizeof(buf), "ADD %d BL %s %s\r\n", ++md->trId, map->user, url_encode(map->friend));
+		g_snprintf(buf, sizeof(buf), "ADD %d BL %s %s\r\n", ++md->trId, map->user,
+			   url_encode(map->friend));
 		if (msn_write(md->fd, buf, strlen(buf)) < 0) {
 			hide_login_progress(map->gc, "Write error");
 			signoff(map->gc);
 			return;
 		}
 		map->gc->deny = g_slist_append(map->gc->deny, map->user);
-//		build_block_list();
+//	        build_block_list();
 	}
-	
+
 	g_free(map->user);
 	g_free(map->friend);
 	g_free(map);
@@ -825,8 +830,9 @@ static int msn_process_main(struct gaim_connection *gc, char *buf)
 		ap->friend = g_strdup(url_decode(friend));
 		ap->gc = gc;
 
-		g_snprintf(msg, sizeof(msg), "The user %s (%s) wants to add you (%s) to their buddy list.",
-				ap->user, url_decode(ap->friend), gc->username);
+		g_snprintf(msg, sizeof(msg),
+			   "The user %s (%s) wants to add you (%s) to their buddy list.", ap->user,
+			   url_decode(ap->friend), gc->username);
 
 		do_ask_dialog(msg, ap, msn_accept_add, msn_cancel_add);
 	} else if (!g_strncasecmp(buf, "BLP", 3)) {
@@ -864,11 +870,13 @@ static int msn_process_main(struct gaim_connection *gc, char *buf)
 		GET_NEXT(hash);
 
 		md5_init(&st);
-		md5_append(&st, (const md5_byte_t *)hash, strlen(hash));
-		md5_append(&st, (const md5_byte_t *)"Q1P7W2E4J9R8U3S5", strlen("Q1P7W2E4J9R8U3S5"));
+		md5_append(&st, (const md5_byte_t *) hash, strlen(hash));
+		md5_append(&st, (const md5_byte_t *) "Q1P7W2E4J9R8U3S5",
+			   strlen("Q1P7W2E4J9R8U3S5"));
 		md5_finish(&st, di);
 
-		g_snprintf(sendbuf, sizeof(sendbuf), "QRY %d msmsgs@msnmsgr.com 32\r\n", ++md->trId);
+		g_snprintf(sendbuf, sizeof(sendbuf), "QRY %d msmsgs@msnmsgr.com 32\r\n",
+			   ++md->trId);
 		for (i = 0; i < 16; i++) {
 			g_snprintf(buf2, sizeof(buf2), "%02x", di[i]);
 			strcat(sendbuf, buf2);
@@ -910,8 +918,8 @@ static int msn_process_main(struct gaim_connection *gc, char *buf)
 				g_free(b->proto_data);
 			b->proto_data = g_strdup(friend);
 			/* <BITLBEE> */
-			g_snprintf( b->show, sizeof( b->show ), "%s", friend );
-			handle_buddy_rename( b, b->name );
+			g_snprintf(b->show, sizeof(b->show), "%s", friend);
+			handle_buddy_rename(b, b->name);
 			/* </BITLBEE> */
 		}
 
@@ -931,96 +939,98 @@ static int msn_process_main(struct gaim_connection *gc, char *buf)
 
 		serv_got_update(gc, user, 1, 0, 0, 0, status, 0);
 	} else if (!g_strncasecmp(buf, "LST", 3)) {
-		char *which, *who, *friend, *tmp, *list = buf;
-		struct msn_add_permit *ap; /* for any as yet undealt with buddies who've added you to their buddy list when you were off-line.  How dare they! */
-		GSList *perm = gc->permit; /* current permit list */
+		char *who, *friend, *list = buf;
+		struct msn_add_permit *ap;	/* for any as yet undealt with buddies who've added you to their buddy list when you were off-line.  How dare they! */
+		GSList *perm = gc->permit;	/* current permit list */
 		GSList *denyl = gc->deny;
 		char msg[MSN_BUF_LEN];
 		int new = 1;
-		int pos, tot;
+		int tot;
 
-		strtok( buf, " " );		
-		who = strtok( NULL , " " );
-		friend = strtok( NULL , " ");
-		list = strtok( NULL, " " );
-		strtok( NULL, " ");
+		strtok(buf, " ");
+		who = strtok(NULL, " ");
+		friend = strtok(NULL, " ");
+		list = strtok(NULL, " ");
+		strtok(NULL, " ");
 
-		tot = strtol( list, NULL , 10 );
-		
+		tot = strtol(list, NULL, 10);
+
 		friend = url_decode(friend);
 		gc->lstitems--;
 
-		if ( (friend && 0x001)==0x001 ) {  // user is in the FL
-		  struct msn_buddy *b = g_new0(struct msn_buddy, 1);
-		  b->user = g_strdup(who);
-		  b->friend = g_strdup(friend);
-		  md->fl = g_slist_append(md->fl, b);
-		} else if ( (friend && 0x002) == 0x002 ) { // user is on the AL
-		  gc->permit = g_slist_append(gc->permit, g_strdup(who));
-		} else if ( (friend && 0x004) == 0x004 ) { // user is on the BL
-		  gc->deny = g_slist_append(gc->deny, g_strdup(who));
-		} else if ( (friend && 0x008) == 0x008 ) { // user is on the RL
-		  while(perm) {
-		    if(!g_strcasecmp(perm->data, who))
-		      new = 0;
-		    perm = perm->next;
-		  }
-		  while(denyl) {
-		    if(!g_strcasecmp(denyl->data, who))
-		      new = 0;
-		    denyl = denyl->next;
-		  }
-		  if(new) {
-		    ap = g_new0(struct msn_add_permit, 1);
-		    ap->user = g_strdup(who);
-		    ap->friend = g_strdup(friend);
-		    ap->gc = gc;
-		    
-		    g_snprintf(msg, sizeof(msg), "The user %s (%s) wants to add you (%s) to their buddy list",ap->user, url_decode(ap->friend), gc->username);
-		    do_ask_dialog(msg, ap, msn_accept_add, msn_cancel_add);
-		  }
+		if ((friend && 0x001) == 0x001) {	// user is in the FL
+			struct msn_buddy *b = g_new0(struct msn_buddy, 1);
+			b->user = g_strdup(who);
+			b->friend = g_strdup(friend);
+			md->fl = g_slist_append(md->fl, b);
+		} else if ((friend && 0x002) == 0x002) {	// user is on the AL
+			gc->permit = g_slist_append(gc->permit, g_strdup(who));
+		} else if ((friend && 0x004) == 0x004) {	// user is on the BL
+			gc->deny = g_slist_append(gc->deny, g_strdup(who));
+		} else if ((friend && 0x008) == 0x008) {	// user is on the RL
+			while (perm) {
+				if (!g_strcasecmp(perm->data, who))
+					new = 0;
+				perm = perm->next;
+			}
+			while (denyl) {
+				if (!g_strcasecmp(denyl->data, who))
+					new = 0;
+				denyl = denyl->next;
+			}
+			if (new) {
+				ap = g_new0(struct msn_add_permit, 1);
+				ap->user = g_strdup(who);
+				ap->friend = g_strdup(friend);
+				ap->gc = gc;
+
+				g_snprintf(msg, sizeof(msg),
+					   "The user %s (%s) wants to add you (%s) to their buddy list",
+					   ap->user, url_decode(ap->friend), gc->username);
+				do_ask_dialog(msg, ap, msn_accept_add, msn_cancel_add);
+			}
 		}
-			
-		if ( gc->lstitems > 0 )  
-		  return 1; /* this isn't the last one in the RL, so return. */
+
+		if (gc->lstitems > 0)
+			return 1;	/* this isn't the last one in the RL, so return. */
 
 		g_snprintf(sendbuf, sizeof(sendbuf), "CHG %d NLN\r\n", ++md->trId);
 		if (msn_write(md->fd, sendbuf, strlen(sendbuf)) < 0) {
-		  hide_login_progress(gc, "Unable to write");
-		  signoff(gc);
-		  return 0;
+			hide_login_progress(gc, "Unable to write");
+			signoff(gc);
+			return 0;
 		}
 
 		account_online(gc);
-		
+
 		md->permit = g_slist_copy(gc->permit);
 		md->deny = g_slist_copy(gc->deny);
 
 		if (bud_list_cache_exists(gc))
-		  do_import(gc, NULL);
+			do_import(gc, NULL);
 		else {
-		  g_snprintf(sendbuf, sizeof(sendbuf), "BLP %d AL\r\n", ++md->trId);
-		  if (msn_write(md->fd, sendbuf, strlen(sendbuf)) < 0) {
-		    hide_login_progress(gc, "Unable to write");
-		    signoff(gc);
-		    return 0;
-		  }
+			g_snprintf(sendbuf, sizeof(sendbuf), "BLP %d AL\r\n", ++md->trId);
+			if (msn_write(md->fd, sendbuf, strlen(sendbuf)) < 0) {
+				hide_login_progress(gc, "Unable to write");
+				signoff(gc);
+				return 0;
+			}
 		}
 		while (md->fl) {
-		  struct msn_buddy *mb = md->fl->data;
-		  struct buddy *b;
-		  md->fl = g_slist_remove(md->fl, mb);
-		  if (!(b = find_buddy(gc, mb->user)))
-		    add_buddy(gc, "Buddies", mb->user, mb->friend);
-		  else if (!g_strcasecmp(b->name, b->show)) {
-		    g_snprintf(b->show, sizeof(b->show), "%s", mb->friend);
-		    handle_buddy_rename(b, b->name);
-		  }
-		  g_free(mb->user);
-		  g_free(mb->friend);
-		  g_free(mb);
+			struct msn_buddy *mb = md->fl->data;
+			struct buddy *b;
+			md->fl = g_slist_remove(md->fl, mb);
+			if (!(b = find_buddy(gc, mb->user)))
+				add_buddy(gc, "Buddies", mb->user, mb->friend);
+			else if (!g_strcasecmp(b->name, b->show)) {
+				g_snprintf(b->show, sizeof(b->show), "%s", mb->friend);
+				handle_buddy_rename(b, b->name);
+			}
+			g_free(mb->user);
+			g_free(mb->friend);
+			g_free(mb);
 		}
-		
+
 	} else if (!g_strncasecmp(buf, "MSG", 3)) {
 		char *user, *tmp = buf;
 		int length;
@@ -1058,8 +1068,8 @@ static int msn_process_main(struct gaim_connection *gc, char *buf)
 				g_free(b->proto_data);
 			b->proto_data = g_strdup(friend);
 			/* <BITLBEE> */
-			g_snprintf( b->show, sizeof( b->show ), "%s", friend );
-			handle_buddy_rename( b, b->name );
+			g_snprintf(b->show, sizeof(b->show), "%s", friend);
+			handle_buddy_rename(b, b->name);
 			/* </BITLBEE> */
 		}
 
@@ -1123,7 +1133,8 @@ static int msn_process_main(struct gaim_connection *gc, char *buf)
 		user = tmp;
 		GET_NEXT(tmp);
 
-		while (ssaddr[i] && ssaddr[i] != ':') i++;
+		while (ssaddr[i] && ssaddr[i] != ':')
+			i++;
 		if (ssaddr[i] == ':') {
 			char *x = &ssaddr[i + 1];
 			ssaddr[i] = 0;
@@ -1160,11 +1171,12 @@ static int msn_process_main(struct gaim_connection *gc, char *buf)
 		rru = tmp;
 		GET_NEXT(tmp);
 		passport = tmp;
-		
-		snprintf(hippy, sizeof(hippy), "%s%d%s", md->mspauth, time(NULL) - md->sl, gc->password);
+
+		snprintf(hippy, sizeof(hippy), "%s%d%s", md->mspauth, time(NULL) - md->sl,
+			 gc->password);
 
 		md5_init(&st);
-		md5_append(&st, (const md5_byte_t *)hippy, strlen(hippy));
+		md5_append(&st, (const md5_byte_t *) hippy, strlen(hippy));
 		md5_finish(&st, di);
 
 		bzero(sendbuf, sizeof(sendbuf));
@@ -1182,22 +1194,25 @@ static int msn_process_main(struct gaim_connection *gc, char *buf)
 		fprintf(fd, "<html>\n");
 		fprintf(fd, "<head>\n");
 		fprintf(fd, "<noscript>\n");
-		fprintf(fd, "<meta http-equiv=Refresh content=\"0; url=http://www.hotmail.com\">\n");
+		fprintf(fd,
+			"<meta http-equiv=Refresh content=\"0; url=http://www.hotmail.com\">\n");
 		fprintf(fd, "</noscript>\n");
 		fprintf(fd, "</head>\n\n");
-		
+
 		fprintf(fd, "<body onload=\"document.pform.submit(); \">\n");
 		fprintf(fd, "<form name=\"pform\" action=\"%s\" method=\"POST\">\n\n", passport);
 		fprintf(fd, "<input type=\"hidden\" name=\"mode\" value=\"ttl\">\n");
 		fprintf(fd, "<input type=\"hidden\" name=\"login\" value=\"%s\">\n", gc->username);
-		fprintf(fd, "<input type=\"hidden\" name=\"username\" value=\"%s\">\n", gc->username);
+		fprintf(fd, "<input type=\"hidden\" name=\"username\" value=\"%s\">\n",
+			gc->username);
 		fprintf(fd, "<input type=\"hidden\" name=\"sid\" value=\"%s\">\n", md->sid);
 		fprintf(fd, "<input type=\"hidden\" name=\"kv\" value=\"%s\">\n", md->kv);
 		fprintf(fd, "<input type=\"hidden\" name=\"id\" value=\"2\">\n");
-		fprintf(fd, "<input type=\"hidden\" name=\"sl\" value=\"%ld\">\n", time(NULL) - md->sl);
+		fprintf(fd, "<input type=\"hidden\" name=\"sl\" value=\"%ld\">\n",
+			time(NULL) - md->sl);
 		fprintf(fd, "<input type=\"hidden\" name=\"rru\" value=\"%s\">\n", rru);
 		fprintf(fd, "<input type=\"hidden\" name=\"auth\" value=\"%s\">\n", md->mspauth);
-		fprintf(fd, "<input type=\"hidden\" name=\"creds\" value=\"%s\">\n", sendbuf); // Digest me
+		fprintf(fd, "<input type=\"hidden\" name=\"creds\" value=\"%s\">\n", sendbuf);	// Digest me
 		fprintf(fd, "<input type=\"hidden\" name=\"svc\" value=\"mail\">\n");
 		fprintf(fd, "<input type=\"hidden\" name=\"js\" value=\"yes\">\n");
 		fprintf(fd, "</form></body>\n");
@@ -1205,18 +1220,42 @@ static int msn_process_main(struct gaim_connection *gc, char *buf)
 		fclose(fd);
 #endif
 	} else if (!g_strncasecmp(buf, "SYN", 3)) {
-	  char* items;
-	  strtok( buf, " " );
-	  strtok( NULL, " ");
-	  strtok( NULL, " ");
-	  items = strtok( NULL, " ");
-	  if ( items == NULL )
-          {
-	    hide_login_progress( gc, "Got invalid SYN response\n" );
-	    signoff( gc );
-	    return 0;
-	  }
-	  gc->lstitems = strtol( items , NULL, 10 );
+		char *items;
+		strtok(buf, " ");
+		strtok(NULL, " ");
+		strtok(NULL, " ");
+		items = strtok(NULL, " ");
+		if (items == NULL) {
+			hide_login_progress(gc, "Got invalid SYN response\n");
+			signoff(gc);
+			return 0;
+		}
+		gc->lstitems = strtol(items, NULL, 10);
+
+		if (gc->lstitems == 0) {
+			g_snprintf(sendbuf, sizeof(sendbuf), "CHG %d NLN\r\n", ++md->trId);
+			if (msn_write(md->fd, sendbuf, strlen(sendbuf)) < 0) {
+				hide_login_progress(gc, "Unable to write");
+				signoff(gc);
+				return 0;
+			}
+
+			account_online(gc);
+
+			md->permit = g_slist_copy(gc->permit);
+			md->deny = g_slist_copy(gc->deny);
+
+			if (bud_list_cache_exists(gc))
+				do_import(gc, NULL);
+			else {
+				g_snprintf(sendbuf, sizeof(sendbuf), "BLP %d AL\r\n", ++md->trId);
+				if (msn_write(md->fd, sendbuf, strlen(sendbuf)) < 0) {
+					hide_login_progress(gc, "Unable to write");
+					signoff(gc);
+					return 0;
+				}
+			}
+		}
 	} else if (!g_strncasecmp(buf, "USR", 3)) {
 	} else if (!g_strncasecmp(buf, "XFR", 3)) {
 		char *host = strstr(buf, "SB");
@@ -1236,11 +1275,13 @@ static int msn_process_main(struct gaim_connection *gc, char *buf)
 		}
 
 		GET_NEXT(host);
-		while (host[i] && host[i] != ':') i++;
+		while (host[i] && host[i] != ':')
+			i++;
 		if (host[i] == ':') {
 			tmp = &host[i + 1];
 			host[i] = 0;
-			while (isdigit(*tmp)) tmp++;
+			while (isdigit(*tmp))
+				tmp++;
 			*tmp++ = 0;
 			port = atoi(&host[i + 1]);
 		} else {
@@ -1292,9 +1333,9 @@ static void msn_process_main_msg(struct gaim_connection *gc, char *msg)
 	content = strstr(msg, "Content-Type: ");
 
 	if ((content) && (!g_strncasecmp(content, "Content-Type: text/x-msmsgsprofile",
-				strlen("Content-Type: text/x-msmsgsprofile")))) {
+					 strlen("Content-Type: text/x-msmsgsprofile")))) {
 
-		char *kv,*sid,*mspauth;
+		char *kv, *sid, *mspauth;
 
 		kv = strstr(msg, "kv: ");
 		sid = strstr(msg, "sid: ");
@@ -1304,7 +1345,8 @@ static void msn_process_main_msg(struct gaim_connection *gc, char *msg)
 			char *tmp;
 
 			kv += strlen("kv: ");
-			tmp = strstr(kv, "\r\n"); *tmp = 0;
+			tmp = strstr(kv, "\r\n");
+			*tmp = 0;
 			md->kv = g_strdup(kv);
 		}
 
@@ -1312,7 +1354,8 @@ static void msn_process_main_msg(struct gaim_connection *gc, char *msg)
 			char *tmp;
 
 			sid += strlen("sid: ");
-			tmp = strstr(sid, "\r\n"); *tmp = 0;
+			tmp = strstr(sid, "\r\n");
+			*tmp = 0;
 			md->sid = g_strdup(sid);
 		}
 
@@ -1320,7 +1363,8 @@ static void msn_process_main_msg(struct gaim_connection *gc, char *msg)
 			char *tmp;
 
 			mspauth += strlen("MSPAuth: ");
-			tmp = strstr(mspauth, "\r\n"); *tmp = 0;
+			tmp = strstr(mspauth, "\r\n");
+			*tmp = 0;
 			md->mspauth = g_strdup(mspauth);
 		}
 
@@ -1403,7 +1447,8 @@ static void msn_callback(gpointer data, gint source, GaimInputCondition cond)
 			while (i + 1 < md->rxlen) {
 				if (*end == '\r' && end[1] == '\n')
 					break;
-				end++; i++;
+				end++;
+				i++;
 			}
 			if (i + 1 == md->rxlen)
 				return;
@@ -1460,114 +1505,112 @@ static void msn_login_xfr_connect(gpointer data, gint source, GaimInputCondition
 }
 
 /* routines necessary for MSNP8 login */
-static char* msn_create_header( char* reply, char* email, char* pwd )
+static char *msn_create_header(char *reply, char *email, char *pwd)
 {
-  static char buffer[2048];
-  char* currenttoken;
+	char *buffer = malloc( 2048 );
+	char *currenttoken;
 
-  
-  currenttoken = strstr( reply, "lc=" );
-  if ( currenttoken == NULL ) return NULL;
+	currenttoken = strstr(reply, "lc=");
+	if (currenttoken == NULL)
+		return NULL;
 
-  snprintf( buffer, 2048,
-            "Authorization: Passport1.4 OrgVerb=GET,"
-            "OrgURL=http%%3A%%2F%%2Fmessenger%%2Emsn%%2Ecom,"
-            "sign-in=%s,pwd=%s,%s",
-            url_encode(email), pwd, currenttoken );
+	snprintf(buffer, 2048,
+		 "Authorization: Passport1.4 OrgVerb=GET,"
+		 "OrgURL=http%%3A%%2F%%2Fmessenger%%2Emsn%%2Ecom,"
+		 "sign-in=%s,pwd=%s,%s", url_encode(email), pwd, currenttoken);
 
-  return buffer;
+	return buffer;
 }
 
 /* 
  * Retrieve the passport login server. The returned string should be deallocated.                                                            
  */
-char* get_DALogin()
+char *get_DALogin()
 {
 	SoupContext *ctx;
 	SoupMessage *msg;
 	char *ret = NULL;
 
-	ctx = soup_context_get ("https://nexus.passport.com/rdr/pprdr.asp");
+	ctx = soup_context_get("https://nexus.passport.com/rdr/pprdr.asp");
 	if (!ctx)
-		return( NULL );
-	
-	msg = soup_message_new (ctx, SOUP_METHOD_GET);
-	soup_context_unref (ctx);
-	
-	soup_message_send (msg);
+		return (NULL);
+
+	msg = soup_message_new(ctx, SOUP_METHOD_GET);
+
+	soup_message_send(msg);
 
 	/* Without a fixed libsoup, we have to ignore the errorcode... But
 	   well, people should just use a fixed libsoup, so we'll check it
 	   from now on. */
-	if( SOUP_ERROR_IS_SUCCESSFUL( msg->errorcode ) )
-	{
-		char *val = (char*) soup_message_get_header( msg->response_headers, "PassportURLs" );
+	if (SOUP_ERROR_IS_SUCCESSFUL(msg->errorcode)) {
+		char *val = (char *) soup_message_get_header(msg->response_headers, "PassportURLs");
 		char *s, *se;
-		
-		if( val && ( s = strstr( val, "DALogin=" ) ) )
-		{
-			s += strlen( "DALogin=" );
-			se = strchr( s, ',' ); if( se ) *se = 0;
+
+		if (val && (s = strstr(val, "DALogin="))) {
+			s += strlen("DALogin=");
+			se = strchr(s, ',');
+			if (se)
+				*se = 0;
 			/* By default the server seems to send an URL without a correct protocol prefix. Add that,
 			   if indeed necessary. */
-			if( strstr( se, "://" ) )
-			{
-				ret = strdup( s );
-			}
-			else
-			{
-				ret = malloc( strlen( s ) + strlen( "https://" ) + 1 );
-				sprintf( ret, "%s%s", "https://", s );
+			if (strstr(se, "://")) {
+				ret = strdup(s);
+			} else {
+				ret = malloc(strlen(s) + strlen("https://") + 1);
+				sprintf(ret, "%s%s", "https://", s);
 			}
 		}
 	}
-	
-	soup_message_free( msg );
-	return( ret );
+
+	soup_message_free(msg);
+	soup_context_unref(ctx);
+	return (ret);
 }
 
-char* get_PassportID( char* header_i, char* url )
+char *get_PassportID(char *header_i, char *url)
 {
 	char header[4096];
 	char *val;
 	SoupContext *ctx;
 	SoupMessage *msg;
 	char *ret = NULL;
-	
-	ctx = soup_context_get (url);
+
+	ctx = soup_context_get(url);
 	if (!ctx)
-		return( NULL );
-	
-	msg = soup_message_new (ctx, SOUP_METHOD_GET);
-	soup_context_unref (ctx);
-	
-	snprintf( header, 4096, "%s", header_i );
-	val = strchr( header, ':' );
+		return (NULL);
+
+	msg = soup_message_new(ctx, SOUP_METHOD_GET);
+
+	snprintf(header, 4096, "%s", header_i);
+	val = strchr(header, ':');
 	*val++ = 0;
-	while( *val == ' ' ) val ++;
-	soup_message_add_header( msg->request_headers, header, val );
-	
-	soup_message_send( msg );
-	
+	while (*val == ' ')
+		val++;
+	soup_message_add_header(msg->request_headers, header, val);
+
+	soup_message_send(msg);
+
 	/* Without a fixed libsoup, we have to ignore the errorcode... But
 	   well, people should just use a fixed libsoup, so we'll check it
 	   from now on. */
-	if( SOUP_ERROR_IS_SUCCESSFUL( msg->errorcode ) )
-	{
+	if (SOUP_ERROR_IS_SUCCESSFUL(msg->errorcode)) {
 		char *s, *se;
-		val = (char *) soup_message_get_header( msg->response_headers, "Authentication-Info" );
-		
-		if( val && ( s = strstr( val, "from-PP='" ) ) )
-		{
-			s += strlen( "from-PP='" );
-			se = strchr( s, '\'' ); if( se ) *se = 0;
-			ret = strdup( s );
+		val =
+		    (char *) soup_message_get_header(msg->response_headers, "Authentication-Info");
+
+		if (val && (s = strstr(val, "from-PP='"))) {
+			s += strlen("from-PP='");
+			se = strchr(s, '\'');
+			if (se)
+				*se = 0;
+			ret = strdup(s);
 		}
 	}
-	
-	soup_message_free (msg);
-	return( ret );
-	
+
+	soup_message_free(msg);
+	soup_context_unref(ctx);
+	return (ret);
+
 /*   AFAIK libsoup handles 302 redirects already
   if ( strstr( data.authinfo, "redir" ) != NULL )
     {
@@ -1596,17 +1639,19 @@ static int msn_process_login(struct gaim_connection *gc, char *buf)
 			return 0;
 		}
 
-		g_snprintf(sendbuf, sizeof(sendbuf), "CVR %d 0x0409 win 4.10 i386 MSNMSGR 5.0.0544 MSMSGS %s\r\n", 
-			   ++md->trId, gc->username);
+		g_snprintf(sendbuf, sizeof(sendbuf),
+			   "CVR %d 0x0409 win 4.10 i386 MSNMSGR 5.0.0544 MSMSGS %s\r\n", ++md->trId,
+			   gc->username);
 		if (msn_write(md->fd, sendbuf, strlen(sendbuf)) < 0) {
 			hide_login_progress(gc, "Unable to send CVR\n");
 			signoff(gc);
 			return 0;
-		}	       
+		}
 
 	} else if (!g_strncasecmp(buf, "CVR", 3)) {
 
-		g_snprintf(sendbuf, sizeof(sendbuf), "USR %d TWN I %s\r\n", ++md->trId, gc->username);
+		g_snprintf(sendbuf, sizeof(sendbuf), "USR %d TWN I %s\r\n", ++md->trId,
+			   gc->username);
 		if (msn_write(md->fd, sendbuf, strlen(sendbuf)) < 0) {
 			hide_login_progress(gc, "Unable to send USR\n");
 			signoff(gc);
@@ -1615,23 +1660,24 @@ static int msn_process_login(struct gaim_connection *gc, char *buf)
 
 		set_login_progress(gc, 3, "Requesting to send password");
 	} else if (!g_strncasecmp(buf, "USR", 3)) {
-	  char* resp = buf + 4;
+		char *resp = buf + 4;
 
 		/* so here, we're either getting the challenge or the OK */
-		if ( strstr(buf, "OK") != NULL ) {
+		if (strstr(buf, "OK") != NULL) {
 
-		        /* store displayname */
-		        strtok(buf," ");
-			strtok(NULL," ");
-			strtok(NULL," ");
-			strtok(NULL," ");
-			resp = strtok(NULL," ");
-			
-			if ( resp != NULL )
-	 	        {
-			  g_snprintf(gc->displayname, sizeof(gc->displayname),"%s",url_decode(resp) );
-			} else			  
-			   g_snprintf(gc->displayname, sizeof(gc->displayname), "%s", gc->username );
+			/* store displayname */
+			strtok(buf, " ");
+			strtok(NULL, " ");
+			strtok(NULL, " ");
+			strtok(NULL, " ");
+			resp = strtok(NULL, " ");
+
+			if (resp != NULL) {
+				g_snprintf(gc->displayname, sizeof(gc->displayname), "%s",
+					   url_decode(resp));
+			} else
+				g_snprintf(gc->displayname, sizeof(gc->displayname), "%s",
+					   gc->username);
 
 			g_snprintf(sendbuf, sizeof(sendbuf), "SYN %d 0\r\n", ++md->trId);
 			if (msn_write(md->fd, sendbuf, strlen(sendbuf)) < 0) {
@@ -1644,41 +1690,44 @@ static int msn_process_login(struct gaim_connection *gc, char *buf)
 			md->inpa = gaim_input_add(md->fd, GAIM_INPUT_READ, msn_callback, gc);
 			return 0;
 
-		} else if ( strstr(buf, "TWN") != NULL ) {
-		  /* update for new protocol
-		   */
+		} else if (strstr(buf, "TWN") != NULL) {
+			/* update for new protocol
+			 */
 
-		  char* DALogin = NULL;
-		  char* passport = NULL;
-		  char* header = NULL;
-		 
-		  header = msn_create_header( buf, gc->username , gc->password );
-		  
-		  DALogin = get_DALogin();
-		  if ( DALogin == NULL ) {
-		    hide_login_progress(gc, "Unable to determine Passport authentication server");
-		    signoff(gc);
-		    return 0;
-		  }          
+			char *DALogin = NULL;
+			char *passport = NULL;
+			char *header = NULL;
 
-		  passport = get_PassportID( header, DALogin );
+			DALogin = get_DALogin();
+			if (DALogin == NULL) {
+				hide_login_progress(gc,
+						    "Unable to determine Passport authentication server");
+				signoff(gc);
+				return 0;
+			}
 
-		  if  ( passport == NULL ) {
-		    hide_login_progress(gc, "Unable to login, maybe wrong password/id");
-		    signoff(gc);
-		    return 0;
-		  }
-		  
-		  g_snprintf(sendbuf, sizeof(sendbuf), "USR %d TWN S %s\r\n", ++md->trId, passport );
+			header = msn_create_header(buf, gc->username, gc->password);
+			
+			passport = get_PassportID(header, DALogin);
+			free( header );
 
-		  if (msn_write(md->fd, sendbuf, strlen(sendbuf)) < 0) { 
-		    hide_login_progress(gc, "Unable to send password"); 
-		    signoff(gc);
-		    return 0; 
-		  } 
+			if (passport == NULL) {
+				hide_login_progress(gc, "Unable to login, maybe wrong password/id");
+				signoff(gc);
+				return 0;
+			}
 
-		  
-		  
+			g_snprintf(sendbuf, sizeof(sendbuf), "USR %d TWN S %s\r\n", ++md->trId,
+				   passport);
+
+			if (msn_write(md->fd, sendbuf, strlen(sendbuf)) < 0) {
+				hide_login_progress(gc, "Unable to send password");
+				signoff(gc);
+				return 0;
+			}
+
+
+
 /* 			char buf2[MSN_BUF_LEN]; */
 /* 			md5_state_t st; */
 /* 			md5_byte_t di[16]; */
@@ -1703,10 +1752,11 @@ static int msn_process_login(struct gaim_connection *gc, char *buf)
 /* 				return 0; */
 /* 			} */
 
-		  set_login_progress(gc, 4, "Password sent");
-		  free( DALogin );
-		  if ( passport != NULL ) free( passport );
-		  
+			set_login_progress(gc, 4, "Password sent");
+			free(DALogin);
+			if (passport != NULL)
+				free(passport);
+
 		}
 	} else if (!g_strncasecmp(buf, "XFR", 3)) {
 		char *host = strstr(buf, "NS");
@@ -1720,7 +1770,8 @@ static int msn_process_login(struct gaim_connection *gc, char *buf)
 		}
 
 		GET_NEXT(host);
-		while (host[i] && host[i] != ':') i++;
+		while (host[i] && host[i] != ':')
+			i++;
 		if (host[i] == ':') {
 			char *x = &host[i + 1];
 			host[i] = 0;
@@ -1783,7 +1834,8 @@ static void msn_login_callback(gpointer data, gint source, GaimInputCondition co
 		while (i + 1 < md->rxlen) {
 			if (*end == '\r' && end[1] == '\n')
 				break;
-			end++; i++;
+			end++;
+			i++;
 		}
 		if (i + 1 == md->rxlen)
 			return;
@@ -1827,7 +1879,7 @@ static void msn_login_connect(gpointer data, gint source, GaimInputCondition con
 		signoff(gc);
 		return;
 	}
- 
+
 	g_snprintf(buf, sizeof(buf), "VER %d MSNP8 CVR0\r\n", ++md->trId);
 	if (msn_write(md->fd, buf, strlen(buf)) < 0) {
 		hide_login_progress(gc, "Unable to write to server");
@@ -1865,8 +1917,8 @@ static void msn_close(struct gaim_connection *gc)
 	if (md->msg)
 		g_free(md->msguser);
 //	if (md->passport) {
-//		unlink(md->passport);
-//		g_free(md->passport);
+//	        unlink(md->passport);
+//	        g_free(md->passport);
 //	}
 	while (md->switches)
 		msn_kill_switch(md->switches->data);
@@ -1904,13 +1956,11 @@ static int msn_send_im(struct gaim_connection *gc, char *who, char *message, int
 		utf8 = str_to_utf8(send);
 		g_free(send);
 		g_snprintf(buf, sizeof(buf), "MSG %d N %d\r\n%s%s", ++ms->trId,
-				strlen(MIME_HEADER) + strlen(utf8),
-				MIME_HEADER, utf8);
+			   strlen(MIME_HEADER) + strlen(utf8), MIME_HEADER, utf8);
 		g_free(utf8);
 #else
 		g_snprintf(buf, sizeof(buf), "MSG %d N %d\r\n%s%s", ++ms->trId,
-				strlen(MIME_HEADER) + strlen(send),
-				MIME_HEADER, send);
+			   strlen(MIME_HEADER) + strlen(send), MIME_HEADER, send);
 		g_free(send);
 #endif
 		if (msn_write(ms->fd, buf, strlen(buf)) < 0)
@@ -1952,13 +2002,11 @@ static int msn_chat_send(struct gaim_connection *gc, int id, char *message)
 	utf8 = str_to_utf8(send);
 	g_free(send);
 	g_snprintf(buf, sizeof(buf), "MSG %d N %d\r\n%s%s", ++ms->trId,
-			strlen(MIME_HEADER) + strlen(utf8),
-			MIME_HEADER, utf8);
+		   strlen(MIME_HEADER) + strlen(utf8), MIME_HEADER, utf8);
 	g_free(utf8);
 #else
 	g_snprintf(buf, sizeof(buf), "MSG %d N %d\r\n%s%s", ++ms->trId,
-			strlen(MIME_HEADER) + strlen(send),
-			MIME_HEADER, send);
+		   strlen(MIME_HEADER) + strlen(send), MIME_HEADER, send);
 	g_free(send);
 #endif
 	if (msn_write(ms->fd, buf, strlen(buf)) < 0) {
@@ -2018,7 +2066,7 @@ static void msn_set_away(struct gaim_connection *gc, char *state, char *msg)
 
 	gc->away = NULL;
 
-	if (strcmp(state,GAIM_AWAY_CUSTOM)==0) {
+	if (strcmp(state, GAIM_AWAY_CUSTOM) == 0) {
 		gc->away = "";
 		away = "AWY";
 	} else if (state) {
@@ -2116,7 +2164,7 @@ static void msn_rem_buddy(struct gaim_connection *gc, char *who, char *group)
 	}
 }
 
-static void msn_set_info( struct gaim_connection *gc, char *txt )
+static void msn_set_info(struct gaim_connection *gc, char *txt)
 {
 	struct msn_data *md = gc->proto_data;
 	char buf[MSN_BUF_LEN];
@@ -2125,7 +2173,7 @@ static void msn_set_info( struct gaim_connection *gc, char *txt )
 		do_error_dialog("Friendly name too long.", "MSN Error");
 		return;
 	}
-	
+
 	g_snprintf(buf, sizeof(buf), "REA %d %s %s\r\n", ++md->trId, gc->username, url_encode(txt));
 	if (msn_write(md->fd, buf, strlen(buf)) < 0) {
 		hide_login_progress(gc, "Write error");
@@ -2146,19 +2194,16 @@ static void msn_convo_closed(struct gaim_connection *gc, char *who)
 static int msn_convo_open(struct gaim_connection *gc, char *who)
 {
 	struct msn_switchboard *ms = msn_find_switch(gc, who);
-	
-	if( ms )
-	{
+
+	if (ms) {
 		ms->chat = serv_got_joined_chat(gc, ++msn_next_convo_id, "MSN Chat");
 		add_chat_buddy(ms->chat, ms->user);
 		add_chat_buddy(ms->chat, gc->username);
 		g_free(ms->user);
 		ms->user = NULL;
-		return( 1 );
-	}
-	else
-	{
-		return( 0 );
+		return (1);
+	} else {
+		return (0);
 	}
 }
 
@@ -2230,11 +2275,11 @@ static void msn_set_permit_deny(struct gaim_connection *gc)
 		}
 		if (t)
 			g_slist_free(t);
-	t = NULL;
-	g_slist_free(md->permit);
-	md->permit = NULL;
+		t = NULL;
+		g_slist_free(md->permit);
+		md->permit = NULL;
 	}
-	
+
 	if (md->deny) {
 		s = g_slist_nth(gc->deny, g_slist_length(md->deny));
 		while (s) {
@@ -2259,8 +2304,8 @@ static void msn_set_permit_deny(struct gaim_connection *gc)
 		}
 		if (t)
 			g_slist_free(t);
-	g_slist_free(md->deny);
-	md->deny = NULL;
+		g_slist_free(md->deny);
+		md->deny = NULL;
 	}
 }
 

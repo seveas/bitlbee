@@ -82,7 +82,16 @@ Looks like grijpmonster's online, since he/she joins the channel immediately! (I
 
 Of course, if you're that kind of person who wants to have five or more conversations at once, you can talk to someone outside the channel as well. Just use the /msg or /query command like you always do on IRC.
 
-This is the end of the QuickStart. For more information about other commands you can type help commands. Good luck and have fun!
+Okay, you know the basics now. If you want to get to know more about the Bee, please type help quickstart5.
+%
+?quickstart5
+So you want more than just chatting? Or maybe you're just looking for a feature? That's cool.
+
+It happens quite often that people ask us about features which exist for ages already. For example, if you're having problems with charsets or HTML, we know about your problem and BitlBee can solve it already. Just type help set to learn more about the possible BitlBee user settings.
+
+For more subjects (like groupchats and away states), please type help index.
+
+We hope that you know enough now. If you're still looking for something, please visit us in #bitlbee on the OFTC network (irc.bitlbee.org, for example), or mail us your problem/suggestion. Good luck and enjoy the Bee!
 %
 ?help
 Syntax: help [<command>]

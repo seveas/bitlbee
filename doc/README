@@ -40,6 +40,12 @@ If you want MSN support, please apply the libsoup patch from utils/ to your
 libsoup source and install it. If you run Debian and feel lazy, you can get
 a (Woody) .deb of a fixed libsoup from http://get.bitlbee.org/libsoup/
 
+Please note that linking Open SSL with a GPL'ed program is illegal, (people
+disagree about this sometimes, but we just want to be sure, so we don't do
+it) so it's best to use a libsoup linked with libgnutls. If you want to
+use a libsoup linked with OpenSSL, we can't stop you, but at least we warned
+you about it.
+
 
 PORTABILITY ISSUES
 ==================
@@ -61,6 +67,29 @@ network.
 
 On some BSD systems the program still suffers from some random bugs. Please
 do report them, we might be able to fix them if they're not too mysterious.
+
+
+RUNNING ON SERVERS WITH MANY USERS
+==================================
+
+BitlBee is not yet bug-free. Sometimes a bug causes the program to get into
+an infinite loop. Something you really don't want on a public server,
+especially when that machine is also used for other (mission-critical) things.
+For now we can't do much about it. We haven't seen that happen for a long
+time already on our own machines, but some people still manage to get
+themselves in nasty situations we haven't seen before.
+
+For now the best we can offer against this problem is bitlbeed, which allows
+you to setrlimit() the child processes to use no more than a specified
+number of CPU seconds. Not the best solution (not really a solution anyway),
+but certainly trashing one busy daemon process is better than trashing your
+whole machine.
+
+We don't believe adding a limit for bitlbee to /etc/security/limits.conf will
+work, because that file is only read by PAM (ie just for real login users,
+not daemons).
+
+See utils/bitlbeed.c for more information about the program.
 
 
 USAGE

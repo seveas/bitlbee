@@ -49,14 +49,19 @@ int main( int argc, char *argv[] )
 		struct sigaction sig, old;
 		memset( &sig, 0, sizeof( sig ) );
 		sig.sa_handler = sighandler;
+		sigaction( SIGPIPE, &sig, &old );
+		sig.sa_flags = SA_ONESHOT;
 		sigaction( SIGINT,  &sig, &old );
 		sigaction( SIGILL,  &sig, &old );
 		sigaction( SIGBUS,  &sig, &old );
 		sigaction( SIGFPE,  &sig, &old );
 		sigaction( SIGSEGV, &sig, &old );
-		sigaction( SIGPIPE, &sig, &old );
 		sigaction( SIGTERM, &sig, &old );
+		sigaction( SIGQUIT, &sig, &old );
+		sigaction( SIGXCPU, &sig, &old );
 	}
+	
+	conf = conf_load( argc, argv );
 	
 	if( !( IRC = irc = irc_new( 0 ) ) )
 		return( 1 );
@@ -64,7 +69,6 @@ int main( int argc, char *argv[] )
 	nogaim_init();
 	set_add( irc, "save_on_quit", "true", set_eval_bool );
 	
-	conf = conf_load( argc, argv );
 	conf_loaddefaults( irc );
 	
 	while( 1 )
@@ -78,6 +82,8 @@ int main( int argc, char *argv[] )
 			if( !irc_process( irc ) ) break;
 		}
 		else if( i == -1 ) break;
+		if( irc_userping( irc ) > 0 )
+			break;
 		g_main_iteration( FALSE );
 	}
 	
@@ -346,23 +352,23 @@ void http_encode( char *s )
 	char *t;
 	int i, j;
 	
-	t = malloc( strlen( s ) * 3 + 1 );
+	t = malloc( strlen( s ) + 1 );
+	strcpy( t, s );
 	
-	for( i = j = 0; s[i]; i ++, j ++ )
+	for( i = j = 0; t[i]; i ++, j ++ )
 	{
-		if( s[i] <= ' ' || ((unsigned char *)s)[i] >= 128 || s[i] == '%' )
+		if( t[i] <= ' ' || ((unsigned char *)t)[i] >= 128 || t[i] == '%' )
 		{
-			sprintf( t + j, "%%%02X", s[i] );
+			sprintf( s + j, "%%%02X", t[i] );
 			j += 2;
 		}
 		else
 		{
-			t[j] = s[i];
+			s[j] = t[i];
 		}
 	}
-	t[j] = 0;
+	s[j] = 0;
 	
-	strcpy( s, t );
 	free( t );
 }
 
@@ -379,6 +385,15 @@ static void sighandler( int signal )
 	else
 	{
 		irc_write( IRC, "ERROR :Fatal signal received: %d. That's probably a bug.. :-/", signal );
-		exit( 1 );
+		/* exit( 1 ); */
+		raise( signal ); /* Re-raise the signal so the default handler will pick it up, dump core, etc... */
 	}
+}
+
+double gettime()
+{
+	struct timeval time[1];
+	
+	gettimeofday( time, 0 );
+	return( (double) time->tv_sec + (double) time->tv_usec / 1000000 );
 }

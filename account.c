@@ -106,7 +106,7 @@ void account_on( irc_t *irc, account_t *a )
 		return;
 	}
 	
-	if( proto_prpl[a->protocol] == NULL )
+	if( proto_prpl[a->protocol]->login == NULL )
 	{
 		irc_usermsg( irc, "Support for protocol %s is not included in this BitlBee", proto_name[a->protocol] );
 		return;

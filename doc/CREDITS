@@ -32,7 +32,15 @@ The authors thank the following people:
 - Jochem Kossen, for giving an account on his OpenBSD box to do some
   portability testing.
 - Geert Hauwaerts, for maintaining quite a big public BitlBee server
-  (msn.irssi.org) and reporting some very nice bugs.
+  (msn.irssi.org, down for now) and reporting some very nice bugs.
+- Robert C Lorentz and other AIM users, for all the reports on bugs (and
+  providing test accounts) about the stupid AIM spaces-in-screenname
+  handling.
+- Scott Cruzen, for patching up strip_html() and more.
+- Samuel Tardieu, for random patches.
+- Tibor Csoegoer, for adding support for receiving URL messages to the
+  ICQ module.
+- Jonathan/rise, for reporting and fixing a problem with the Yahoo! servers.
 
 - And all other users who help us by sending useful bug reports, positive
   feedback, nice patches and cool addons. Mentioning you all would make

@@ -304,6 +304,7 @@ void strip_html( char *in )
 	char *out = malloc( strlen( in ) + 1 );
 	char *s = out, *cs;
 	int i;
+	int matched;
 	
 	memset( out, 0, strlen( in ) + 1 );
 	
@@ -321,13 +322,21 @@ void strip_html( char *in )
 				in ++;
 			
 			if( *in == ';' ) in ++;
+			matched = 0;
 			
 			for( i = 0; *ent[i].code; i ++ )
 				if( strncasecmp( ent[i].code, cs, strlen( ent[i].code ) ) == 0 )
 				{
 					*(s++) = ent[i].is;
+					matched = 1;
 					break;
 				}
+
+			// none of the entities were matched, return the string
+			if (!matched) {
+				in = cs-1;
+				*(s++) = *(in++);
+			}
 		}
 		else
 		{

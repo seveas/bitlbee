@@ -39,6 +39,7 @@ typedef struct conf
 	runmode_t runmode;
 	authmode_t authmode;
 	char *password;
+	char *hostname;
 } conf_t;
 
 conf_t *conf_load( int argc, char *argv[] );

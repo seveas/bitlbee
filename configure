@@ -54,7 +54,6 @@ Option		Description				Default
 --strip=0/1	Disable/enable binary stripping		$strip
 
 --iconv=0/1	Character set conversion		$iconv
---tcpd=0/1	/etc/hosts.{allow,deny} support		$tcpd
 EOF
 		exit;
 	fi
@@ -187,7 +186,7 @@ CFLAGS+=`pkg-config soup-2.0 --cflags`
 EOF
 	else
 		echo
-		echo 'Could not find libsoup, we need that for MSN. MSN disabled.'
+		echo 'Could not find libsoup (v1.99 or higher), we need that for MSN. MSN disabled.'
 		msn=0;
 	fi;
 fi
@@ -285,6 +284,9 @@ SunOS )
 	echo 'Solaris does not work with stripping enabled, so we will disable that.'
 	echo 'EFLAGS+=-lresolv -lnsl -lsocket' >> Makefile.settings
 	echo 'STRIP=\# skip strip' >> Makefile.settings
+	if [ "$iconv" = "1" ]; then
+		echo 'EFLAGS+=-liconv' >> Makefile.settings;
+	fi
 ;;
 Darwin )
 	echo 'Darwin/Mac OS X. This should work well, please read the docs for more information.'
@@ -332,7 +334,10 @@ fi
 if [ "$tcpd" = "0" ]; then
 	echo '  Tcpd support disabled.';
 else
-	echo '  Tcpd support enabled.';
+	echo '  Tcpd support enabled.'
+	echo '    -- Please do not report any bugs when using tcpd, we disabled this feature'
+	echo '       long ago, for a very good reason: It usually does not work and does not'
+	echo '       really make sense in inetd services anyway.';
 fi
 
 if [ "$iconv" = "0" ]; then

@@ -311,8 +311,10 @@ static void gjab_send_raw(gjconn gjc, const char *str)
 		 * JFIXME: No error detection?!?!
 		 */
 		if(write(gjc->fd, str, strlen(str)) < 0) {
+			/* Do NOT write to stdout/stderr directly, IRC clients
+			   might get confused, and we don't want that...
 			fprintf(stderr, "DBG: Problem sending.  Error: %d\n", errno);
-			fflush(stderr);
+			fflush(stderr); */
 		}
 	}
 }

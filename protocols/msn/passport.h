@@ -2,8 +2,9 @@
 #define __PASSPORT_H__
 /* passport.h
  *
- * Functions to login to microsoft passport service for Messenger
- * Copyright (C) 2004 Wouter Paesen <wouter@blue-gate.be>
+ * Functions to login to Microsoft Passport Service for Messenger
+ * Copyright (C) 2004 Wouter Paesen <wouter@blue-gate.be>,
+ *                    Wilmer van der Gaast <wilmer@gaast.net>
  *
  * This program is free software; you can redistribute it and/or modify             
  * it under the terms of the GNU General Public License version 2                   
@@ -23,35 +24,24 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
+#ifndef _WIN32
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <unistd.h>
-#include <gnutls/gnutls.h>
-#include <netdb.h>
+#endif
 #include "nogaim.h"
 
+struct passport_reply
+{
+	void *data;
+	char *result;
+	void (*func)( struct passport_reply * );
+	char *url;
+	char *header;
+	int redirects;
+};
 
-#define BUFFER_SIZE 2048
-
-static const int pp_cert_type_priority[3] = { GNUTLS_CRT_X509,
-					      GNUTLS_CRT_OPENPGP, 0 };
-
-
-/* connect to the peer and return the socket descriptor.
- * reslove the servername if necessary
- */
-int tcp_connect( const char* SERVER, const char* PORT);
-void tcp_disconnect( int sd ); 
-
-char* passport_retrieve_dalogin();
-
-char* passport_get_id( char* header_i, char* url );
-
-/* routines necessary for MSNP8 login */
-char *passport_create_header(char *reply, char *email, char *pwd);
-
-char *url_encode(const char *msg);
-char *url_decode(const char *msg);
+int passport_get_id( gpointer data, char *username, char *password, char *cookie, gpointer func );
 
 #endif /* __PASSPORT_H__ */

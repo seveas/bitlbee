@@ -108,13 +108,13 @@ faim_export int aim_bos_changevisibility(aim_session_t *sess, aim_conn_t *conn, 
 	else
 		return -EINVAL;
 
-	localcpy = strdup(denylist);
+	localcpy = g_strdup(denylist);
 
 	listcount = aimutil_itemcnt(localcpy, '&');
 	packlen = aimutil_tokslen(localcpy, 99, '&') + listcount + 9;
 
 	if (!(fr = aim_tx_new(sess, conn, AIM_FRAMETYPE_FLAP, 0x02, packlen))) {
-		free(localcpy);
+		g_free(localcpy);
 		return -ENOMEM;
 	}
 
@@ -127,9 +127,9 @@ faim_export int aim_bos_changevisibility(aim_session_t *sess, aim_conn_t *conn, 
 		aimbs_put8(&fr->data, strlen(tmpptr));
 		aimbs_putraw(&fr->data, tmpptr, strlen(tmpptr));
 
-		free(tmpptr);
+		g_free(tmpptr);
 	}
-	free(localcpy);
+	g_free(localcpy);
 
 	aim_tx_enqueue(sess, fr);
 

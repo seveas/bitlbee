@@ -39,7 +39,8 @@
  * 
  * --------------------------------------------------------------------------*/
 
-#include "../lib.h"
+#include "jabber.h"
+static jpacket jpacket_reset(jpacket p);
 
 jpacket jpacket_new(xmlnode x)
 {
@@ -54,7 +55,7 @@ jpacket jpacket_new(xmlnode x)
     return jpacket_reset(p);
 }
 
-jpacket jpacket_reset(jpacket p)
+static jpacket jpacket_reset(jpacket p)
 {
     char *val;
     xmlnode x;

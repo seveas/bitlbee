@@ -9,7 +9,7 @@
 -include Makefile.settings
 
 # Program variables
-objects = irc.o bitlbee.o user.o nick.o set.o commands.o crypting.o help.o account.o ini.o conf.o log.o
+objects = account.o bitlbee.o commands.o conf.o crypting.o help.o ini.o irc.o log.o nick.o query.o set.o unix.o url.o user.o
 subdirs = protocols
 
 # Expansion of variables
@@ -95,7 +95,7 @@ ifndef DEBUG
 endif
 
 encode: crypting.c
-	$(CC) crypting.c protocols/md5.c $(CFLAGS) -o encode -DCRYPTING_MAIN
+	$(CC) crypting.c protocols/md5.c $(CFLAGS) -o encode -DCRYPTING_MAIN $(CFLAGS) $(EFLAGS) $(LFLAGS)
 
 decode: encode
 	cp encode decode

@@ -28,8 +28,14 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <getopt.h>
 #include "conf.h"
 #include "ini.h"
+#include "url.h"
+
+#include "protocols/proxy.h"
+
+char *CONF_FILE;
 
 static int conf_loadini( conf_t *conf, char *file );
 
@@ -41,25 +47,34 @@ conf_t *conf_load( int argc, char *argv[] )
 	conf = bitlbee_alloc( sizeof( conf_t ) );
 	memset( conf, 0, sizeof( conf_t ) );
 	
-	conf->interface = "0.0.0.0";
+	conf->iface = "0.0.0.0";
 	conf->port = 6667;
 	conf->nofork = 0;
 	conf->verbose = 0;
 	conf->runmode = RUNMODE_INETD;
-	conf->authmode = OPEN;
+	conf->authmode = AUTHMODE_OPEN;
 	conf->password = NULL;
-	conf->configdir = strdup( CONFIG );
-	conf->motdfile = strdup( ETCDIR "/motd.txt" );
+	conf->configdir = g_strdup( CONFIG );
+	conf->motdfile = g_strdup( ETCDIR "/motd.txt" );
 	conf->ping_interval = 180;
 	conf->ping_timeout = 300;
 	
-	conf_loadini( conf, CONF_FILE );
+	i = conf_loadini( conf, CONF_FILE );
+	if( i == 0 )
+	{
+		fprintf( stderr, "Error: Syntax error in configuration file `%s'.\n", CONF_FILE );
+		return( NULL );
+	}
+	else if( i == -1 )
+	{
+		fprintf( stderr, "Warning: Unable to read configuration file `%s'.\n", CONF_FILE );
+	}
 	
 	while( ( opt = getopt( argc, argv, "i:p:nvIDc:d:h" ) ) >= 0 )
 	{
 		if( opt == 'i' )
 		{
-			conf->interface = strdup( optarg );
+			conf->iface = g_strdup( optarg );
 		}
 		else if( opt == 'p' )
 		{
@@ -82,16 +97,16 @@ conf_t *conf_load( int argc, char *argv[] )
 		{
 			if( strcmp( CONF_FILE, optarg ) != 0 )
 			{
-				free( CONF_FILE );
-				CONF_FILE = strdup( optarg );
-				free( conf );
+				g_free( CONF_FILE );
+				CONF_FILE = g_strdup( optarg );
+				g_free( conf );
 				return( conf_load( argc, argv ) );
 			}
 		}
 		else if( opt == 'd' )
 		{
-			free( conf->configdir );
-			conf->configdir = strdup( optarg );
+			g_free( conf->configdir );
+			conf->configdir = g_strdup( optarg );
 		}
 		else if( opt == 'h' )
 		{
@@ -116,10 +131,10 @@ conf_t *conf_load( int argc, char *argv[] )
 	
 	if( conf->configdir[strlen(conf->configdir)-1] != '/' )
 	{
-		char *s = malloc( strlen( conf->configdir ) + 2 );
+		char *s = bitlbee_alloc( strlen( conf->configdir ) + 2 );
 		
 		sprintf( s, "%s/", conf->configdir );
-		free( conf->configdir );
+		g_free( conf->configdir );
 		conf->configdir = s;
 	}
 	
@@ -132,23 +147,23 @@ static int conf_loadini( conf_t *conf, char *file )
 	int i;
 	
 	ini = ini_open( file );
-	if( ini == NULL ) return( 0 );
+	if( ini == NULL ) return( -1 );
 	while( ini_read( ini ) )
 	{
-		if( strcasecmp( ini->section, "settings" ) == 0 )
+		if( g_ascii_strcasecmp( ini->section, "settings" ) == 0 )
 		{
-			if( strcasecmp( ini->key, "runmode" ) == 0 )
+			if( g_ascii_strcasecmp( ini->key, "runmode" ) == 0 )
 			{
-				if( strcasecmp( ini->value, "daemon" ) == 0 )
+				if( g_ascii_strcasecmp( ini->value, "daemon" ) == 0 )
 					conf->runmode = RUNMODE_DAEMON;
 				else
 					conf->runmode = RUNMODE_INETD;
 			}
-			else if( strcasecmp( ini->key, "daemoninterface" ) == 0 )
+			else if( g_ascii_strcasecmp( ini->key, "daemoninterface" ) == 0 )
 			{
-				conf->interface = strdup( ini->value );
+				conf->iface = g_strdup( ini->value );
 			}
-			else if( strcasecmp( ini->key, "daemonport" ) == 0 )
+			else if( g_ascii_strcasecmp( ini->key, "daemonport" ) == 0 )
 			{
 				if( ( sscanf( ini->value, "%d", &i ) != 1 ) || ( i <= 0 ) || ( i > 65535 ) )
 				{
@@ -157,57 +172,88 @@ static int conf_loadini( conf_t *conf, char *file )
 				}
 				conf->port = i;
 			}
-			else if( strcasecmp( ini->key, "authmode" ) == 0 )
+			else if( g_ascii_strcasecmp( ini->key, "authmode" ) == 0 )
 			{
-				if( strcasecmp( ini->value, "registered" ) == 0 )
-					conf->authmode = REGISTERED;
-				else if( strcasecmp( ini->value, "closed" ) == 0 )
-					conf->authmode = CLOSED;
+				if( g_ascii_strcasecmp( ini->value, "registered" ) == 0 )
+					conf->authmode = AUTHMODE_REGISTERED;
+				else if( g_ascii_strcasecmp( ini->value, "closed" ) == 0 )
+					conf->authmode = AUTHMODE_CLOSED;
 				else
-					conf->authmode = OPEN;
+					conf->authmode = AUTHMODE_OPEN;
 			}
-			else if( strcasecmp( ini->key, "authpassword" ) == 0 )
+			else if( g_ascii_strcasecmp( ini->key, "authpassword" ) == 0 )
 			{
-				conf->password = strdup( ini->value );
+				conf->password = g_strdup( ini->value );
 			}
-			else if( strcasecmp( ini->key, "hostname" ) == 0 )
+			else if( g_ascii_strcasecmp( ini->key, "hostname" ) == 0 )
 			{
-				conf->hostname = strdup( ini->value );
+				conf->hostname = g_strdup( ini->value );
 			}
-			else if( strcasecmp( ini->key, "configdir" ) == 0 )
+			else if( g_ascii_strcasecmp( ini->key, "configdir" ) == 0 )
 			{
-				free( conf->configdir );
-				conf->configdir = strdup( ini->value );
+				g_free( conf->configdir );
+				conf->configdir = g_strdup( ini->value );
 			}
-			else if( strcasecmp( ini->key, "motdfile" ) == 0 )
+			else if( g_ascii_strcasecmp( ini->key, "motdfile" ) == 0 )
 			{
-				free( conf->motdfile );
-				conf->motdfile = strdup( ini->value );
+				g_free( conf->motdfile );
+				conf->motdfile = g_strdup( ini->value );
 			}
-			else if( strcasecmp( ini->key, "pinginterval" ) == 0 )
+			else if( g_ascii_strcasecmp( ini->key, "pinginterval" ) == 0 )
 			{
 				if( sscanf( ini->value, "%d", &i ) != 1 )
 				{
-					fprintf( stderr, "Invalid PingInterval value: %s\n", ini->value );
+					fprintf( stderr, "Invalid %s value: %s\n", ini->key, ini->value );
 					return( 0 );
 				}
 				conf->ping_interval = i;
 			}
-			else if( strcasecmp( ini->key, "pingtimeout" ) == 0 )
+			else if( g_ascii_strcasecmp( ini->key, "pingtimeout" ) == 0 )
 			{
 				if( sscanf( ini->value, "%d", &i ) != 1 )
 				{
-					fprintf( stderr, "Invalid PingTimeOut value: %s\n", ini->value );
+					fprintf( stderr, "Invalid %s value: %s\n", ini->key, ini->value );
 					return( 0 );
 				}
 				conf->ping_timeout = i;
 			}
+			else if( g_ascii_strcasecmp( ini->key, "proxy" ) == 0 )
+			{
+				url_t *url = g_new0( url_t, 1 );
+				
+				if( !url_set( url, ini->value ) )
+				{
+					fprintf( stderr, "Invalid %s value: %s\n", ini->key, ini->value );
+					g_free( url );
+					return( 0 );
+				}
+				
+				strncpy( proxyhost, url->host, sizeof( proxyhost ) );
+				strncpy( proxyuser, url->user, sizeof( proxyuser ) );
+				strncpy( proxypass, url->pass, sizeof( proxypass ) );
+				proxyport = url->port;
+				if( url->proto == PROTO_HTTP )
+					proxytype = PROXY_HTTP;
+				else if( url->proto == PROTO_SOCKS4 )
+					proxytype = PROXY_SOCKS4;
+				else if( url->proto == PROTO_SOCKS5 )
+					proxytype = PROXY_SOCKS5;
+				
+				g_free( url );
+			}
 			else
 			{
+				fprintf( stderr, "Error: Unknown setting `%s` in configuration file.\n", ini->key );
+				return( 0 );
 				/* For now just ignore unknown keys... */
 			}
 		}
-		else /* Ignore the other sections for now */ ;
+		else if( g_ascii_strcasecmp( ini->section, "defaults" ) != 0 )
+		{
+			fprintf( stderr, "Error: Unknown section [%s] in configuration file. "
+			                 "BitlBee configuration must be put in a [settings] section!\n", ini->section );
+			return( 0 );
+		}
 	}
 	ini_close( ini );
 	
@@ -222,14 +268,14 @@ void conf_loaddefaults( irc_t *irc )
 	if( ini == NULL ) return;
 	while( ini_read( ini ) )
 	{
-		if( strcasecmp( ini->section, "defaults" ) == 0 )
+		if( g_ascii_strcasecmp( ini->section, "defaults" ) == 0 )
 		{
 			set_t *s = set_find( irc, ini->key );
 			
 			if( s )
 			{
-				if( s->def ) free( s->def );
-				s->def = strdup( ini->value );
+				if( s->def ) g_free( s->def );
+				s->def = g_strdup( ini->value );
 			}
 		}
 	}

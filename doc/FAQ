@@ -53,25 +53,48 @@ A: Short answer: we don't need it.
    works and we are kind of attached to it.
    
 Q: When is $random_feature going to be implemented?
-A: Please do consult doc/TODO before asking. You're not going to be the
-   first one to ask for file transfer support. ;-) Please also check the
-   documentation. You'd also not be the first one to request a feature
-   which already exists!
+A: Please do consult doc/TODO (preferably in a development snapshot, which
+   is more up-to-date than a TODO in a release version) before asking.
+   Please also check the documentation. You'd not be the first one to request
+   a feature which already exists!
    
    If your fabulous feature seems not to be requested before, just join
    #bitlbee on irc.oftc.net and tell us the news.
+   
+   If your feature request is already in the TODO list, of course you can
+   still request it again/make us know that you'd like to see the feature as
+   well. But when the feature is in the "post-1.0" list, it's probably not
+   going to help. Most of the features in this list are low-priority because
+   we (the developers) don't need (or even want) them. (File transfers are a
+   good example here.)
+   Hence, they'll only be implemented when we really got too much spare
+   time. Obviously, if you're willing to help (i.e. submit a patch), you're
+   always welcome.
 
-Q: EEK! They're sending me HTML messages!
-A: help set html ... And please take a good look at the list of settings
-   (you can get them all with the set command without any arguments)
-   before asking us about a feature. There are some features which aren't
-   enabled by default because they're not always wanted. For a lot of
-   non-English people, help set charset is probably also interesting, for
-   example...
+Q: The messages I send and/or receive look weird. I see weird characters and
+   annoying HTML codes. Or, BitlBee does evil things when I send messages with
+   non-ASCII characters!
+A: You probably have to change some settings. To get rid of HTML in messages,
+   see "help set html". If you seem to have problems with your charset, see
+   "help set charset".
+
+Q: Is BitlBee forked from Gaim?
+A: BitlBee 0.7 was, sort-of. It contained a lot of code from Gaim 0.58
+   (mainly the IM-code), although heavily modified, to make it work better
+   with BitlBee. We were planning to keep BitlBee up-to-date with later Gaim
+   versions, but this turned out to be very time-consuming because the API
+   changed a lot, and we don't have the time to keep up with those changes
+   all the time.
+   
+   These days, we replaced the Yahoo! code with libyahoo2 (which is a
+   separate Yahoo! module. It's derived from Gaim, but separately
+   maintained) and wrote our own MSN module. More modules are probably going
+   to be changed, so in the near future, the API might be the only thing
+   left from Gaim.
 
 Q: What's that Gaim doing in BitlBee error messages and my Jabber resource?
-A: Ah, well, as you probably know we use Gaim's IM-modules, and we don't
-   think it's worth our time to do a search-and-replace over the whole
+A: Ah, well, as you probably know we use some of Gaim's IM-modules, and we
+   don't think it's worth our time to do a search-and-replace over the whole
    source to get rid of every reference to Gaim. In fact, we don't want to,
    since we don't want to pretend we wrote all that code.
    

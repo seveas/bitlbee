@@ -23,13 +23,16 @@
   Suite 330, Boston, MA  02111-1307  USA
 */
 
+#define BITLBEE_CORE
 #include "bitlbee.h"
 #include "commands.h"
 #include "crypting.h"
 #include "protocols/nogaim.h"
 #include "help.h"
 #include <signal.h>
-
+#include <stdio.h>
+#include <errno.h>
+                     
 #ifdef USE_GNUTLS
 #include <gnutls/gnutls.h>
 #endif
@@ -38,81 +41,8 @@ irc_t *IRC;
 GList *connection_list = NULL;
 global_t global;	/* Against global namespace pollution */
 
-static void sighandler( int signal );
+irc_t *get_IRC() { return IRC; }
 
-int main( int argc, char *argv[] )
-{
-	int i = 0;
-	struct sigaction sig, old;
-	
-	memset( &global, 0, sizeof( global_t ) );
-	
-	log_init( );
-	nogaim_init( );
-#ifdef USE_GNUTLS
-	gnutls_global_init();
-#endif
-	
-	CONF_FILE = strdup( CONF_FILE_DEF );
-	
-	global.conf = conf_load( argc, argv );
-	if( global.conf == NULL )
-		return( 1 );
-	
-	if( global.conf->runmode == RUNMODE_INETD )
-	{
-		i = bitlbee_inetd_init();
-		log_message(LOGLVL_INFO, "Bitlbee %s starting in inetd mode.", BITLBEE_VERSION );
-
-	}
-	else if( global.conf->runmode == RUNMODE_DAEMON )
-	{
-		i = bitlbee_daemon_init();
-		log_message( LOGLVL_INFO, "Bitlbee %s starting in daemon mode.", BITLBEE_VERSION );
-	}
-	if( i != 0 )
-		return( i );
- 	
-	/* Catch some signals to tell the user what's happening before quitting */
-	memset( &sig, 0, sizeof( sig ) );
-	sig.sa_handler = sighandler;
-	sigaction( SIGPIPE, &sig, &old );
-	sig.sa_flags = SA_RESETHAND;
-	sigaction( SIGINT,  &sig, &old );
-	sigaction( SIGILL,  &sig, &old );
-	sigaction( SIGBUS,  &sig, &old );
-	sigaction( SIGFPE,  &sig, &old );
-	sigaction( SIGSEGV, &sig, &old );
-	sigaction( SIGTERM, &sig, &old );
-	sigaction( SIGQUIT, &sig, &old );
-	sigaction( SIGXCPU, &sig, &old );
-	
-	if( !getuid() || !geteuid() )
-		log_message( LOGLVL_WARNING, "BitlBee is running with root privileges. Why?" );
-	if( access( global.conf->configdir, F_OK ) != 0 )
-		log_message( LOGLVL_WARNING, "The configuration directory %s does not exist. Configuration won't be saved.", CONFIG );
-	else if( access( global.conf->configdir, R_OK ) != 0 || access( global.conf->configdir, W_OK ) != 0 )
-		log_message( LOGLVL_WARNING, "Permission problem: Can't read/write from/to %s.", CONFIG );
-	if( help_init( &(global.help) ) == NULL )
-		log_message( LOGLVL_WARNING, "Error opening helpfile %s.", HELP_FILE );
-	
-	while( 1 )
-	{
-		if( global.conf->runmode == RUNMODE_INETD )
-			i = bitlbee_inetd_main_loop();
-		else if( global.conf->runmode == RUNMODE_DAEMON )
-			i = bitlbee_daemon_main_loop();
-		if( i == -1 )
-			return( 1 );
-		else if( i != 0 )
-			break;
-	}
-	
-#ifdef USE_GNUTLS
-	gnutls_global_deinit();
-#endif
-	return( 0 );
-}
 
 int bitlbee_daemon_init()
 {
@@ -129,7 +59,7 @@ int bitlbee_daemon_init()
 	}
 	listen_addr.sin_family = AF_INET;         
 	listen_addr.sin_port = htons( global.conf->port );     
-	listen_addr.sin_addr.s_addr = inet_addr( global.conf->interface );
+	listen_addr.sin_addr.s_addr = inet_addr( global.conf->iface );
 
 	i=bind( global.listen_socket, ( struct sockaddr * )&listen_addr, sizeof( struct sockaddr ) );
 	if( i == -1 ) {
@@ -143,6 +73,7 @@ int bitlbee_daemon_init()
 		return( -1 );
 	}
 
+#ifndef _WIN32
 	if( !global.conf->nofork )
 	{
 		i = fork();
@@ -155,6 +86,7 @@ int bitlbee_daemon_init()
 		close(0); close(1); close(2);
 		chdir("/");
 	}
+#endif
 	return( 0 );
 }
  
@@ -319,25 +251,26 @@ int bitlbee_connection_create( int fd )
 		return( 0 );
 	
 	connection_list = g_list_append( connection_list, newconn );
-
+	
         set_add( newconn, "away_devoice", "true",  set_eval_away_devoice );
 	set_add( newconn, "auto_connect", "true", set_eval_bool );
 	set_add( newconn, "auto_reconnect", "false", set_eval_bool );
 	set_add( newconn, "auto_reconnect_delay", "300", set_eval_int );
 	set_add( newconn, "buddy_sendbuffer", "false", set_eval_bool );
 	set_add( newconn, "buddy_sendbuffer_delay", "1", set_eval_int );
-#ifdef ICONV
-        set_add( newconn, "charset", "none", NULL );  
-#endif
+        set_add( newconn, "charset", "iso8859-15", set_eval_charset );
 	set_add( newconn, "debug", "false", set_eval_bool );
+	set_add( newconn, "default_target", "root", NULL );
+	set_add( newconn, "display_namechanges", "false", set_eval_bool );
 	set_add( newconn, "handle_unknown", "root", NULL );
 	set_add( newconn, "html", "nostrip", NULL );
 	set_add( newconn, "ops", "both", set_eval_ops );
 	set_add( newconn, "private", "false", set_eval_bool );
+	set_add( newconn, "query_order", "lifo", NULL );
 	set_add( newconn, "save_on_quit", "1", set_eval_bool );
 	set_add( newconn, "to_char", ": ", set_eval_to_char );
 	set_add( newconn, "typing_notice", "false", set_eval_bool );
-
+	
 	conf_loaddefaults( newconn );
 	
 	return( 1 );	
@@ -356,7 +289,7 @@ GList *bitlbee_connection_destroy( GList *node )
 	FD_CLR( ( (irc_t * )( node->data ) )->fd, global.readfds ); 
 	FD_CLR( ( (irc_t * )( node->data ) )->fd, global.writefds ); 
 	
-	close( ( (irc_t * )( node->data ) )->fd );
+	closesocket( ( (irc_t * )( node->data ) )->fd );
 
 	returnval=node->next;
 
@@ -371,6 +304,7 @@ GList *bitlbee_connection_destroy( GList *node )
 int bitlbee_load( irc_t *irc, char* password )
 {
 	char s[512];
+	char *path;
 	char *line;
 	int proto;
 	char nick[MAX_NICK_LENGTH+1];
@@ -380,30 +314,33 @@ int bitlbee_load( irc_t *irc, char* password )
 	if( irc->status == USTATUS_IDENTIFIED )
 		return( 1 );
 	
-	snprintf( s, 511, "%s%s%s", global.conf->configdir, irc->nick, ".accounts" );
-	fp = fopen( s, "r" );
-	if( !fp ) return( 0 );
-
+	g_snprintf( s, 511, "%s%s", irc->nick, ".accounts" );
+  	path = g_build_path( G_DIR_SEPARATOR_S, global.conf->configdir, s, NULL );
+   	fp = fopen( path, "r" );
+   	g_free( path );
+   	if( !fp ) return( 0 );
+	
 	fscanf( fp, "%32[^\n]s", s );
-	if( setpass( irc, password, s ) < 0 ) {
+	if( setpass( irc, password, s ) < 0 )
 		return( -1 );
-	}
-
+	
 	/* Do this now. If the user runs with AuthMode = Registered, the
 	   account command will not work otherwise. */
 	irc->status = USTATUS_IDENTIFIED;
-
+	
 	while( fscanf( fp, "%511[^\n]s", s ) > 0 )
 	{
 		fgetc( fp );
 		line = deobfucrypt( irc, s );
 		root_command_string( irc, ru, line );
-		free( line );
+		g_free( line );
 	}
 	fclose( fp );
 	
-	snprintf( s, 511, "%s%s%s", global.conf->configdir, irc->nick, ".nicks" );
-	fp = fopen( s, "r" );
+	g_snprintf( s, 511, "%s%s",  irc->nick, ".nicks" );
+	path = g_build_path( G_DIR_SEPARATOR_S, global.conf->configdir, s, NULL );
+	fp = fopen( path, "r" );
+	g_free( path );
 	if( !fp ) return( 0 );
 	while( fscanf( fp, "%s %d %s", s, &proto, nick ) > 0 )
 	{
@@ -424,8 +361,8 @@ int bitlbee_load( irc_t *irc, char* password )
 int bitlbee_save( irc_t *irc )
 {
 	char s[512];
+	char *path, *old_path;
 	char *line;
-	char *hash;
 	nick_t *n = irc->nicks;
 	set_t *set = irc->set;
 	mode_t ou = umask( 0077 );
@@ -447,59 +384,70 @@ int bitlbee_save( irc_t *irc )
 	 *  me. I just thought it was funny.
 	\*/
 	
-	hash = hashpass( irc );
+	char *hash = hashpass( irc );
 	if( hash == NULL )
 	{
 		irc_usermsg( irc, "Please register yourself if you want to save your settings." );
 		return( 0 );
 	}
 	
-	snprintf( s, 512, "%s%s%s", global.conf->configdir, irc->nick, ".nicks~" );
-	fp = fopen( s, "w" );
+	g_snprintf( s, 511, "%s%s", irc->nick, ".nicks~" );
+	path = g_build_path(G_DIR_SEPARATOR_S, global.conf->configdir, s, NULL);
+	fp = fopen( path, "w" );
 	if( !fp ) return( 0 );
 	while( n )
 	{
 		strcpy( s, n->handle );
 		s[169] = 0; /* Prevent any overflow (169 ~ 512 / 3) */
 		http_encode( s );
-		snprintf( s + strlen( s ), 510 - strlen( s ), " %d %s", n->proto, n->nick );
+		g_snprintf( s + strlen( s ), 510 - strlen( s ), " %d %s", n->proto, n->nick );
 		if( fprintf( fp, "%s\n", s ) != strlen( s ) + 1 )
 		{
 			irc_usermsg( irc, "fprintf() wrote too little. Disk full?" );
 			fclose( fp );
 			return( 0 );
 		}
+ 
 		n = n->next;
 	}
 	fclose( fp );
-
-	snprintf( s, 512, "%s%s%s", global.conf->configdir, irc->nick, ".nicks~" );
-	line = g_strndup( s, strlen( s ) - 1 );
-	if( unlink( line ) != 0 )
+  
+	g_snprintf( s, 512, "%s%s", irc->nick, ".nicks" );
+	old_path = g_build_path(G_DIR_SEPARATOR_S, global.conf->configdir, s, NULL);
+	if( unlink( old_path ) != 0 )
 	{
 		if( errno != ENOENT )
 		{
 			irc_usermsg( irc, "Error while removing old .nicks file" );
+			g_free( path );
+			g_free( old_path );
 			return( 0 );
 		}
 	}
-	if( rename( s, line ) != 0 )
+	if( rename( path, old_path ) != 0 )
 	{
 		irc_usermsg( irc, "Error while renaming new .nicks file" );
+		g_free( path );
+		g_free( old_path );
 		return( 0 );
 	}
-	free( line );
+	g_free( path );
+	g_free( old_path );
 	
-	snprintf( s, 512, "%s%s%s", global.conf->configdir, irc->nick, ".accounts~" );
-	fp = fopen( s, "w" );
+	
+	g_snprintf( s, 511, "%s%s", irc->nick, ".accounts~" );
+	path = g_build_path(G_DIR_SEPARATOR_S, global.conf->configdir, s, NULL);
+	fp = fopen( path, "w" );
 	if( !fp ) return( 0 );
 	if( fprintf( fp, "%s", hash ) != strlen( hash ) )
 	{
 		irc_usermsg( irc, "fprintf() wrote too little. Disk full?" );
 		fclose( fp );
+		g_free( path );
 		return( 0 );
 	}
-	free( hash );
+	g_free( hash );
+
 	
 	/* [SH] Making s empty, because if no settings nor accounts are defined
 	   the file will contain it's name encrypted. How 'bout redundant
@@ -508,9 +456,9 @@ int bitlbee_save( irc_t *irc )
 	for( a = irc->accounts; a; a = a->next )
 	{
 		if( a->protocol == PROTO_OSCAR || a->protocol == PROTO_ICQ || a->protocol == PROTO_TOC )
-			snprintf( s, sizeof( s ), "account add oscar \"%s\" \"%s\" %s", a->user, a->pass, a->server );
+			g_snprintf( s, sizeof( s ), "account add oscar \"%s\" \"%s\" %s", a->user, a->pass, a->server );
 		else
-			snprintf( s, sizeof( s ), "account add %s \"%s\" \"%s\"", proto_name[a->protocol], a->user, a->pass );
+			g_snprintf( s, sizeof( s ), "account add %s \"%s\" \"%s\"", proto_name[a->protocol], a->user, a->pass );
 		
 		line = obfucrypt( irc, s );
 		if( *line )
@@ -522,14 +470,14 @@ int bitlbee_save( irc_t *irc )
 				return( 0 );
 			}
 		}
-		free( line );
+		g_free( line );
 	}
 	memset( s, 0, sizeof( s ) );
 	while( set )
 	{
 		if( set->value && set->def )
 		{
-			snprintf( s, sizeof( s ), "set %s %s", set->key, set->value );
+			g_snprintf( s, sizeof( s ), "set %s %s", set->key, set->value );
 			line = obfucrypt( irc, s );
 			if( *line )
 			{
@@ -540,13 +488,13 @@ int bitlbee_save( irc_t *irc )
 					return( 0 );
 				}
 			}
-			free( line );
+			g_free( line );
 		}
 		set = set->next;
 	}
 	if( strcmp( irc->mynick, ROOT_NICK ) != 0 )
 	{
-		snprintf( s, sizeof( s ), "rename %s %s", ROOT_NICK, irc->mynick );
+		g_snprintf( s, sizeof( s ), "rename %s %s", ROOT_NICK, irc->mynick );
 		line = obfucrypt( irc, s );
 		if( *line )
 		{
@@ -557,26 +505,31 @@ int bitlbee_save( irc_t *irc )
 				return( 0 );
 			}
 		}
-		free( line );
+		g_free( line );
 	}
 	fclose( fp );
 	
-	snprintf( s, 512, "%s%s%s", global.conf->configdir, irc->nick, ".accounts~" );
-	line = g_strndup( s, strlen( s ) - 1 );
-	if( unlink( line ) != 0 )
+ 	g_snprintf( s, 512, "%s%s", irc->nick, ".accounts" );
+ 	old_path = g_build_path(G_DIR_SEPARATOR_S, global.conf->configdir, s, NULL);
+ 	if( unlink( old_path ) != 0 )
 	{
 		if( errno != ENOENT )
 		{
 			irc_usermsg( irc, "Error while removing old .accounts file" );
+			g_free( old_path );
+			g_free( path );
 			return( 0 );
 		}
 	}
-	if( rename( s, line ) != 0 )
+	if( rename( path, old_path ) != 0 )
 	{
 		irc_usermsg( irc, "Error while renaming new .accounts file" );
+		g_free( old_path );
+		g_free( path );
 		return( 0 );
 	}
-	free( line );
+	g_free( old_path );
+	g_free( path );
 	
 	umask( ou );
 	
@@ -626,7 +579,7 @@ int root_command( irc_t *irc, char *cmd[] )
 		return( 0 );
 	
 	for( i = 0; commands[i].command; i++ )
-		if( strcasecmp( commands[i].command, cmd[0] ) == 0 )
+		if( g_ascii_strcasecmp( commands[i].command, cmd[0] ) == 0 )
 		{
 			if( !cmd[commands[i].required_parameters] )
 			{
@@ -648,7 +601,7 @@ void http_decode( char *s )
 	char *t;
 	int i, j, k;
 	
-	t = malloc( strlen( s ) + 1 );
+	t = bitlbee_alloc( strlen( s ) + 1 );
 	
 	for( i = j = 0; s[i]; i ++, j ++ )
 	{
@@ -673,7 +626,7 @@ void http_decode( char *s )
 	t[j] = 0;
 	
 	strcpy( s, t );
-	free( t );
+	g_free( t );
 }
 
 /* Warning: This one explodes the string. Worst-cases can make the string 3x its original size! */
@@ -683,7 +636,7 @@ void http_encode( char *s )
 	char *t;
 	int i, j;
 	
-	t = strdup( s );
+	t = g_strdup( s );
 	
 	for( i = j = 0; t[i]; i ++, j ++ )
 	{
@@ -699,7 +652,7 @@ void http_encode( char *s )
 	}
 	s[j] = 0;
 	
-	free( t );
+	g_free( t );
 }
 
 
@@ -707,9 +660,9 @@ void *bitlbee_alloc( size_t size )
 {
 	void *mem;
 
-	mem=malloc(size);
+	mem=g_malloc(size);
 	if(mem==NULL) {
-		log_error("malloc");
+		log_error("g_malloc");
 		exit(1);
 	}
 	
@@ -720,7 +673,7 @@ void *bitlbee_realloc( void *oldmem, size_t newsize )
 {
 	void *newmem;
 
-	newmem=realloc(oldmem, newsize);
+	newmem=g_realloc(oldmem, newsize);
 	if(newmem==NULL) {
 		log_error("realloc");
 		exit(1);
@@ -728,24 +681,3 @@ void *bitlbee_realloc( void *oldmem, size_t newsize )
 	
 	return(newmem);
 }
-
-
-static void sighandler( int signal )
-{
-	if( signal != SIGPIPE )
-	{
-		log_message( LOGLVL_ERROR, "Fatal signal received: %d. That's probably a bug.", signal );
-		raise( signal );
-	}
-}
-
-double gettime()
-{
-	struct timeval time[1];
-
-	gettimeofday( time, 0 );
-	return( (double) time->tv_sec + (double) time->tv_usec / 1000000 );
-}
-
-
-

@@ -96,7 +96,7 @@ faim_internal aim_msgcookie_t *aim_mkcookie(fu8_t *c, int type, void *data)
 	if (!c)
 		return NULL;
 
-	if (!(cookie = calloc(1, sizeof(aim_msgcookie_t))))
+	if (!(cookie = g_new0(aim_msgcookie_t,1)))
 		return NULL;
 
 	cookie->data = data;
@@ -172,8 +172,8 @@ faim_internal int aim_cookie_free(aim_session_t *sess, aim_msgcookie_t *cookie)
 			prev = &cur->next;
 	}
 
-	free(cookie->data);
-	free(cookie);
+	g_free(cookie->data);
+	g_free(cookie);
 
 	return 0;
 } 

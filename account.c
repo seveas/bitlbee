@@ -23,6 +23,7 @@
   Suite 330, Boston, MA  02111-1307  USA
 */
 
+#define BITLBEE_CORE
 #include "bitlbee.h"
 #include "account.h"
 
@@ -43,36 +44,53 @@ account_t *account_add( irc_t *irc, int protocol, char *user, char *pass )
 	memset( a, 0, sizeof( account_t ) );
 	
 	a->protocol = protocol;
-	a->user = strdup( user );
-	a->pass = strdup( pass );
+	a->user = g_strdup( user );
+	a->pass = g_strdup( pass );
 	
 	return( a );
 }
 
-account_t *account_get( irc_t *irc, int nr )
+account_t *account_get( irc_t *irc, char *id )
 {
-	account_t *a;
+	account_t *a, *ret = NULL;
+	int nr;
+	
+	if( sscanf( id, "%d", &nr ) == 1 && nr < 1000 )
+	{
+		for( a = irc->accounts; a; a = a->next )
+			if( ( nr-- ) == 0 )
+				return( a );
+		
+		return( NULL );
+	}
 	
 	for( a = irc->accounts; a; a = a->next )
-		if( nr == -1 )		/* Special case: nr == -1 gets the last one, we might need it sometimes */
+	{
+		if( g_strcasecmp( id, proto_name[a->protocol] ) == 0 )
 		{
-			if( !a->next )
-				return( a );
+			if( !ret )
+				ret = a;
+			else
+				return( NULL ); /* We don't want to match more than one... */
 		}
-		else if( ( nr-- ) == 0 )
+		else if( strstr( a->user, id ) )
 		{
-			return( a );
+			if( !ret )
+				ret = a;
+			else
+				return( NULL );
 		}
-		
-	return( NULL );
+	}
+	
+	return( ret );
 }
 
-void account_del( irc_t *irc, int nr )
+void account_del( irc_t *irc, account_t *acc )
 {
 	account_t *a, *l = NULL;
 	
 	for( a = irc->accounts; a; a = (l=a)->next )
-		if( ( nr-- ) == 0 )
+		if( a == acc )
 		{
 			if( a->gc ) return; /* Caller should have checked, accounts still in use can't be deleted. */
 			
@@ -85,12 +103,12 @@ void account_del( irc_t *irc, int nr )
 				irc->accounts = a->next;
 			}
 			
-			free( a->user );
-			free( a->pass );
-			if( a->server ) free( a->server );
+			g_free( a->user );
+			g_free( a->pass );
+			if( a->server ) g_free( a->server );
 			if( a->reconnect )	/* This prevents any reconnect still queued to happen */
 				cancel_auto_reconnect( a );
-			free( a );
+			g_free( a );
 			
 			break;
 		}
@@ -117,9 +135,9 @@ void account_on( irc_t *irc, account_t *a )
 	u = bitlbee_alloc( sizeof( struct aim_user ) );
 	memset( u, 0, sizeof( *u ) );
 	u->protocol = a->protocol;
-	strcpy( u->username, a->user );
-	strcpy( u->password, a->pass );
-	if( a->server) strcpy( u->proto_opt[0], a->server );
+	strncpy( u->username, a->user, sizeof( u->username ) - 1 );
+	strncpy( u->password, a->pass, sizeof( u->password ) - 1 );
+	if( a->server) strncpy( u->proto_opt[0], a->server, sizeof( u->proto_opt[0] ) - 1 );
 	
 	a->gc = (struct gaim_connection *) u; /* Bit hackish :-/ */
 	a->reconnect = 0;

@@ -37,9 +37,9 @@ typedef struct
 } set_t;
 
 set_t *set_add( irc_t *irc, char *key, char *def, void *eval );
-set_t *set_find( irc_t *irc, char *key );
-char *set_getstr( irc_t *irc, char *key );
-int set_getint( irc_t *irc, char *key );
+G_MODULE_EXPORT set_t *set_find( irc_t *irc, char *key );
+G_MODULE_EXPORT char *set_getstr( irc_t *irc, char *key );
+G_MODULE_EXPORT int set_getint( irc_t *irc, char *key );
 int set_setstr( irc_t *irc, char *key, char *value );
 int set_setint( irc_t *irc, char *key, int value );
 void set_del( irc_t *irc, char *key );

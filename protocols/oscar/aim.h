@@ -24,16 +24,9 @@
 #include <stdarg.h>
 #include <errno.h>
 #include <time.h>
+#include <gmodule.h>
 
-#ifdef _WIN32
-#include <windows.h>
-#include <io.h>
-#else
-#include <sys/time.h>
-#include <unistd.h>
-#include <netinet/in.h>
-#include <sys/socket.h>
-#endif
+#include "bitlbee.h"
 
 /* XXX adjust these based on autoconf-detected platform */
 typedef unsigned char fu8_t;
@@ -43,12 +36,6 @@ typedef fu32_t aim_snacid_t;
 typedef fu16_t flap_seqnum_t;
 
 /* Portability stuff (DMP) */
-
-#ifdef _WIN32
-#define sleep(x) Sleep((x)*1000)
-#define snprintf _snprintf /* I'm not sure whats wrong with Microsoft here */
-#define close(x) closesocket(x) /* no comment */
-#endif
 
 #if defined(mach) && defined(__APPLE__)
 #define gethostbyname(x) gethostbyname2(x, AF_INET) 
@@ -60,26 +47,8 @@ typedef fu16_t flap_seqnum_t;
 #define faim_shortfunc inline
 #endif
 
-#if defined(_WIN32) && !defined(WIN32_STATIC)
-/*
- * For a win32 DLL, we define WIN32_INDLL if this file
- * is included while compiling the DLL. If its not 
- * defined (its included in a client app), the symbols
- * will be imported instead of exported.
- */
-#ifdef WIN32_INDLL
-#define faim_export __declspec(dllexport)
-#else 
-#define faim_export __declspec(dllimport)
-#endif /* WIN32_INDLL */
-#define faim_internal
-#else
-/*
- * Nothing normally needed for unix...
- */
-#define faim_export
-#define faim_internal
-#endif
+#define faim_internal 
+#define faim_export G_MODULE_EXPORT
 
 /* 
  * Current Maximum Length for Screen Names (not including NULL) 
@@ -1138,9 +1107,6 @@ faim_export char *aimutil_itemidx(char *toSearch, int index, char dl);
 
 faim_export int aim_snlen(const char *sn);
 faim_export int aim_sncmp(const char *sn1, const char *sn2);
-
-/* for libc's that dont have it */
-faim_export char *aim_strsep(char **pp, const char *delim);
 
 /* aim_meta.c */
 faim_export char *aim_getbuilddate(void);

@@ -49,24 +49,23 @@ faim_internal int aim__registermodule(aim_session_t *sess, int (*modfirst)(aim_s
 	if (!sess || !modfirst)
 		return -1;
 
-	if (!(mod = malloc(sizeof(aim_module_t))))
+	if (!(mod = g_new0(aim_module_t,1)))
 		return -1;
-	memset(mod, 0, sizeof(aim_module_t));
 
 	if (modfirst(sess, mod) == -1) {
-		free(mod);
+		g_free(mod);
 		return -1;
 	}
 
 	if (aim__findmodule(sess, mod->name)) {
 		if (mod->shutdown)
 			mod->shutdown(sess, mod);
-		free(mod);
+		g_free(mod);
 		return -1;
 	}
 
 	mod->next = (aim_module_t *)sess->modlistv;
-	(aim_module_t *)sess->modlistv = mod;
+	sess->modlistv = mod;
 
 	faimdprintf(sess, 1, "registered module %s (family 0x%04x, version = 0x%04x, tool 0x%04x, tool version 0x%04x)\n", mod->name, mod->family, mod->version, mod->toolid, mod->toolversion);
 
@@ -85,7 +84,7 @@ faim_internal void aim__shutdownmodules(aim_session_t *sess)
 		if (cur->shutdown)
 			cur->shutdown(sess, cur);
 
-		free(cur);
+		g_free(cur);
 
 		cur = tmp;
 	}
@@ -176,7 +175,7 @@ static int negchan_middle(aim_session_t *sess, aim_frame_t *fr)
 
 	aim_freetlvchain(&tlvlist);
 
-	free(msg);
+	g_free(msg);
 
 	return ret;
 }
@@ -185,7 +184,7 @@ static int negchan_middle(aim_session_t *sess, aim_frame_t *fr)
  * Bleck functions get called when there's no non-bleck functions
  * around to cleanup the mess...
  */
-faim_internal int bleck(aim_session_t *sess, aim_frame_t *frame, ...)
+static int bleck(aim_session_t *sess, aim_frame_t *frame, ...)
 {
 	fu16_t family, subtype;
 	fu16_t maxf, maxs;
@@ -412,7 +411,7 @@ faim_export int aim_conn_addhandler(aim_session_t *sess, aim_conn_t *conn, fu16_
 		return -1;
 	}
 
-	if (!(newcb = (struct aim_rxcblist_s *)calloc(1, sizeof(struct aim_rxcblist_s))))
+	if (!(newcb = (struct aim_rxcblist_s *)g_new0(struct aim_rxcblist_s, 1)))
 		return -1;
 
 	newcb->family = family;
@@ -445,7 +444,7 @@ faim_export int aim_clearhandlers(aim_conn_t *conn)
 		struct aim_rxcblist_s *tmp;
 
 		tmp = cur->next;
-		free(cur);
+		g_free(cur);
 		cur = tmp;
 	}
 	conn->handlerlist = NULL;
@@ -489,7 +488,7 @@ faim_internal void aim_clonehandlers(aim_session_t *sess, aim_conn_t *dest, aim_
 	return;
 }
 
-faim_internal int aim_callhandler_noparam(aim_session_t *sess, aim_conn_t *conn,fu16_t family, fu16_t type, aim_frame_t *ptr)
+int aim_callhandler_noparam(aim_session_t *sess, aim_conn_t *conn,fu16_t family, fu16_t type, aim_frame_t *ptr)
 {
 	aim_rxcallback_t userfunc;
 
@@ -595,24 +594,3 @@ faim_export void aim_rxdispatch(aim_session_t *sess)
 
 	return;
 }
-
-faim_internal int aim_parse_unknown(aim_session_t *sess, aim_frame_t *frame, ...)
-{
-	int i;
-
-	faimdprintf(sess, 1, "\nRecieved unknown packet:");
-
-	for (i = 0; aim_bstream_empty(&frame->data); i++) {
-		if ((i % 8) == 0)
-			faimdprintf(sess, 1, "\n\t");
-
-		faimdprintf(sess, 1, "0x%2x ", aimbs_get8(&frame->data));
-	}
-
-	faimdprintf(sess, 1, "\n\n");
-
-	return 1;
-}
-
-
-

@@ -47,7 +47,9 @@
 # include <config.h>
 #endif
 
+#ifndef _WIN32
 #include <unistd.h>
+#endif
 #include <errno.h>
 #include <stdio.h>
 #include <stdarg.h>

@@ -135,10 +135,8 @@ void *pmalloc_x(pool p, int size, char c); /* Wrapper around pmalloc which prefi
 void *pmalloco(pool p, int size); /* YAPW for zeroing the block */
 char *pstrdup(pool p, const char *src); /* wrapper around strdup, gains mem from pool */
 void pool_stat(int full); /* print to stderr the changed pools and reset */
-char *pstrdupx(pool p, const char *src); /* temp stub */
 void pool_cleanup(pool p, pool_cleaner f, void *arg); /* calls f(arg) before the pool is freed during cleanup */
 void pool_free(pool p); /* calls the cleanup functions, frees all the data on the pool, and deletes the pool itself */
-int pool_size(pool p); /* returns total bytes allocated in this pool */
 
 
 
@@ -161,22 +159,6 @@ int make_netsocket(u_short port, char *host, int type);
 struct in_addr *make_addr(char *host);
 int set_fd_close_on_exec(int fd, int flag);
 #endif
-
-
-/* --------------------------------------------------------- */
-/*                                                           */
-/* String management routines                                */
-/*                                                           */
-/* --------------------------------------------------------- */
-char *j_strdup(const char *str); /* provides NULL safe strdup wrapper */
-char *j_strcat(char *dest, char *txt); /* strcpy() clone */
-int j_strcmp(const char *a, const char *b); /* provides NULL safe strcmp wrapper */
-int j_strcasecmp(const char *a, const char *b); /* provides NULL safe strcasecmp wrapper */
-int j_strncmp(const char *a, const char *b, int i); /* provides NULL safe strncmp wrapper */
-int j_strncasecmp(const char *a, const char *b, int i); /* provides NULL safe strncasecmp wrapper */
-int j_strlen(const char *a); /* provides NULL safe strlen wrapper */
-int j_atoi(const char *a, int def); /* checks for NULL and uses default instead, convienence */
-void str_b64decode(char *str); /* what it says */
 
 
 /* --------------------------------------------------------- */
@@ -226,7 +208,6 @@ int str_hash_code(const char *s);
 /*                                                           */
 /* --------------------------------------------------------- */
 char *strescape(pool p, char *buf); /* Escape <>&'" chars */
-char *strunescape(pool p, char *buf);
 
 
 /* --------------------------------------------------------- */
@@ -357,40 +338,6 @@ int      xmlnode2file(char *file, xmlnode node); /* writes node to file */
 void expat_startElement(void* userdata, const char* name, const char** atts);
 void expat_endElement(void* userdata, const char* name);
 void expat_charData(void* userdata, const char* s, int len);
-
-/***********************
- * XSTREAM Section
- ***********************/
-
-#define XSTREAM_MAXNODE 1000000
-#define XSTREAM_MAXDEPTH 100
-
-#define XSTREAM_ROOT        0 /* root element */
-#define XSTREAM_NODE        1 /* normal node */
-#define XSTREAM_CLOSE       2 /* closed </stream:stream> */
-#define XSTREAM_ERR         4 /* parser error */
-
-typedef void (*xstream_onNode)(int type, xmlnode x, void *arg); /* xstream event handler */
-
-typedef struct xstream_struct
-{
-    XML_Parser parser;
-    xmlnode node;
-    char *cdata;
-    int cdata_len;
-    pool p;
-    xstream_onNode f;
-    void *arg;
-    int status;
-    int depth;
-} *xstream, _xstream;
-
-xstream xstream_new(pool p, xstream_onNode f, void *arg); /* create a new xstream */
-int xstream_eat(xstream xs, char *buff, int len); /* parse new data for this xstream, returns last XSTREAM_* status */
-
-/* convience functions */
-xmlnode xstream_header(char *namespace, char *to, char *from);
-char *xstream_header_char(xmlnode x);
 
 /* SHA.H */
 /* 

@@ -27,6 +27,11 @@ directory is read-/writable by this user only.
 DEPENDENCIES
 ============
 
+BitlBee's only real dependency is GLib. This is available on virtually every
+platform. At the moment, GLib 2.0 or higher is required. Older versions
+(pre-0.90) used to work with older GLib versions, and so might future
+BitlBee's.
+
 These days, MSN Messenger clients have to connect to the MS Passport servers
 through HTTPS. BitlBee uses libgnutls for this. We're not sure about the
 exact version you'll need for this to work, but at least verion 0.8.9 is
@@ -37,6 +42,9 @@ GnuTLS might be a bit hard-to-get on the less common platforms, unfortunately.
 This means BitlBee is not as portable anymore as it used to be. You might
 wonder why we don't use OpenSSL instead then: That's because it's illegal to
 link GPL'ed programs with OpenSSL.
+
+Instead of GnuTLS, you can also use libnss now. libnss is the SSL library
+used in Mozilla, available on many platforms.
 
 
 PORTABILITY ISSUES
@@ -57,8 +65,9 @@ doesn't provide a glib package. You can download a binary tar.gz from:
 fine. You'll probably like bitlbeed or xinetd to get it running on the
 network.
 
-On some BSD systems the program still suffers from some random bugs. Please
-do report them, we might be able to fix them if they're not too mysterious.
+On some non-Linux systems the program still suffers from some random bugs.
+Please do report them, we might be able to fix them if they're not too
+mysterious.
 
 
 RUNNING ON SERVERS WITH MANY USERS
@@ -156,8 +165,8 @@ compatible. It is however a free software license.
 Another part (the md5 algorithm) is licensed under the Aladdin license.
 This license can be found in the files, to which this applies.
 
-The Yahoo! library used by BitlBee is libyahoo2, written by Philip S Tellis
-<philip.tellis@gmx.net>, also licensed under the GPL.
+The Yahoo! library used by BitlBee is libyahoo2 <http://libyahoo2.sf.net/>,
+also licensed under the GPL.
 
 
 	BitlBee - An IRC to other chat networks gateway 

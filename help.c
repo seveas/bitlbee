@@ -23,7 +23,10 @@
   Suite 330, Boston, MA  02111-1307  USA
 */
 
+#define BITLBEE_CORE
 #include "bitlbee.h"
+#undef read 
+#undef write
 
 #define BUFSIZE 1100
 
@@ -37,17 +40,22 @@ help_t *help_init( help_t **help )
 	
 	*help = h = bitlbee_alloc( sizeof( help_t ) );
 	memset( h, 0, sizeof( help_t ) );
-	h->fd = open( HELP_FILE, O_RDONLY );
+	
+	h->fd = open( global.helpfile, O_RDONLY
+#ifdef _WIN32
+				  | O_BINARY
+#endif
+				  );
 	
 	if( h->fd == -1 )
 	{
-		free( h );
+		g_free( h );
 		return( *help = NULL );
 	}
 	
 	if( fstat( h->fd, stat ) != 0 )
 	{
-		free( h );
+		g_free( h );
 		return( *help = NULL );
 	}
 	mtime = stat->st_mtime;
@@ -65,7 +73,7 @@ help_t *help_init( help_t **help )
 			/* FIXME: Clean up */
 //			help_close( *help );
 			*help = NULL;
-			free( s );
+			g_free( s );
 			return( NULL );
 		}
 		i = strchr( s, '\n' ) - s;
@@ -85,13 +93,13 @@ help_t *help_init( help_t **help )
 		h->mtime = mtime;
 		
 		buflen -= ( t + 3 - s );
-		t = strdup( t + 3 );
-		free( s );
+		t = g_strdup( t + 3 );
+		g_free( s );
 		s = bitlbee_realloc( t, BUFSIZE + 1 );
 		s[BUFSIZE] = 0;
 	}
 	
-	free( s );
+	g_free( s );
 	
 	return( *help );
 }
@@ -106,7 +114,7 @@ char *help_get( help_t **help, char *string )
 
 	while( h )
 	{
-		if( strcasecmp( h->string, string ) == 0 ) break;
+		if( g_ascii_strcasecmp( h->string, string ) == 0 ) break;
 		h = h->next;
 	}
 	if( h )
@@ -115,7 +123,7 @@ char *help_get( help_t **help, char *string )
 		
 		if( fstat( h->fd, stat ) != 0 )
 		{
-			free( h );
+			g_free( h );
 			*help=NULL;
 			return( NULL );
 		}
@@ -123,7 +131,7 @@ char *help_get( help_t **help, char *string )
 		
 		if( mtime > h->mtime ) {
 			return( NULL );
-			return( strdup( "Help file changed during this session. Please restart to get help back." ) );
+			return( g_strdup( "Help file changed during this session. Please restart to get help back." ) );
 		}
 		s[h->length] = 0;
 		if( h->fd > 0 )

@@ -27,11 +27,11 @@
 #define __CONF_H
 
 typedef enum runmode { RUNMODE_DAEMON, RUNMODE_INETD } runmode_t;
-typedef enum authmode { OPEN, CLOSED, REGISTERED } authmode_t;
+typedef enum authmode { AUTHMODE_OPEN, AUTHMODE_CLOSED, AUTHMODE_REGISTERED } authmode_t;
 
 typedef struct conf
 {
-	char *interface;
+	char *iface;
 	signed int port;
 	int nofork;
 	int verbose;

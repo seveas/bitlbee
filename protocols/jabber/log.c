@@ -30,7 +30,7 @@ void jdebug(char *zone, const char *msgfmt, ...)
     static int size;
 
     /* XXX: We may want to check the sizes eventually */
-    size = snprintf(loghdr, LOGSIZE_HDR, "debug/%s %s\n", zone, msgfmt);
+    size = g_snprintf(loghdr, LOGSIZE_HDR, "debug/%s %s\n", zone, msgfmt);
 
     va_start(ap, msgfmt);
     size = vsnprintf(logmsg, LOGSIZE_TAIL, loghdr, ap);

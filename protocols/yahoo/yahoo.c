@@ -19,16 +19,12 @@
  *
  */
 
-#include <netdb.h>
-#include <unistd.h>
+
 #include <errno.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <time.h>
-#include <sys/socket.h>
 #include <sys/stat.h>
 #include <ctype.h>
 #include "nogaim.h"
@@ -78,34 +74,48 @@ static int byahoo_chat_id = 0;
 
 static char *byahoo_strip( char *in )
 {
-	int st = 1;
+	int len;
 	
-	while( *in && st )
+	/* This should get rid of HTML tags at the beginning of the string. */
+	while( *in )
 	{
-		st = 0;
-		if( strncasecmp( in, "<font", 5 ) == 0 )
+		if( g_strncasecmp( in, "<font", 5 ) == 0 ||
+		    g_strncasecmp( in, "<fade", 5 ) == 0 ||
+		    g_strncasecmp( in, "<alt", 4 ) == 0 )
 		{
 			char *s = strchr( in, '>' );
 			if( !s )
 				break;
 			
 			in = s + 1;
-			st = 1;
 		}
-		else if( strncmp( in, "\e[#", 3 ) == 0 )
+		else if( strncmp( in, "\e[", 2 ) == 0 )
 		{
-			if( strlen( in ) < 10 )
+			char *s;
+			
+			for( s = in + 2; *s && *s != 'm'; s ++ );
+			
+			if( *s != 'm' )
 				break;
 			
-			if( in[9] != 'm' )
-				break;
-			
-			in += 10;
-			st = 1;
+			in = s + 1;
+		}
+		else
+		{
+			break;
 		}
 	}
 	
-	return( strdup( in ) );
+	/* This is supposed to get rid of the closing HTML tags at the end of the line. */
+	len = strlen( in );
+	while( len > 0 && in[len-1] == '>' )
+	{
+		len --;
+		while( len > 0 && in[len] != '<' )
+			len --;
+	}
+	
+	return( g_strndup( in, len ) );
 }
 
 static void byahoo_login( struct aim_user *user )
@@ -133,9 +143,9 @@ static void byahoo_close( struct gaim_connection *gc )
 	{
 		struct byahoo_buddygroups *bg = l->data;
 		
-		free( bg->buddy );
-		free( bg->group );
-		free( bg );
+		g_free( bg->buddy );
+		g_free( bg->group );
+		g_free( bg );
 	}
 	g_slist_free( yd->buddygroups );
 	
@@ -149,11 +159,7 @@ static int byahoo_send_im( struct gaim_connection *gc, char *who, char *what, in
 {
 	struct byahoo_data *yd = gc->proto_data;
 	
-#ifdef ICONV
 	yahoo_send_im( yd->y2_id, NULL, who, what, 1 );
-#else
-	yahoo_send_im( yd->y2_id, NULL, who, what, 0 );
-#endif
 	
 	return 1;
 }
@@ -172,32 +178,32 @@ static void byahoo_set_away( struct gaim_connection *gc, char *state, char *msg 
 	else if (state)
 	{
 		gc->away = "";
-		if( strcasecmp(state, "Available" ) == 0 )
+		if( g_ascii_strcasecmp(state, "Available" ) == 0 )
 		{
 			yd->current_status = YAHOO_STATUS_AVAILABLE;
 			gc->away = NULL;
 		}
-		else if( strcasecmp( state, "Be Right Back" ) == 0 )
+		else if( g_ascii_strcasecmp( state, "Be Right Back" ) == 0 )
 			yd->current_status = YAHOO_STATUS_BRB;
-		else if( strcasecmp( state, "Busy" ) == 0 )
+		else if( g_ascii_strcasecmp( state, "Busy" ) == 0 )
 			yd->current_status = YAHOO_STATUS_BUSY;
-		else if( strcasecmp( state, "Not At Home" ) == 0 )
+		else if( g_ascii_strcasecmp( state, "Not At Home" ) == 0 )
 			yd->current_status = YAHOO_STATUS_NOTATHOME;
-		else if( strcasecmp( state, "Not At Desk" ) == 0 )
+		else if( g_ascii_strcasecmp( state, "Not At Desk" ) == 0 )
 			yd->current_status = YAHOO_STATUS_NOTATDESK;
-		else if( strcasecmp( state, "Not In Office" ) == 0 )
+		else if( g_ascii_strcasecmp( state, "Not In Office" ) == 0 )
 			yd->current_status = YAHOO_STATUS_NOTINOFFICE;
-		else if( strcasecmp( state, "On Phone" ) == 0 )
+		else if( g_ascii_strcasecmp( state, "On Phone" ) == 0 )
 			yd->current_status = YAHOO_STATUS_ONPHONE;
-		else if( strcasecmp( state, "On Vacation" ) == 0 )
+		else if( g_ascii_strcasecmp( state, "On Vacation" ) == 0 )
 			yd->current_status = YAHOO_STATUS_ONVACATION;
-		else if( strcasecmp( state, "Out To Lunch" ) == 0 )
+		else if( g_ascii_strcasecmp( state, "Out To Lunch" ) == 0 )
 			yd->current_status = YAHOO_STATUS_OUTTOLUNCH;
-		else if( strcasecmp( state, "Stepped Out" ) == 0 )
+		else if( g_ascii_strcasecmp( state, "Stepped Out" ) == 0 )
 			yd->current_status = YAHOO_STATUS_STEPPEDOUT;
-		else if( strcasecmp( state, "Invisible" ) == 0 )
+		else if( g_ascii_strcasecmp( state, "Invisible" ) == 0 )
 			yd->current_status = YAHOO_STATUS_INVISIBLE;
-		else if( strcasecmp( state, GAIM_AWAY_CUSTOM ) == 0 )
+		else if( g_ascii_strcasecmp( state, GAIM_AWAY_CUSTOM ) == 0 )
 		{
 			if (gc->is_idle)
 				yd->current_status = YAHOO_STATUS_IDLE;
@@ -260,12 +266,12 @@ static void byahoo_remove_buddy( struct gaim_connection *gc, char *who, char *gr
 	{
 		struct byahoo_buddygroups *bg = bgl->data;
 		
-		if( strcasecmp( bg->buddy, who ) == 0 )
+		if( g_ascii_strcasecmp( bg->buddy, who ) == 0 )
 			yahoo_remove_buddy( yd->y2_id, who, bg->group );
 	}
 }
 
-static char *byahoo_get_status_string( int stat )
+static char *byahoo_get_status_string( struct gaim_connection *gc, int stat )
 {
 	enum yahoo_status a = stat >> 1;
 	
@@ -291,8 +297,16 @@ static char *byahoo_get_status_string( int stat )
 		return "Stepped Out";
 	case YAHOO_STATUS_INVISIBLE:
 		return "Invisible";
+	case YAHOO_STATUS_CUSTOM:
+		return "Away";
+	case YAHOO_STATUS_IDLE:
+		return "Idle";
+	case YAHOO_STATUS_OFFLINE:
+		return "Offline";
+	case YAHOO_STATUS_NOTIFY:
+		return "Notify";
 	default:
-		return "Online";
+		return "Away";
 	}
 }
 
@@ -303,11 +317,7 @@ static int byahoo_chat_send( struct gaim_connection *gc, int id, char *message )
 	
 	for( c = gc->conversations; c && c->id != id; c = c->next );
 
-#ifdef ICONV	
 	yahoo_conference_message( yd->y2_id, NULL, c->data, c->title, message, 1 );
-#else
-	yahoo_conference_message( yd->y2_id, NULL, c->data, c->title, message, 0 );
-#endif
 	
 	return( 0 );
 }
@@ -341,7 +351,7 @@ static int byahoo_chat_open( struct gaim_connection *gc, char *who )
 	YList *members;
 	
 	roomname = g_new0( char, strlen( gc->username ) + 16 );
-	snprintf( roomname, strlen( gc->username ) + 16, "%s-Bee-%d", gc->username, byahoo_chat_id );
+	g_snprintf( roomname, strlen( gc->username ) + 16, "%s-Bee-%d", gc->username, byahoo_chat_id );
 	
 	c = serv_got_joined_chat( gc, ++byahoo_chat_id, roomname );
 	add_chat_buddy( c, gc->username );
@@ -349,11 +359,11 @@ static int byahoo_chat_open( struct gaim_connection *gc, char *who )
 	/* FIXME: Free this thing when the chat's destroyed. We can't *always*
 	          do this because it's not always created here. */
 	c->data = members = g_new0( YList, 1 );
-	members->data = strdup( who );
+	members->data = g_strdup( who );
 	
 	yahoo_conference_invite( yd->y2_id, NULL, members, roomname, "Please join my groupchat..." );
 	
-	free( roomname );
+	g_free( roomname );
 	
 	return( 1 );
 }
@@ -387,7 +397,7 @@ static struct gaim_connection *byahoo_get_gc_by_id( int id )
 	struct gaim_connection *gc;
 	struct byahoo_data *yd;
 	
-	for( l = connections; l; l = l->next )
+	for( l = get_connections(); l; l = l->next )
 	{
 		gc = l->data;
 		yd = gc->proto_data;
@@ -395,9 +405,6 @@ static struct gaim_connection *byahoo_get_gc_by_id( int id )
 		if( gc->protocol == PROTO_YAHOO && yd->y2_id == id )
 			return( gc );
 	}
-	
-	if( set_getint( IRC, "debug" ) )
-		irc_usermsg( IRC, "WARNING: Couldn't find gc structure for y2_id == %d! (This usually happens when logging off)", id );
 	
 	return( NULL );
 }
@@ -417,7 +424,7 @@ void byahoo_connect_callback( gpointer data, gint source, GaimInputCondition con
 	struct byahoo_connect_callback_data *d = data;
 	
 	d->callback( d->fd, 0, d->data );
-	free( d );
+	g_free( d );
 }
 
 struct byahoo_read_ready_data
@@ -460,10 +467,6 @@ void ext_yahoo_login_response( int id, int succ, char *url )
 		   up the connection on the first failure, the second
 		   should be ignored. */
 		
-		if( set_getint( IRC, "debug" ) )
-			irc_usermsg( IRC, "Got an ext_yahoo_login_response() (error %d) for a non-existent connection. "
-			                  "Probably already cleaned up.", succ );
-		
 		return;
 	}
 	
@@ -500,12 +503,12 @@ void ext_yahoo_login_response( int id, int succ, char *url )
 		
 		if( url && *url )
 		{
-			s = malloc( strlen( "Error %d (%s). See %s for more information." ) + strlen( url ) + strlen( errstr ) + 16 );
+			s = g_malloc( strlen( "Error %d (%s). See %s for more information." ) + strlen( url ) + strlen( errstr ) + 16 );
 			sprintf( s, "Error %d (%s). See %s for more information.", succ, errstr, url );
 		}
 		else
 		{
-			s = malloc( strlen( "Error %d (%s)" ) + strlen( errstr ) + 16 );
+			s = g_malloc( strlen( "Error %d (%s)" ) + strlen( errstr ) + 16 );
 			sprintf( s, "Error %d (%s)", succ, errstr );
 		}
 		
@@ -514,7 +517,7 @@ void ext_yahoo_login_response( int id, int succ, char *url )
 		else
 			hide_login_progress( gc, s );
 		
-		free( s );
+		g_free( s );
 		
 		signoff( gc );
 	}
@@ -535,8 +538,8 @@ void ext_yahoo_got_buddies( int id, YList *buds )
 		{
 			bg = g_new0( struct byahoo_buddygroups, 1 );
 			
-			bg->buddy = strdup( b->id );
-			bg->group = strdup( b->group );
+			bg->buddy = g_strdup( b->id );
+			bg->group = g_strdup( b->group );
 			yd->buddygroups = g_slist_append( yd->buddygroups, bg );
 		}
 		
@@ -571,14 +574,14 @@ void ext_yahoo_got_im( int id, char *who, char *msg, long tm, int stat, int utf8
 	char *m = byahoo_strip( msg );
 	
 	serv_got_im( gc, who, m, 0, 0, strlen( m ) );
-	free( m );
+	g_free( m );
 }
 
 void ext_yahoo_got_file( int id, char *who, char *url, long expires, char *msg, char *fname, unsigned long fesize )
 {
 	struct gaim_connection *gc = byahoo_get_gc_by_id( id );
 	
-	irc_usermsg( gc->irc, "Got a file transfer (file = %s) from %s. Ignoring for now due to lack of support.", fname, who );
+	serv_got_crap( gc, "Got a file transfer (file = %s) from %s. Ignoring for now due to lack of support.", fname, who );
 }
 
 void ext_yahoo_typing_notify( int id, char *who, int stat )
@@ -592,14 +595,14 @@ void ext_yahoo_system_message( int id, char *msg )
 {
 	struct gaim_connection *gc = byahoo_get_gc_by_id( id );
 	
-	irc_usermsg( gc->irc, "Yahoo! system message: %s", msg );
+	serv_got_crap( gc, "Yahoo! system message: %s", msg );
 }
 
 void ext_yahoo_webcam_invite( int id, char *from )
 {
 	struct gaim_connection *gc = byahoo_get_gc_by_id( id );
 	
-	irc_usermsg( gc->irc, "Got a webcam invitation from %s. IRC+webcams is a no-no though...", from );
+	serv_got_crap( gc, "Got a webcam invitation from %s. IRC+webcams is a no-no though...", from );
 }
 
 void ext_yahoo_error( int id, char *err, int fatal )
@@ -645,7 +648,7 @@ int ext_yahoo_add_handler( int id, int fd, yahoo_input_condition cond, void *dat
 	}
 	else
 	{
-		free( inp );
+		g_free( inp );
 		return( -1 );
 		/* Panic... */
 	}
@@ -664,8 +667,8 @@ void ext_yahoo_remove_handler( int id, int tag )
 		inp = l->data;
 		if( inp->h == tag )
 		{
-			free( inp->d );
-			free( inp );
+			g_free( inp->d );
+			g_free( inp );
 			byahoo_inputs = g_slist_remove( byahoo_inputs, inp );
 			break;
 		}
@@ -683,7 +686,7 @@ int ext_yahoo_connect_async( int id, char *host, int port, yahoo_connect_callbac
 	d = g_new0( struct byahoo_connect_callback_data, 1 );
 	if( ( fd = proxy_connect( host, port, (GaimInputFunction) byahoo_connect_callback, (gpointer) d ) ) < 0 )
 	{
-		free( d );
+		g_free( d );
 		return( fd );
 	}
 	d->fd = fd;
@@ -703,7 +706,7 @@ int ext_yahoo_connect(char *host, int port)
 	int servfd;
 	char **p;
 
-	if(last_host[0] || strcasecmp(last_host, host)!=0) {
+	if(last_host[0] || g_ascii_strcasecmp(last_host, host)!=0) {
 		if(!(server = gethostbyname(host))) {
 			return -1;
 		}
@@ -723,47 +726,42 @@ int ext_yahoo_connect(char *host, int port)
 
 		if(connect(servfd, (struct sockaddr *) &serv_addr, 
 					sizeof(serv_addr)) == -1) {
-			if(errno!=ECONNREFUSED && errno!=ETIMEDOUT && 
-					errno!=ENETUNREACH) {
-				break;
-			}
+			return -1;
 		} else {
 			return servfd;
 		}
 	}
 
-	close(servfd);
+	closesocket(servfd);
 	return -1;
 }
 
 static void byahoo_accept_conf( gpointer w, struct byahoo_conf_invitation *inv )
 {
-	// yahoo_conference_logon(int id, const char * from, YList *who, const char *room);
 	yahoo_conference_logon( inv->yid, NULL, inv->members, inv->name );
-	free( inv->name );
 	add_chat_buddy( inv->c, inv->gc->username );
+	g_free( inv->name );
+	g_free( inv );
 }
 
 static void byahoo_reject_conf( gpointer w, struct byahoo_conf_invitation *inv )
 {
-	// void yahoo_conference_decline(int id, const char * from, YList *who, const char *room, const char *msg);
 	yahoo_conference_decline( inv->yid, NULL, inv->members, inv->name, "User rejected groupchat" );
 	serv_got_chat_left( inv->gc, inv->c->id );
-	free( inv->name );
+	g_free( inv->name );
+	g_free( inv );
 }
 
 void ext_yahoo_got_conf_invite( int id, char *who, char *room, char *msg, YList *members )
 {
 	struct gaim_connection *gc = byahoo_get_gc_by_id( id );
-	user_t *u = user_findhandle( gc, who );
 	struct byahoo_conf_invitation *inv;
-	char who_f[256];
 	char txt[1024];
 	YList *m;
 	
-	inv = malloc( sizeof( struct byahoo_conf_invitation ) );
+	inv = g_malloc( sizeof( struct byahoo_conf_invitation ) );
 	memset( inv, 0, sizeof( struct byahoo_conf_invitation ) );
-	inv->name = strdup( room );
+	inv->name = g_strdup( room );
 	inv->c = serv_got_joined_chat( gc, ++byahoo_chat_id, room );
 	inv->c->data = members;
 	inv->yid = id;
@@ -771,31 +769,19 @@ void ext_yahoo_got_conf_invite( int id, char *who, char *room, char *msg, YList 
 	inv->gc = gc;
 	
 	for( m = members; m; m = m->next )
-		if( strcasecmp( m->data, gc->username ) != 0 )
+		if( g_ascii_strcasecmp( m->data, gc->username ) != 0 )
 			add_chat_buddy( inv->c, m->data );
 	
-	if( u )
-		snprintf( who_f, 256, "%s (handle %s)", u->nick, u->handle );
-	else
-		snprintf( who_f, 256, "unknown user with handle %s", who );
+	g_snprintf( txt, 1024, "Got an invitation to chatroom %s from %s: %s", room, who, msg );
 	
-	snprintf( txt, 1024, "Got an invitation to chatroom %s from %s: %s", room, who_f, msg );
-	
-	do_ask_dialog( txt, inv, byahoo_accept_conf, byahoo_reject_conf );
+	do_ask_dialog( gc, txt, inv, byahoo_accept_conf, byahoo_reject_conf );
 }
 
 void ext_yahoo_conf_userdecline( int id, char *who, char *room, char *msg )
 {
 	struct gaim_connection *gc = byahoo_get_gc_by_id( id );
-	user_t *u = user_findhandle( gc, who );
-	char who_f[256];
 	
-	if( u )
-		snprintf( who_f, 256, "%s (handle %s)", u->nick, u->handle );
-	else
-		snprintf( who_f, 256, "unknown user with handle %s", who );
-	
-	irc_usermsg( IRC, "Invite to chatroom %s rejected by %s: %s", room, who_f, msg );
+	serv_got_crap( gc, "Invite to chatroom %s rejected by %s: %s", room, who, msg );
 }
 
 void ext_yahoo_conf_userjoin( int id, char *who, char *room )
@@ -808,7 +794,7 @@ void ext_yahoo_conf_userjoin( int id, char *who, char *room )
 	if( c )
 		add_chat_buddy( c, who );
 	else if( set_getint( gc->irc, "debug" ) )
-		irc_usermsg( gc->irc, "Got ext_yahoo_conf_userjoin() from %s for unknown conference %s", who, room );
+		serv_got_crap( gc, "Got ext_yahoo_conf_userjoin() from %s for unknown conference %s", who, room );
 }
 
 void ext_yahoo_conf_userleave( int id, char *who, char *room )
@@ -821,7 +807,7 @@ void ext_yahoo_conf_userleave( int id, char *who, char *room )
 	if( c )
 		remove_chat_buddy( c, who, "" );
 	else if( set_getint( gc->irc, "debug" ) )
-		irc_usermsg( gc->irc, "Got ext_yahoo_conf_userleave() from %s for unknown conference %s", who, room );
+		serv_got_crap( gc, "Got ext_yahoo_conf_userleave() from %s for unknown conference %s", who, room );
 }
 
 void ext_yahoo_conf_message( int id, char *who, char *room, char *msg, int utf8 )
@@ -833,7 +819,7 @@ void ext_yahoo_conf_message( int id, char *who, char *room, char *msg, int utf8 
 	for( c = gc->conversations; c && strcmp( c->title, room ) != 0; c = c->next );
 	
 	serv_got_chat_in( gc, c ? c->id : 0, who, 0, m, 0 );
-	free( m );
+	g_free( m );
 }
 
 void ext_yahoo_chat_cat_xml( int id, char *xml )
@@ -878,6 +864,12 @@ void ext_yahoo_game_notify( int id, char *who, int stat )
 
 void ext_yahoo_mail_notify( int id, char *from, char *subj, int cnt )
 {
+	struct gaim_connection *gc = byahoo_get_gc_by_id( id );
+	
+	if( from && subj )
+		serv_got_crap( gc, "Received e-mail message from %s with subject `%s'", from, subj );
+	else if( cnt > 0 )
+		serv_got_crap( gc, "Received %d new e-mails", cnt );
 }
 
 void ext_yahoo_webcam_invite_reply( int id, char *from, int accept )

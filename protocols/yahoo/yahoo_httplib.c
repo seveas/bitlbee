@@ -42,7 +42,9 @@ char *strchr (), *strrchr ();
 
 
 #include <errno.h>
+#ifndef _WIN32
 #include <unistd.h>
+#endif
 #include <ctype.h>
 #include "yahoo2.h"
 #include "yahoo2_callbacks.h"

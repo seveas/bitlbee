@@ -67,7 +67,7 @@ static int hostonline(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, a
 	int famcount;
 
 
-	if (!(families = malloc(aim_bstream_empty(bs))))
+	if (!(families = g_malloc(aim_bstream_empty(bs))))
 		return 0;
 
 	for (famcount = 0; aim_bstream_empty(bs); famcount++) {
@@ -75,7 +75,7 @@ static int hostonline(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, a
 		aim_conn_addgroup(rx->conn, families[famcount]);
 	}
 
-	free(families);
+	g_free(families);
 
 
 	/*
@@ -135,12 +135,12 @@ static int redirect(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, aim
 	if ((userfunc = aim_callhandler(sess, rx->conn, snac->family, snac->subtype)))
 		ret = userfunc(sess, rx, &redir);
 
-	free((void *)redir.ip);
-	free((void *)redir.cookie);
+	g_free((void *)redir.ip);
+	g_free((void *)redir.cookie);
 
 	if (origsnac)
-		free(origsnac->data);
-	free(origsnac);
+		g_free(origsnac->data);
+	g_free(origsnac);
 
 	aim_freetlvchain(&tlvlist);
 
@@ -205,7 +205,7 @@ static void rc_addclass(struct rateclass **head, struct rateclass *inrc)
 {
 	struct rateclass *rc, *rc2;
 
-	if (!(rc = malloc(sizeof(struct rateclass))))
+	if (!(rc = g_malloc(sizeof(struct rateclass))))
 		return;
 
 	memcpy(rc, inrc, sizeof(struct rateclass));
@@ -238,7 +238,7 @@ static void rc_addpair(struct rateclass *rc, fu16_t group, fu16_t type)
 {
 	struct snacpair *sp, *sp2;
 
-	if (!(sp = malloc(sizeof(struct snacpair))))
+	if (!(sp = g_malloc(sizeof(struct snacpair))))
 		return;
 	memset(sp, 0, sizeof(struct snacpair));
 
@@ -586,7 +586,7 @@ static int migrate(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, aim_
 		ret = userfunc(sess, rx, ip, cktlv ? cktlv->value : NULL);
 
 	aim_freetlvchain(&tl);
-	free(ip);
+	g_free(ip);
 
 	return ret;
 }
@@ -623,7 +623,7 @@ static int motd(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, aim_mod
 	if ((userfunc = aim_callhandler(sess, rx->conn, snac->family, snac->subtype)))
 		ret = userfunc(sess, rx, id, msg);
 
-	free(msg);
+	g_free(msg);
 
 	aim_freetlvchain(&tlvlist);
 
@@ -713,7 +713,7 @@ static int hostversions(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx,
 	/* This is frivolous. (Thank you SmarterChild.) */
 	vercount = aim_bstream_empty(bs)/4;
 	versions = aimbs_getraw(bs, aim_bstream_empty(bs));
-	free(versions);
+	g_free(versions);
 
 	/*
 	 * Now request rates.
@@ -809,7 +809,7 @@ static int memrequest(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, a
 	if ((userfunc = aim_callhandler(sess, rx->conn, snac->family, snac->subtype)))
 		return userfunc(sess, rx, offset, len, modname);
 
-	free(modname);
+	g_free(modname);
 	aim_freetlvchain(&list);
 
 	return 0;

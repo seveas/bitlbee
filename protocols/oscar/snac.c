@@ -38,7 +38,7 @@ faim_internal aim_snacid_t aim_cachesnac(aim_session_t *sess, const fu16_t famil
 	snac.flags = flags;
 
 	if (datalen) {
-		if (!(snac.data = malloc(datalen)))
+		if (!(snac.data = g_malloc(datalen)))
 			return 0; /* er... */
 		memcpy(snac.data, data, datalen);
 	} else
@@ -59,7 +59,7 @@ faim_internal aim_snacid_t aim_newsnac(aim_session_t *sess, aim_snac_t *newsnac)
 	if (!newsnac)
 		return 0;
 
-	if (!(snac = malloc(sizeof(aim_snac_t))))
+	if (!(snac = g_malloc(sizeof(aim_snac_t))))
 		return 0;
 	memcpy(snac, newsnac, sizeof(aim_snac_t));
 	snac->issuetime = time(NULL);
@@ -123,8 +123,8 @@ faim_internal void aim_cleansnacs(aim_session_t *sess, int maxage)
 				*prev = cur->next;
 
 				/* XXX should we have destructors here? */
-				free(cur->data);
-				free(cur);
+				g_free(cur->data);
+				g_free(cur);
 
 			} else
 				prev = &cur->next;

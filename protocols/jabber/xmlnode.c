@@ -39,10 +39,15 @@
  * 
  * --------------------------------------------------------------------------*/
 
-#include "../lib.h"
+#include "jabber.h"
+#include <glib.h>
+
+static xmlnode xmlnode_get_firstattrib(xmlnode parent);
+static int xmlnode_get_type(xmlnode node);
+static void xmlnode_insert_node(xmlnode parent, xmlnode node);
 
 /* Internal routines */
-xmlnode _xmlnode_new(pool p, const char* name, unsigned int type)
+static xmlnode _xmlnode_new(pool p, const char* name, unsigned int type)
 {
     xmlnode result = NULL;
     if (type > NTYPE_LAST)
@@ -121,7 +126,7 @@ static xmlnode _xmlnode_search(xmlnode firstsibling, const char* name, unsigned 
     return NULL;
 }
 
-void _xmlnode_merge(xmlnode data)
+static void _xmlnode_merge(xmlnode data)
 {
     xmlnode cur;
     char *merge, *scur;
@@ -165,7 +170,7 @@ static void _xmlnode_hide_sibling(xmlnode child)
         child->next->prev = child->prev;
 }
 
-void _xmlnode_tag2str(spool s, xmlnode node, int flag)
+static void _xmlnode_tag2str(spool s, xmlnode node, int flag)
 {
     xmlnode tmp;
 
@@ -188,7 +193,7 @@ void _xmlnode_tag2str(spool s, xmlnode node, int flag)
     }
 }
 
-spool _xmlnode2spool(xmlnode node)
+static spool _xmlnode2spool(xmlnode node)
 {
     spool s;
     int level=0,dir=0;
@@ -255,23 +260,6 @@ spool _xmlnode2spool(xmlnode node)
 xmlnode xmlnode_new_tag(const char* name)
 {
     return _xmlnode_new(NULL, name, NTYPE_TAG);
-}
-
-
-/*
- *  xmlnode_new_tag_pool -- create a tag node within given pool
- *
- *  parameters
- *      p -- previously created memory pool
- *      name -- name of the tag
- *
- *  returns
- *      a pointer to the tag node
- *      or NULL if it was unsuccessfull
- */
-xmlnode xmlnode_new_tag_pool(pool p, const char* name)
-{
-    return _xmlnode_new(p, name, NTYPE_TAG);
 }
 
 
@@ -355,7 +343,7 @@ xmlnode xmlnode_get_tag(xmlnode parent, const char* name)
     if(strstr(name, "/") == NULL && strstr(name,"?") == NULL && strstr(name, "=") == NULL)
         return _xmlnode_search(parent->firstchild, name, NTYPE_TAG);
 
-    str = strdup(name);
+    str = g_strdup(name);
     slash = strstr(str, "/");
     qmark = strstr(str, "?");
     equals = strstr(str, "=");
@@ -381,7 +369,7 @@ xmlnode xmlnode_get_tag(xmlnode parent, const char* name)
             break;
         }
 
-        free(str);
+        g_free(str);
         return step;
     }
 
@@ -415,7 +403,7 @@ xmlnode xmlnode_get_tag(xmlnode parent, const char* name)
             break;
         }
 
-        free(str);
+        g_free(str);
         return step;
     }
 
@@ -433,12 +421,12 @@ xmlnode xmlnode_get_tag(xmlnode parent, const char* name)
         ret = xmlnode_get_tag(step, slash);
         if(ret != NULL)
         {
-            free(str);
+            g_free(str);
             return ret;
         }
     }
 
-    free(str);
+    g_free(str);
     return NULL;
 }
 
@@ -497,37 +485,7 @@ char* xmlnode_get_attrib(xmlnode owner, const char* name)
     return NULL;
 }
 
-void xmlnode_put_vattrib(xmlnode owner, const char* name, void *value)
-{
-    xmlnode attrib;
-
-    if (owner != NULL)
-    {
-        attrib = _xmlnode_search(owner->firstattrib, name, NTYPE_ATTRIB);
-        if (attrib == NULL)
-        {
-            xmlnode_put_attrib(owner, name, "");
-            attrib = _xmlnode_search(owner->firstattrib, name, NTYPE_ATTRIB);
-        }
-        if (attrib != NULL)
-            attrib->firstchild = (xmlnode)value;
-    }
-}
-
-void* xmlnode_get_vattrib(xmlnode owner, const char* name)
-{
-    xmlnode attrib;
-
-    if (owner != NULL && owner->firstattrib != NULL)
-    {
-        attrib = _xmlnode_search(owner->firstattrib, name, NTYPE_ATTRIB);
-        if (attrib != NULL)
-            return (void*)attrib->firstchild;
-    }
-    return NULL;
-}
-
-xmlnode xmlnode_get_firstattrib(xmlnode parent)
+static xmlnode xmlnode_get_firstattrib(xmlnode parent)
 {
     if (parent != NULL)
         return parent->firstattrib;
@@ -541,24 +499,10 @@ xmlnode xmlnode_get_firstchild(xmlnode parent)
     return NULL;
 }
 
-xmlnode xmlnode_get_lastchild(xmlnode parent)
-{
-    if (parent != NULL)
-        return parent->lastchild;
-    return NULL;
-}
-
 xmlnode xmlnode_get_nextsibling(xmlnode sibling)
 {
     if (sibling != NULL)
         return sibling->next;
-    return NULL;
-}
-
-xmlnode xmlnode_get_prevsibling(xmlnode sibling)
-{
-    if (sibling != NULL)
-        return sibling->prev;
     return NULL;
 }
 
@@ -591,7 +535,7 @@ char* xmlnode_get_data(xmlnode node)
     return node->data;
 }
 
-int xmlnode_get_datasz(xmlnode node)
+static int xmlnode_get_datasz(xmlnode node)
 {
     if(xmlnode_get_type(node) != NTYPE_CDATA) return 0;
 
@@ -601,7 +545,7 @@ int xmlnode_get_datasz(xmlnode node)
     return node->data_sz;
 }
 
-int xmlnode_get_type(xmlnode node)
+static int xmlnode_get_type(xmlnode node)
 {
     if (node != NULL)
         return node->type;
@@ -615,7 +559,7 @@ int xmlnode_has_children(xmlnode node)
     return 0;
 }
 
-int xmlnode_has_attribs(xmlnode node)
+static int xmlnode_has_attribs(xmlnode node)
 {
     if ((node != NULL) && (node->firstattrib != NULL))
         return 1;
@@ -627,25 +571,6 @@ pool xmlnode_pool(xmlnode node)
     if (node != NULL)
         return node->p;
     return (pool)NULL;
-}
-
-void xmlnode_hide(xmlnode child)
-{
-    xmlnode parent;
-
-    if(child == NULL || child->parent == NULL)
-        return;
-
-    parent = child->parent;
-
-    /* first fix up at the child level */
-    _xmlnode_hide_sibling(child);
-
-    /* next fix up at the parent level */
-    if(parent->firstchild == child)
-        parent->firstchild = child->next;
-    if(parent->lastchild == child)
-        parent->lastchild = child->prev;
 }
 
 void xmlnode_hide_attrib(xmlnode parent, const char *name)
@@ -686,27 +611,8 @@ char *xmlnode2str(xmlnode node)
      return spool_print(_xmlnode2spool(node));
 }
 
-/*
- *  xmlnode2tstr -- convert given xmlnode tree into a newline terminated string
- *
- *  parameters
- *      node -- pointer to the xmlnode structure
- *
- *  results
- *      a pointer to the created string
- *      or NULL if it was unsuccessfull
- */
-char*    xmlnode2tstr(xmlnode node)
-{
-     spool s = _xmlnode2spool(node);
-     if (s != NULL)
-	  spool_add(s, "\n");
-    return spool_print(s);
-}
-
-
 /* loop through both a and b comparing everything, attribs, cdata, children, etc */
-int xmlnode_cmp(xmlnode a, xmlnode b)
+static int xmlnode_cmp(xmlnode a, xmlnode b)
 {
     int ret = 0;
 
@@ -767,7 +673,7 @@ xmlnode xmlnode_insert_tag_node(xmlnode parent, xmlnode node)
 }
 
 /* places copy of node and node's siblings in parent */
-void xmlnode_insert_node(xmlnode parent, xmlnode node)
+static void xmlnode_insert_node(xmlnode parent, xmlnode node)
 {
     if(node == NULL || parent == NULL)
         return;
@@ -789,53 +695,6 @@ void xmlnode_insert_node(xmlnode parent, xmlnode node)
     }
 }
 
-
-/* produce full duplicate of x with a new pool, x must be a tag! */
-xmlnode xmlnode_dup(xmlnode x)
-{
-    xmlnode x2;
-
-    if(x == NULL)
-        return NULL;
-
-    x2 = xmlnode_new_tag(xmlnode_get_name(x));
-
-    if (xmlnode_has_attribs(x))
-        xmlnode_insert_node(x2, xmlnode_get_firstattrib(x));
-    if (xmlnode_has_children(x))
-        xmlnode_insert_node(x2, xmlnode_get_firstchild(x));
-
-    return x2;
-}
-
-xmlnode xmlnode_dup_pool(pool p, xmlnode x)
-{
-    xmlnode x2;
-
-    if(x == NULL)
-        return NULL;
-
-    x2 = xmlnode_new_tag_pool(p, xmlnode_get_name(x));
-
-    if (xmlnode_has_attribs(x))
-        xmlnode_insert_node(x2, xmlnode_get_firstattrib(x));
-    if (xmlnode_has_children(x))
-        xmlnode_insert_node(x2, xmlnode_get_firstchild(x));
-
-    return x2;
-}
-
-xmlnode xmlnode_wrap(xmlnode x,const char *wrapper)
-{
-    xmlnode wrap;
-    if(x==NULL||wrapper==NULL) return NULL;
-    wrap=xmlnode_new_tag_pool(xmlnode_pool(x),wrapper);
-    if(wrap==NULL) return NULL;
-    wrap->firstchild=x;
-    wrap->lastchild=x;
-    x->parent=wrap;
-    return wrap;
-}
 
 void xmlnode_free(xmlnode node)
 {

@@ -23,7 +23,7 @@
   Suite 330, Boston, MA  02111-1307  USA
 */
 
-typedef struct __USER__ /* struct user exists on some architectures already... */
+typedef struct __USER
 {
 	char *nick;
 	char *user;
@@ -32,22 +32,23 @@ typedef struct __USER__ /* struct user exists on some architectures already... *
 	
 	char *away;
 	
-	char private;
+	char is_private;
 	char online;
 	
 	char *handle;
 	struct gaim_connection *gc;
+
+ 	char *sendbuf;
+ 	int sendbuf_len;
+ 	guint sendbuf_timer;
 	
-	char *sendbuf;
-	int sendbuf_len;
-	guint sendbuf_timer;
-	
-	int (*send_handler) ( irc_t *irc, struct __USER__ *u, char *msg );
+	int (*send_handler) ( irc_t *irc, struct __USER *u, char *msg );
 	
 	void *next;
 } user_t;
 
 user_t *user_add( struct irc *irc, char *nick );
 int user_del( irc_t *irc, char *nick );
-user_t *user_find( irc_t *irc, char *nick );
-user_t *user_findhandle( struct gaim_connection *gc, char *handle );
+G_MODULE_EXPORT user_t *user_find( irc_t *irc, char *nick );
+G_MODULE_EXPORT user_t *user_findhandle( struct gaim_connection *gc, char *handle );
+void user_rename( irc_t *irc, char *oldnick, char *newnick );

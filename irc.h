@@ -30,9 +30,6 @@
 #define IRC_MAX_ARGS 8
 
 #define IRC_LOGIN_TIMEOUT 60
-/* These are now in bitlbee.conf:
-   #define IRC_PING_INTERVAL 180
-   #define IRC_PING_TIMEOUT 300 */
 #define IRC_PING_STRING "PinglBee"
 
 /* #define FLOOD_SEND 
@@ -46,16 +43,6 @@
 #define CMODES "nt"
 #define CMODE "t"
 #define UMODE "s"
-
-typedef struct query
-{
-	void *gc;
-	char *question;
-	void (* yes) ( gpointer w, void *data );
-	void (* no) ( gpointer w, void *data );
-	void *data;
-	void *next;
-} query_t;
 
 typedef enum
 {
@@ -97,11 +84,14 @@ typedef struct irc
 	char *channel;
 	int c_id;
 
-	char private;
-	query_t *queries;
+	char is_private;		/* Not too nice... */
+	char *last_target;
+	
+	struct query *queries;
 	struct account *accounts;
 	
 	void *users;
+	GHashTable *userhash;
 	void *nicks;
 	void *help;
 	void *set;
@@ -123,7 +113,7 @@ void irc_vawrite( irc_t *irc, char *format, va_list params );
 void irc_write( irc_t *irc, char *format, ... );
 void irc_write_all( char *format, ... );
 void irc_reply( irc_t *irc, int code, char *format, ... );
-int irc_usermsg( irc_t *irc, char *format, ... );
+G_MODULE_EXPORT int irc_usermsg( irc_t *irc, char *format, ... );
 char **irc_tokenize( char *buffer );
 
 void irc_login( irc_t *irc );

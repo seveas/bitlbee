@@ -34,7 +34,7 @@ faim_export int aim_bos_setbuddylist(aim_session_t *sess, aim_conn_t *conn, cons
 	char *localcpy = NULL;
 	char *tmpptr = NULL;
 
-	if (!buddy_list || !(localcpy = strdup(buddy_list))) 
+	if (!buddy_list || !(localcpy = g_strdup(buddy_list))) 
 		return -EINVAL;
 
 	for (tmpptr = strtok(localcpy, "&"); tmpptr; ) {
@@ -62,7 +62,7 @@ faim_export int aim_bos_setbuddylist(aim_session_t *sess, aim_conn_t *conn, cons
 
 	aim_tx_enqueue(sess, fr);
 
-	free(localcpy);
+	g_free(localcpy);
 
 	return 0;
 }
@@ -364,8 +364,8 @@ static int generror(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, aim
 		ret = userfunc(sess, rx, error, snac2 ? snac2->data : NULL);
 
 	if (snac2)
-		free(snac2->data);
-	free(snac2);
+		g_free(snac2->data);
+	g_free(snac2);
 
 	return ret;
 }

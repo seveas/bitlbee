@@ -40,8 +40,8 @@ typedef struct account
 } account_t;
 
 account_t *account_add( irc_t *irc, int protocol, char *user, char *pass );
-account_t *account_get( irc_t *irc, int nr );
-void account_del( irc_t *irc, int nr );
+account_t *account_get( irc_t *irc, char *id );
+void account_del( irc_t *irc, account_t *acc );
 void account_on( irc_t *irc, account_t *a );
 void account_off( irc_t *irc, account_t *a );
 

@@ -1,6 +1,6 @@
 /*
   Copyright (C) 1999 Aladdin Enterprises.  All rights reserved.
-
+  
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
   arising from the use of this software.
@@ -32,6 +32,7 @@
   <ghost@aladdin.com>.  Other authors are noted in the change history
   that follows (in reverse chronological order):
 
+  2004-03-09 Jelmer Vernooij add G_MODULE_EXPORT for Bitlbee
   1999-11-04 lpd Edited comments slightly for automatic TOC extraction.
   1999-10-18 lpd Fixed typo in header comment (ansi2knr rather than md5);
 	added conditionalization for C++ compilation from Martin
@@ -41,6 +42,9 @@
 
 #ifndef md5_INCLUDED
 #  define md5_INCLUDED
+
+#include <glib.h>
+#include <gmodule.h>
 
 /*
  * This code has some adaptations for the Ghostscript environment, but it
@@ -66,25 +70,13 @@ extern "C"
 #endif
 
 /* Initialize the algorithm. */
-#ifdef P1
-void md5_init(P1(md5_state_t *pms));
-#else
-void md5_init(md5_state_t *pms);
-#endif
+G_MODULE_EXPORT void md5_init(md5_state_t *pms);
 
 /* Append a string to the message. */
-#ifdef P3
-void md5_append(P3(md5_state_t *pms, const md5_byte_t *data, int nbytes));
-#else
-void md5_append(md5_state_t *pms, const md5_byte_t *data, int nbytes);
-#endif
+G_MODULE_EXPORT void md5_append(md5_state_t *pms, const md5_byte_t *data, int nbytes);
 
 /* Finish the message and return the digest. */
-#ifdef P2
-void md5_finish(P2(md5_state_t *pms, md5_byte_t digest[16]));
-#else
-void md5_finish(md5_state_t *pms, md5_byte_t digest[16]);
-#endif
+G_MODULE_EXPORT void md5_finish(md5_state_t *pms, md5_byte_t digest[16]);
 
 #ifdef __cplusplus
 }  /* end extern "C" */

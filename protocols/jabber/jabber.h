@@ -27,18 +27,15 @@
 #include <errno.h>
 #include <signal.h>
 #include <stdarg.h>
-#include <syslog.h>
-#include <strings.h>
-#include <unistd.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <netdb.h>
-#include <arpa/inet.h>
-#include <sys/time.h>
 #include <time.h>
 #include <ctype.h>
+#ifdef _WIN32
+#undef DATADIR
+#include <winsock.h>
+#endif
 
-#include "libxode.h"
+#include "lib.h"
+
 
 #ifndef INCL_JABBER_H
 #define INCL_JABBER_H
@@ -74,6 +71,7 @@ int     jid_cmpx(jid a, jid b, int parts);     /* Compares just the parts specif
 jid     jid_append(jid a, jid b);	       /* Appending b to a (list), no dups */
 xmlnode jid_xres(jid id);		       /* Returns xmlnode representation of the resource?query=string */
 xmlnode jid_nodescan(jid id, xmlnode x);       /* Scans the children of the node for a matching jid attribute */
+jid     jid_user(jid a);                       /* returns the same jid but just of the user@host part */
 
 
 /* --------------------------------------------------------- */
@@ -103,6 +101,7 @@ xmlnode jid_nodescan(jid id, xmlnode x);       /* Scans the children of the node
 #define JPACKET__UNAVAILABLE  13
 #define JPACKET__PROBE        14
 #define JPACKET__HEADLINE     15
+#define JPACKET__INVISIBLE    16
 
 typedef struct jpacket_struct
 {
@@ -119,7 +118,6 @@ typedef struct jpacket_struct
 } *jpacket, _jpacket;
  
 jpacket jpacket_new(xmlnode x);	    /* Creates a jabber packet from the xmlnode */
-jpacket jpacket_reset(jpacket p);   /* Resets the jpacket values based on the xmlnode */
 int     jpacket_subtype(jpacket p); /* Returns the subtype value (looks at xmlnode for it) */
 
 

@@ -79,20 +79,18 @@ faim_export char *aimutil_itemidx(char *toSearch, int index, char dl)
 	}
 
 	if (curCount < index) {
-		toReturn = malloc(sizeof(char));
-		*toReturn = '\0';
+		toReturn = g_strdup("");
 	}
 	next = strchr(last, dl);
 
 	if (curCount < index) {
-		toReturn = malloc(sizeof(char));
-		*toReturn = '\0';
+		toReturn = g_strdup("");
 	} else {
 		if (next == NULL) {
-			toReturn = malloc((strlen(last) + 1) * sizeof(char));
+			toReturn = g_malloc((strlen(last) + 1) * sizeof(char));
 			strcpy(toReturn, last);
 		} else {
-			toReturn = malloc((next - last + 1) * sizeof(char));
+			toReturn = g_malloc((next - last + 1) * sizeof(char));
 			memcpy(toReturn, last, (next - last));
 			toReturn[next - last] = '\0';
 		}
@@ -108,7 +106,7 @@ faim_export char *aimutil_itemidx(char *toSearch, int index, char dl)
 * return is equal to that of strlen().
 *
 */
-faim_export int aim_snlen(const char *sn)
+int aim_snlen(const char *sn)
 {
 	int i = 0;
 	const char *curPtr = NULL;
@@ -139,7 +137,7 @@ faim_export int aim_snlen(const char *sn)
 *
 */
 
-faim_export int aim_sncmp(const char *sn1, const char *sn2)
+int aim_sncmp(const char *sn1, const char *sn2)
 {
 	const char *curPtr1 = NULL, *curPtr2 = NULL;
 
@@ -168,41 +166,3 @@ faim_export int aim_sncmp(const char *sn1, const char *sn2)
 
 	return 0;
 }
-
-/* strsep Copyright (C) 1992, 1993 Free Software Foundation, Inc.
-strsep is part of the GNU C Library.
-
-The GNU C Library is free software; you can redistribute it and/or
-modify it under the terms of the GNU Library General Public License as
-published by the Free Software Foundation; either version 2 of the
-License, or (at your option) any later version.
-
-The GNU C Library is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-Library General Public License for more details.
-
-You should have received a copy of the GNU Library General Public
-License along with the GNU C Library; see the file COPYING.LIB.  If
-not, write to the Free Software Foundation, Inc., 675 Mass Ave,
-Cambridge, MA 02139, USA.  */
-
-/* Minor changes by and1000 on 15/1/97 to make it go under Nemesis */
-
-faim_export char *aim_strsep(char **pp, const char *delim)
-{
-	char *p, *q;
-
-	if (!(p = *pp))
-		return 0;
-
-	if ((q = strpbrk (p, delim))) {
-		*pp = q + 1;
-		*q = '\0';
-	} else
-		*pp = 0;
-
-	return p;
-}
-
-

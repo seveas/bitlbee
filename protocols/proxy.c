@@ -2,6 +2,7 @@
  * gaim
  *
  * Copyright (C) 1998-1999, Mark Spencer <markster@marko.net>
+ * Copyright (C) 2002-2004, Wilmer van der Gaast, Jelmer Vernooij
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -23,15 +24,23 @@
 /* it is intended to : 1st handle http proxy, using the CONNECT command
  , 2nd provide an easy way to add socks support */
 
+#define BITLBEE_CORE
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
+#ifndef _WIN32
 #include <sys/socket.h>
 #include <netdb.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <unistd.h>
+#else
+#include <winsock.h>
+int inet_aton(char *host, struct in_addr *addr) { addr->S_un.S_addr = inet_addr(host); return addr->S_un.S_addr != INADDR_NONE; }
+#define ETIMEDOUT WSAETIMEDOUT
+#define EINPROGRESS WSAEINPROGRESS
+#endif
 #include <fcntl.h>
 #include <errno.h>
 #include "nogaim.h"
@@ -41,17 +50,28 @@
 #define GAIM_WRITE_COND (G_IO_OUT | G_IO_HUP | G_IO_ERR | G_IO_NVAL)
 #define GAIM_ERR_COND   (G_IO_HUP | G_IO_ERR | G_IO_NVAL)
 
-char proxyhost[128] = { 0 };
+/*FIXME*		
+	#ifndef _WIN32
+		if (getsockopt(fd, SOL_SOCKET, SO_ERROR, &error, &len) < 0) {
+			closesocket(fd);
+			g_free(phb);
+			return -1;
+		}
+		fcntl(fd, F_SETFL, 0);
+#endif*/
+
+char proxyhost[128] = "";
 int proxyport = 0;
-int proxytype = 0;
-char proxyuser[128] = { 0 };
-char proxypass[128] = { 0 };
+int proxytype = PROXY_NONE;
+char proxyuser[128] = "";
+char proxypass[128] = "";
 
 struct PHB {
-	GaimInputFunction func;
-	gpointer data;
+	GaimInputFunction func, proxy_func;
+	gpointer data, proxy_data;
 	char *host;
 	int port;
+	int fd;
 	gint inpa;
 };
 
@@ -60,6 +80,27 @@ typedef struct _GaimIOClosure {
 	guint result;
 	gpointer data;
 } GaimIOClosure;
+
+
+
+static struct sockaddr_in *gaim_gethostbyname(char *host, int port)
+{
+	static struct sockaddr_in sin;
+
+	if (!inet_aton(host, &sin.sin_addr)) {
+		struct hostent *hp;
+		if (!(hp = gethostbyname(host))) {
+			return NULL;
+		}
+		memset(&sin, 0, sizeof(struct sockaddr_in));
+		memcpy(&sin.sin_addr.s_addr, hp->h_addr, hp->h_length);
+		sin.sin_family = hp->h_addrtype;
+	} else
+		sin.sin_family = AF_INET;
+	sin.sin_port = htons(port);
+
+	return &sin;
+}
 
 static void gaim_io_destroy(gpointer data)
 {
@@ -83,82 +124,35 @@ static gboolean gaim_io_invoke(GIOChannel *source, GIOCondition condition, gpoin
 	return TRUE;
 }
 
-gint gaim_input_add(gint source, GaimInputCondition condition, GaimInputFunction function, gpointer data)
-{
-	GaimIOClosure *closure = g_new0(GaimIOClosure, 1);
-	GIOChannel *channel;
-	GIOCondition cond = 0;
-
-	closure->function = function;
-	closure->data = data;
-
-	if (condition & GAIM_INPUT_READ)
-		cond |= GAIM_READ_COND;
-	if (condition & GAIM_INPUT_WRITE)
-		cond |= GAIM_WRITE_COND;
-
-	channel = g_io_channel_unix_new(source);
-	closure->result = g_io_add_watch_full(channel, G_PRIORITY_DEFAULT, cond,
-					      gaim_io_invoke, closure, gaim_io_destroy);
-
-	g_io_channel_unref(channel);
-	return closure->result;
-}
-
-void gaim_input_remove(gint tag)
-{
-	if (tag > 0)
-		g_source_remove(tag);
-}
-
-static struct sockaddr_in *gaim_gethostbyname(char *host, int port)
-{
-	static struct sockaddr_in sin;
-
-	if (!inet_aton(host, &sin.sin_addr)) {
-		struct hostent *hp;
-		if (!(hp = gethostbyname(host))) {
-			return NULL;
-		}
-		memset(&sin, 0, sizeof(struct sockaddr_in));
-		memcpy(&sin.sin_addr.s_addr, hp->h_addr, hp->h_length);
-		sin.sin_family = hp->h_addrtype;
-	} else
-		sin.sin_family = AF_INET;
-	sin.sin_port = htons(port);
-
-	return &sin;
-}
-
 static void no_one_calls(gpointer data, gint source, GaimInputCondition cond)
 {
 	struct PHB *phb = data;
 	unsigned int len;
 	int error = ETIMEDOUT;
 	len = sizeof(error);
+	
+#ifndef _WIN32
 	if (getsockopt(source, SOL_SOCKET, SO_ERROR, &error, &len) < 0) {
-		close(source);
+		closesocket(source);
 		gaim_input_remove(phb->inpa);
-		phb->func(phb->data, -1, GAIM_INPUT_READ);
-		g_free(phb);
+		if( phb->proxy_func )
+			phb->proxy_func(phb->proxy_data, -1, GAIM_INPUT_READ);
+		else {
+			phb->func(phb->data, -1, GAIM_INPUT_READ);
+			g_free(phb);
+		}
 		return;
 	}
 	fcntl(source, F_SETFL, 0);
+#endif
 	gaim_input_remove(phb->inpa);
-	phb->func(phb->data, source, GAIM_INPUT_READ);
-	g_free(phb);
+	if( phb->proxy_func )
+		phb->proxy_func(phb->proxy_data, source, GAIM_INPUT_READ);
+	else {
+		phb->func(phb->data, source, GAIM_INPUT_READ);
+		g_free(phb);
+	}
 }
-
-static gboolean clean_connect(gpointer data)
-{
-	struct PHB *phb = data;
-
-	phb->func(phb->data, phb->port, GAIM_INPUT_READ);
-	g_free(phb);
-
-	return FALSE;
-}
-
 
 static int proxy_connect_none(char *host, unsigned short port, struct PHB *phb)
 {
@@ -175,33 +169,24 @@ static int proxy_connect_none(char *host, unsigned short port, struct PHB *phb)
 		return -1;
 	}
 
-	fcntl(fd, F_SETFL, O_NONBLOCK);
+	sock_make_nonblocking(fd);
+
 	if (connect(fd, (struct sockaddr *)sin, sizeof(*sin)) < 0) {
-		if ((errno == EINPROGRESS) || (errno == EINTR)) {
+		if (sockerr_again()) {
 			phb->inpa = gaim_input_add(fd, GAIM_INPUT_WRITE, no_one_calls, phb);
+			phb->fd = fd;
 		} else {
-			close(fd);
+			closesocket(fd);
 			g_free(phb);
 			return -1;
 		}
-	} else {
-		unsigned int len;
-		int error = ETIMEDOUT;
-		len = sizeof(error);
-		if (getsockopt(fd, SOL_SOCKET, SO_ERROR, &error, &len) < 0) {
-			close(fd);
-			g_free(phb);
-			return -1;
-		}
-		fcntl(fd, F_SETFL, 0);
-		phb->port = fd;	/* bleh */
-		g_timeout_add(50, clean_connect, phb);	/* we do this because we never
-							   want to call our callback
-							   before we return. */
 	}
 
 	return fd;
 }
+
+
+/* Connecting to HTTP proxies */
 
 #define HTTP_GOODSTRING "HTTP/1.0 200 Connection established"
 #define HTTP_GOODSTRING2 "HTTP/1.1 200 Connection established"
@@ -254,7 +239,9 @@ static void http_canwrite(gpointer data, gint source, GaimInputCondition cond)
 		g_free(phb);
 		return;
 	}
+#ifdef F_SETFL
 	fcntl(source, F_SETFL, 0);
+#endif
 
 	g_snprintf(cmd, sizeof(cmd), "CONNECT %s:%d HTTP/1.1\r\nHost: %s:%d\r\n", phb->host, phb->port,
 		   phb->host, phb->port);
@@ -266,7 +253,7 @@ static void http_canwrite(gpointer data, gint source, GaimInputCondition cond)
 		return;
 	}
 
-	if (proxyuser) {
+	if (proxyuser && *proxyuser) {
 		char *t1, *t2;
 		t1 = g_strdup_printf("%s:%s", proxyuser, proxypass);
 		t2 = tobase64(t1);
@@ -296,48 +283,16 @@ static void http_canwrite(gpointer data, gint source, GaimInputCondition cond)
 
 static int proxy_connect_http(char *host, unsigned short port, struct PHB *phb)
 {
-	struct sockaddr_in *sin;
-	int fd = -1;
-
-	if (!(sin = gaim_gethostbyname(proxyhost, proxyport))) {
-		g_free(phb);
-		return -1;
-	}
-
-	if ((fd = socket(sin->sin_family, SOCK_STREAM, 0)) < 0) {
-		g_free(phb);
-		return -1;
-	}
-
 	phb->host = g_strdup(host);
 	phb->port = port;
-
-	fcntl(fd, F_SETFL, O_NONBLOCK);
-	if (connect(fd, (struct sockaddr *)sin, sizeof(*sin)) < 0) {
-		if ((errno == EINPROGRESS) || (errno == EINTR)) {
-			phb->inpa = gaim_input_add(fd, GAIM_INPUT_WRITE, http_canwrite, phb);
-		} else {
-			close(fd);
-			g_free(phb->host);
-			g_free(phb);
-			return -1;
-		}
-	} else {
-		unsigned int len;
-		int error = ETIMEDOUT;
-		len = sizeof(error);
-		if (getsockopt(fd, SOL_SOCKET, SO_ERROR, &error, &len) < 0) {
-			close(fd);
-			g_free(phb->host);
-			g_free(phb);
-			return -1;
-		}
-		fcntl(fd, F_SETFL, 0);
-		http_canwrite(phb, fd, GAIM_INPUT_WRITE);
-	}
-
-	return fd;
+	phb->proxy_func = http_canwrite;
+	phb->proxy_data = phb;
+	
+	return( proxy_connect_none( proxyhost, proxyport, phb ) );
 }
+
+
+/* Connecting to SOCKS4 proxies */
 
 static void s4_canread(gpointer data, gint source, GaimInputCondition cond)
 {
@@ -377,7 +332,9 @@ static void s4_canwrite(gpointer data, gint source, GaimInputCondition cond)
 		g_free(phb);
 		return;
 	}
+#ifdef F_SETFL
 	fcntl(source, F_SETFL, 0);
+#endif
 
 	/* XXX does socks4 not support host name lookups by the proxy? */
 	if (!(hp = gethostbyname(phb->host))) {
@@ -410,48 +367,16 @@ static void s4_canwrite(gpointer data, gint source, GaimInputCondition cond)
 
 static int proxy_connect_socks4(char *host, unsigned short port, struct PHB *phb)
 {
-	struct sockaddr_in *sin;
-	int fd = -1;
-
-	if (!(sin = gaim_gethostbyname(proxyhost, proxyport))) {
-		g_free(phb);
-		return -1;
-	}
-
-	if ((fd = socket(sin->sin_family, SOCK_STREAM, 0)) < 0) {
-		g_free(phb);
-		return -1;
-	}
-
 	phb->host = g_strdup(host);
 	phb->port = port;
-
-	fcntl(fd, F_SETFL, O_NONBLOCK);
-	if (connect(fd, (struct sockaddr *)sin, sizeof(*sin)) < 0) {
-		if ((errno == EINPROGRESS) || (errno == EINTR)) {
-			phb->inpa = gaim_input_add(fd, GAIM_INPUT_WRITE, s4_canwrite, phb);
-		} else {
-			close(fd);
-			g_free(phb->host);
-			g_free(phb);
-			return -1;
-		}
-	} else {
-		unsigned int len;
-		int error = ETIMEDOUT;
-		len = sizeof(error);
-		if (getsockopt(fd, SOL_SOCKET, SO_ERROR, &error, &len) < 0) {
-			close(fd);
-			g_free(phb->host);
-			g_free(phb);
-			return -1;
-		}
-		fcntl(fd, F_SETFL, 0);
-		s4_canwrite(phb, fd, GAIM_INPUT_WRITE);
-	}
-
-	return fd;
+	phb->proxy_func = s4_canwrite;
+	phb->proxy_data = phb;
+	
+	return( proxy_connect_none( proxyhost, proxyport, phb ) );
 }
+
+
+/* Connecting to SOCKS5 proxies */
 
 static void s5_canread_again(gpointer data, gint source, GaimInputCondition cond)
 {
@@ -594,7 +519,9 @@ static void s5_canwrite(gpointer data, gint source, GaimInputCondition cond)
 		g_free(phb);
 		return;
 	}
+#ifdef F_SETFL
 	fcntl(source, F_SETFL, 0);
+#endif
 
 	i = 0;
 	buf[0] = 0x05;		/* SOCKS version 5 */
@@ -622,62 +549,61 @@ static void s5_canwrite(gpointer data, gint source, GaimInputCondition cond)
 
 static int proxy_connect_socks5(char *host, unsigned short port, struct PHB *phb)
 {
-	struct sockaddr_in *sin;
-	int fd = -1;
-
-	if (!(sin = gaim_gethostbyname(proxyhost, proxyport))) {
-		g_free(phb);
-		return -1;
-	}
-
-	if ((fd = socket(sin->sin_family, SOCK_STREAM, 0)) < 0) {
-		g_free(phb);
-		return -1;
-	}
-
 	phb->host = g_strdup(host);
 	phb->port = port;
+	phb->proxy_func = s5_canwrite;
+	phb->proxy_data = phb;
+	
+	return( proxy_connect_none( proxyhost, proxyport, phb ) );
+}
 
-	fcntl(fd, F_SETFL, O_NONBLOCK);
-	if (connect(fd, (struct sockaddr *)sin, sizeof(*sin)) < 0) {
-		if ((errno == EINPROGRESS) || (errno == EINTR)) {
-			phb->inpa = gaim_input_add(fd, GAIM_INPUT_WRITE, s5_canwrite, phb);
-		} else {
-			close(fd);
-			g_free(phb->host);
-			g_free(phb);
-			return -1;
-		}
-	} else {
-		unsigned int len;
-		int error = ETIMEDOUT;
-		len = sizeof(error);
-		if (getsockopt(fd, SOL_SOCKET, SO_ERROR, &error, &len) < 0) {
-			close(fd);
-			g_free(phb->host);
-			g_free(phb);
-			return -1;
-		}
-		fcntl(fd, F_SETFL, 0);
-		s5_canwrite(phb, fd, GAIM_INPUT_WRITE);
-	}
 
-	return fd;
+/* Export functions */
+
+gint gaim_input_add(gint source, GaimInputCondition condition, GaimInputFunction function, gpointer data)
+{
+	GaimIOClosure *closure = g_new0(GaimIOClosure, 1);
+	GIOChannel *channel;
+	GIOCondition cond = 0;
+	
+	closure->function = function;
+	closure->data = data;
+	
+	if (condition & GAIM_INPUT_READ)
+		cond |= GAIM_READ_COND;
+	if (condition & GAIM_INPUT_WRITE)
+		cond |= GAIM_WRITE_COND;
+	
+	channel = g_io_channel_unix_new(source);
+	closure->result = g_io_add_watch_full(channel, G_PRIORITY_DEFAULT, cond,
+					      gaim_io_invoke, closure, gaim_io_destroy);
+	
+	g_io_channel_unref(channel);
+	return closure->result;
+}
+
+void gaim_input_remove(gint tag)
+{
+	if (tag > 0)
+		g_source_remove(tag);
 }
 
 int proxy_connect(char *host, int port, GaimInputFunction func, gpointer data)
 {
-	struct PHB *phb = g_new0(struct PHB, 1);
-	phb->func = func;
-	phb->data = data;
-
+	struct PHB *phb;
+	
 	if (!host || !port || (port == -1) || !func) {
-		g_free(phb);
 		return -1;
 	}
-
+	
+	phb = g_new0(struct PHB, 1);
+	phb->func = func;
+	phb->data = data;
+	
+#ifndef _WIN32
 	sethostent(1);
-
+#endif
+	
 	if ((proxytype == PROXY_NONE) || !proxyhost || !proxyhost[0] || !proxyport || (proxyport == -1))
 		return proxy_connect_none(host, port, phb);
 	else if (proxytype == PROXY_HTTP)
@@ -686,7 +612,8 @@ int proxy_connect(char *host, int port, GaimInputFunction func, gpointer data)
 		return proxy_connect_socks4(host, port, phb);
 	else if (proxytype == PROXY_SOCKS5)
 		return proxy_connect_socks5(host, port, phb);
-
+	
+	if (phb->host) g_free(phb);
 	g_free(phb);
 	return -1;
 }

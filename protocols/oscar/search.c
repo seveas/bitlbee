@@ -20,7 +20,7 @@ faim_export int aim_usersearch_address(aim_session_t *sess, aim_conn_t *conn, co
 	if (!(fr = aim_tx_new(sess, conn, AIM_FRAMETYPE_FLAP, 0x02, 10+strlen(address))))
 		return -ENOMEM;
 
-	snacid = aim_cachesnac(sess, 0x000a, 0x0002, 0x0000, strdup(address), strlen(address)+1);
+	snacid = aim_cachesnac(sess, 0x000a, 0x0002, 0x0000, g_strdup(address), strlen(address)+1);
 	aim_putsnac(&fr->data, 0x000a, 0x0002, 0x0000, snacid);
 	
 	aimbs_putraw(&fr->data, address, strlen(address)); 
@@ -48,8 +48,8 @@ static int error(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, aim_mo
 
 	/* XXX freesnac()? */
 	if (snac2)
-		free(snac2->data);
-	free(snac2);
+		g_free(snac2->data);
+	g_free(snac2);
 
 	return ret;
 }
@@ -71,10 +71,10 @@ static int reply(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, aim_mo
 
 	/* XXX uhm. */
 	while ((cur = aim_gettlv_str(tlvlist, 0x0001, j+1)) && j < m) {
-		buf = realloc(buf, (j+1) * (MAXSNLEN+1));
+		buf = g_realloc(buf, (j+1) * (MAXSNLEN+1));
 
 		strncpy(&buf[j * (MAXSNLEN+1)], cur, MAXSNLEN);
-		free(cur);
+		g_free(cur);
 
 		j++; 
 	}
@@ -86,10 +86,10 @@ static int reply(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, aim_mo
 
 	/* XXX freesnac()? */
 	if (snac2)
-		free(snac2->data);
-	free(snac2);
+		g_free(snac2->data);
+	g_free(snac2);
 
-	free(buf);
+	g_free(buf);
 
 	return ret;
 }

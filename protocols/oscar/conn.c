@@ -9,12 +9,7 @@
 #define FAIM_INTERNAL
 #define FAIM_NEED_CONN_INTERNAL
 #include <aim.h> 
-
-#ifndef _WIN32
-#include <netdb.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#endif
+#include "sock.h"
 
 /*
  * In OSCAR, every connection has a set of SNAC groups associated
@@ -76,7 +71,7 @@ faim_internal void aim_conn_addgroup(aim_conn_t *conn, fu16_t group)
 	aim_conn_inside_t *ins = (aim_conn_inside_t *)conn->inside;
 	struct snacgroup *sg;
 
-	if (!(sg = malloc(sizeof(struct snacgroup))))
+	if (!(sg = g_malloc(sizeof(struct snacgroup))))
 		return;
 
 	faimdprintf(aim_conn_getsess(conn), 1, "adding group 0x%04x\n", group);
@@ -113,7 +108,7 @@ static void connkill_snacgroups(struct snacgroup **head)
 		struct snacgroup *tmp;
 
 		tmp = sg->next;
-		free(sg);
+		g_free(sg);
 		sg = tmp;
 	}
 
@@ -136,10 +131,10 @@ static void connkill_rates(struct rateclass **head)
 			struct snacpair *tmpsp;
 
 			tmpsp = sp->next;
-			free(sp);
+			g_free(sp);
 			sp = tmpsp;
 		}
-		free(rc);
+		g_free(rc);
 
 		rc = tmp;
 	}
@@ -164,7 +159,7 @@ static void connkill_real(aim_session_t *sess, aim_conn_t **deadconn)
 	 * ->internal instead.
 	 */
 	if ((*deadconn)->priv)
-		free((*deadconn)->priv);
+		g_free((*deadconn)->priv);
 
 	/*
 	 * This will free ->internal if it necessary...
@@ -180,10 +175,10 @@ static void connkill_real(aim_session_t *sess, aim_conn_t **deadconn)
 		connkill_snacgroups(&inside->groups);
 		connkill_rates(&inside->rates);
 
-		free(inside);
+		g_free(inside);
 	}
 
-	free(*deadconn);
+	g_free(*deadconn);
 	*deadconn = NULL;
 
 	return;
@@ -252,15 +247,13 @@ static aim_conn_t *aim_conn_getnext(aim_session_t *sess)
 {
 	aim_conn_t *newconn;
 
-	if (!(newconn = malloc(sizeof(aim_conn_t)))) 	
+	if (!(newconn = g_new0(aim_conn_t,1))) 	
 		return NULL;
-	memset(newconn, 0, sizeof(aim_conn_t));
 
-	if (!(newconn->inside = malloc(sizeof(aim_conn_inside_t)))) {
-		free(newconn);
+	if (!(newconn->inside = g_new0(aim_conn_inside_t,1))) {
+		g_free(newconn);
 		return NULL;
 	}
-	memset(newconn->inside, 0, sizeof(aim_conn_inside_t));
 
 	aim_conn_init(newconn);
 
@@ -317,7 +310,7 @@ faim_export void aim_conn_close(aim_conn_t *deadconn)
 {
 
 	if (deadconn->fd >= 3)
-		close(deadconn->fd);
+		closesocket(deadconn->fd);
 	deadconn->fd = -1;
 	if (deadconn->handlerlist)
 		aim_clearhandlers(deadconn);
@@ -364,19 +357,6 @@ faim_export aim_conn_t *aim_getconn_type_all(aim_session_t *sess, int type)
 	return cur;
 }
 
-/* If you pass -1 for the fd, you'll get what you ask for.  Gibberish. */
-faim_export aim_conn_t *aim_getconn_fd(aim_session_t *sess, int fd)
-{
-	aim_conn_t *cur;
-
-	for (cur = sess->connlist; cur; cur = cur->next) {
-		if (cur->fd == fd)
-			break;
-	}
-
-	return cur;
-}
-
 /**
  * aim_proxyconnect - An extrememly quick and dirty SOCKS5 interface. 
  * @sess: Session to connect
@@ -410,7 +390,7 @@ static int aim_proxyconnect(aim_session_t *sess, const char *host, fu16_t port, 
 			}
 		}
 
-		proxy = (char *)malloc(i+1);
+		proxy = (char *)g_malloc(i+1);
 		strncpy(proxy, sess->socksproxy.server, i);
 		proxy[i] = '\0';
 
@@ -419,7 +399,7 @@ static int aim_proxyconnect(aim_session_t *sess, const char *host, fu16_t port, 
 			*statusret = (h_errno | AIM_CONN_STATUS_RESOLVERR);
 			return -1;
 		}
-		free(proxy);
+		g_free(proxy);
 
 		memset(&sa.sin_zero, 0, 8);
 		sa.sin_port = htons(proxyport);
@@ -429,7 +409,7 @@ static int aim_proxyconnect(aim_session_t *sess, const char *host, fu16_t port, 
 		fd = socket(hp->h_addrtype, SOCK_STREAM, 0);
 		if (connect(fd, (struct sockaddr *)&sa, sizeof(struct sockaddr_in)) < 0) {
 			faimdprintf(sess, 0, "proxyconnect: unable to connect to proxy\n");
-			close(fd);
+			closesocket(fd);
 			return -1;
 		}
 
@@ -448,19 +428,19 @@ static int aim_proxyconnect(aim_session_t *sess, const char *host, fu16_t port, 
 
 		if (write(fd, buf, i) < i) {
 			*statusret = errno;
-			close(fd);
+			closesocket(fd);
 			return -1;
 		}
 
 		if (read(fd, buf, 2) < 2) {
 			*statusret = errno;
-			close(fd);
+			closesocket(fd);
 			return -1;
 		}
 
 		if ((buf[0] != 0x05) || (buf[1] == 0xff)) {
 			*statusret = EINVAL;
-			close(fd);
+			closesocket(fd);
 			return -1;
 		}
 
@@ -473,17 +453,17 @@ static int aim_proxyconnect(aim_session_t *sess, const char *host, fu16_t port, 
 			i += aimutil_putstr(buf+i, sess->socksproxy.password, strlen(sess->socksproxy.password));
 			if (write(fd, buf, i) < i) {
 				*statusret = errno;
-				close(fd);
+				closesocket(fd);
 				return -1;
 			}
 			if (read(fd, buf, 2) < 2) {
 				*statusret = errno;
-				close(fd);
+				closesocket(fd);
 				return -1;
 			}
 			if ((buf[0] != 0x01) || (buf[1] != 0x00)) {
 				*statusret = EINVAL;
-				close(fd);
+				closesocket(fd);
 				return -1;
 			}
 		}
@@ -498,17 +478,17 @@ static int aim_proxyconnect(aim_session_t *sess, const char *host, fu16_t port, 
 
 		if (write(fd, buf, i) < i) {
 			*statusret = errno;
-			close(fd);
+			closesocket(fd);
 			return -1;
 		}
 		if (read(fd, buf, 10) < 10) {
 			*statusret = errno;
-			close(fd);
+			closesocket(fd);
 			return -1;
 		}
 		if ((buf[0] != 0x05) || (buf[1] != 0x00)) {
 			*statusret = EINVAL;
-			close(fd);
+			closesocket(fd);
 			return -1;
 		}
 
@@ -528,18 +508,28 @@ static int aim_proxyconnect(aim_session_t *sess, const char *host, fu16_t port, 
 
 		fd = socket(hp->h_addrtype, SOCK_STREAM, 0);
 
-		if (sess->flags & AIM_SESS_FLAGS_NONBLOCKCONNECT)
+		if (sess->flags & AIM_SESS_FLAGS_NONBLOCKCONNECT) {
+#ifdef _WIN32
+			int non_block = 1;
+			ioctlsocket(fd, FIONBIO, &non_block);
+#else
 			fcntl(fd, F_SETFL, O_NONBLOCK); /* XXX save flags */
+#endif
+		}
 
 		if (connect(fd, (struct sockaddr *)&sa, sizeof(struct sockaddr_in)) < 0) {
 			if (sess->flags & AIM_SESS_FLAGS_NONBLOCKCONNECT) {
-				if ((errno == EINPROGRESS) || (errno == EINTR)) {
+#ifdef _WIN32
+				if(WSAGetLastError() == WSAEINPROGRESS) {
+#else
+				if (sockerr_again()) {
+#endif
 					if (statusret)
 						*statusret |= AIM_CONN_STATUS_INPROGRESS;
 					return fd;
 				}
 			}
-			close(fd);
+			closesocket(fd);
 			fd = -1;
 		}
 	}
@@ -639,145 +629,21 @@ faim_export aim_conn_t *aim_newconn(aim_session_t *sess, int type, const char *d
 		}
 	}
 
-	host = (char *)malloc(i+1);
+	host = (char *)g_malloc(i+1);
 	strncpy(host, dest, i);
 	host[i] = '\0';
 
 	if ((ret = aim_proxyconnect(sess, host, port, &connstruct->status)) < 0) {
 		connstruct->fd = -1;
 		connstruct->status = (errno | AIM_CONN_STATUS_CONNERR);
-		free(host);
+		g_free(host);
 		return connstruct;
 	} else
 		connstruct->fd = ret;
 
-	free(host);
+	g_free(host);
 
 	return connstruct;
-}
-
-/**
- * aim_conngetmaxfd - Return the highest valued file discriptor in session
- * @sess: Session to search
- *
- * Returns the highest valued filed descriptor of all open 
- * connections in @sess.
- *
- */
-faim_export int aim_conngetmaxfd(aim_session_t *sess)
-{
-	int j;
-	aim_conn_t *cur;
-
-	for (cur = sess->connlist, j = 0; cur; cur = cur->next) {
-		if (cur->fd > j)
-			j = cur->fd;
-	}
-
-	return j;
-}
-
-/**
- * aim_conn_in_sess - Predicate to test the precense of a connection in a sess
- * @sess: Session to look in
- * @conn: Connection to look for
- *
- * Searches @sess for the passed connection.  Returns 1 if its present,
- * zero otherwise.
- *
- */
-faim_export int aim_conn_in_sess(aim_session_t *sess, aim_conn_t *conn)
-{
-	aim_conn_t *cur;
-
-	for (cur = sess->connlist; cur; cur = cur->next) {
-		if (cur == conn)
-			return 1;
-	}
-
-	return 0;
-}
-
-/**
- * aim_select - Wait for a socket with data or timeout
- * @sess: Session to wait on
- * @timeout: How long to wait
- * @status: Return status
- *
- * Waits for a socket with data or for timeout, whichever comes first.
- * See select(2).
- * 
- * Return codes in *status:
- *   -1  error in select() (%NULL returned)
- *    0  no events pending (%NULL returned)
- *    1  outgoing data pending (%NULL returned)
- *    2  incoming data pending (connection with pending data returned)
- *
- */ 
-faim_export aim_conn_t *aim_select(aim_session_t *sess, struct timeval *timeout, int *status)
-{
-	aim_conn_t *cur;
-	fd_set fds, wfds;
-	int maxfd, i, haveconnecting = 0;
-
-	if (!sess->connlist) {
-		*status = -1;
-		return NULL;
-	}
-
-	FD_ZERO(&fds);
-	FD_ZERO(&wfds);
-
-	for (cur = sess->connlist, maxfd = 0; cur; cur = cur->next) {
-		if (cur->fd == -1) {
-			/* don't let invalid/dead connections sit around */
-			*status = 2;
-			return cur;
-		} else if (cur->status & AIM_CONN_STATUS_INPROGRESS) {
-			FD_SET(cur->fd, &wfds);
-
-			haveconnecting++;
-		}
-		FD_SET(cur->fd, &fds);
-		if (cur->fd > maxfd)
-			maxfd = cur->fd;
-	}
-
-	/* 
-	 * If we have data waiting to be sent, return
-	 *
-	 * We have to not do this if theres at least one
-	 * connection thats still connecting, since that connection
-	 * may have queued data and this return would prevent
-	 * the connection from ever completing!  This is a major
-	 * inadequacy of the libfaim way of doing things.  It means
-	 * that nothing can transmit as long as there's connecting
-	 * sockets. Evil.
-	 *
-	 * But its still better than having blocking connects.
-	 *
-	 */
-	if (!haveconnecting && sess->queue_outgoing) {
-		*status = 1;
-		return NULL;
-	} 
-
-	if ((i = select(maxfd+1, &fds, &wfds, NULL, timeout))>=1) {
-		for (cur = sess->connlist; cur; cur = cur->next) {
-			if ((FD_ISSET(cur->fd, &fds)) || 
-					((cur->status & AIM_CONN_STATUS_INPROGRESS) && 
-					FD_ISSET(cur->fd, &wfds))) {
-				*status = 2;
-				return cur;
-			}
-		}
-		*status = 0; /* shouldn't happen */
-	} else if ((i == -1) && (errno == EINTR)) /* treat interrupts as a timeout */
-		*status = 0;
-	else
-		*status = i; /* can be 0 or -1 */
-
-	return NULL;  /* no waiting or error, return */
 }
 
 /**
@@ -905,14 +771,11 @@ faim_export void aim_session_init(aim_session_t *sess, fu32_t flags, int debugle
 	aim__registermodule(sess, locate_modfirst);
 	aim__registermodule(sess, buddylist_modfirst);
 	aim__registermodule(sess, msg_modfirst);
-	aim__registermodule(sess, adverts_modfirst);
-	aim__registermodule(sess, invite_modfirst);
 	aim__registermodule(sess, admin_modfirst);
 	aim__registermodule(sess, popups_modfirst);
 	aim__registermodule(sess, bos_modfirst);
 	aim__registermodule(sess, search_modfirst);
 	aim__registermodule(sess, stats_modfirst);
-	aim__registermodule(sess, translate_modfirst);
 	aim__registermodule(sess, chatnav_modfirst);
 	aim__registermodule(sess, chat_modfirst);
 	/* missing 0x0f - 0x12 */
@@ -962,24 +825,6 @@ faim_export int aim_setdebuggingcb(aim_session_t *sess, faim_debugging_callback_
 	return 0;
 }
 
-/**
- * aim_conn_isconnecting - Determine if a connection is connecting
- * @conn: Connection to examine
- *
- * Returns nonzero if the connection is in the process of
- * connecting (or if it just completed and aim_conn_completeconnect()
- * has yet to be called on it).
- *
- */
-faim_export int aim_conn_isconnecting(aim_conn_t *conn)
-{
-
-	if (!conn)
-		return 0;
-
-	return !!(conn->status & AIM_CONN_STATUS_INPROGRESS);
-}
-
 /*
  * XXX this is nearly as ugly as proxyconnect().
  */
@@ -1026,7 +871,9 @@ faim_export int aim_conn_completeconnect(aim_session_t *sess, aim_conn_t *conn)
 		return -1;
 	}
 
+#ifndef _WIN32
 	fcntl(conn->fd, F_SETFL, 0); /* XXX should restore original flags */
+#endif
 
 	conn->status &= ~AIM_CONN_STATUS_INPROGRESS;
 
@@ -1054,7 +901,7 @@ faim_export aim_session_t *aim_conn_getsess(aim_conn_t *conn)
  * Closes -ALL- open connections.
  *
  */
-faim_export int aim_logoff(aim_session_t *sess)
+int aim_logoff(aim_session_t *sess)
 {
 
 	aim_connrst(sess);  /* in case we want to connect again */

@@ -108,7 +108,7 @@ static int parseinfo_perms(aim_session_t *sess, aim_module_t *mod, aim_frame_t *
 
 		curexchange++;
 
-		exchanges = realloc(exchanges, curexchange * sizeof(struct aim_chat_exchangeinfo));
+		exchanges = g_realloc(exchanges, curexchange * sizeof(struct aim_chat_exchangeinfo));
 
 		/* exchange number */
 		exchanges[curexchange-1].number = aimbs_get16(&tbs);
@@ -258,13 +258,13 @@ static int parseinfo_perms(aim_session_t *sess, aim_module_t *mod, aim_frame_t *
 		ret = userfunc(sess, rx, snac2->type, maxrooms, curexchange, exchanges);
 
 	for (curexchange--; curexchange >= 0; curexchange--) {
-		free(exchanges[curexchange].name);
-		free(exchanges[curexchange].charset1);
-		free(exchanges[curexchange].lang1);
-		free(exchanges[curexchange].charset2);
-		free(exchanges[curexchange].lang2);
+		g_free(exchanges[curexchange].name);
+		g_free(exchanges[curexchange].charset1);
+		g_free(exchanges[curexchange].lang1);
+		g_free(exchanges[curexchange].charset2);
+		g_free(exchanges[curexchange].lang2);
 	}
-	free(exchanges);
+	g_free(exchanges);
 	aim_freetlvchain(&tlvlist);
 
 	return ret;
@@ -302,7 +302,7 @@ static int parseinfo_create(aim_session_t *sess, aim_module_t *mod, aim_frame_t 
 	if (detaillevel != 0x02) {
 		faimdprintf(sess, 0, "unknown detaillevel in create room response (0x%02x)\n", detaillevel);
 		aim_freetlvchain(&tlvlist);
-		free(ck);
+		g_free(ck);
 		return 0;
 	}
 
@@ -335,9 +335,9 @@ static int parseinfo_create(aim_session_t *sess, aim_module_t *mod, aim_frame_t 
 		ret = userfunc(sess, rx, snac2->type, fqcn, instance, exchange, flags, createtime, maxmsglen, maxoccupancy, createperms, unknown, name, ck);
 	}
 
-	free(ck);
-	free(name);
-	free(fqcn);
+	g_free(ck);
+	g_free(name);
+	g_free(fqcn);
 	aim_freetlvchain(&innerlist);
 	aim_freetlvchain(&tlvlist);
 
@@ -396,8 +396,8 @@ static int parseinfo(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, ai
 		faimdprintf(sess, 0, "chatnav_parse_info: unknown request subtype (%04x)\n", snac2->type);
 
 	if (snac2)
-		free(snac2->data);
-	free(snac2);
+		g_free(snac2->data);
+	g_free(snac2);
 
 	return ret;
 }

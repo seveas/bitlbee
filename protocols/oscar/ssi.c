@@ -41,13 +41,13 @@ static struct aim_ssi_item *aim_ssi_itemlist_add(struct aim_ssi_item **list, str
 	int i;
 	struct aim_ssi_item *cur, *newitem;
 
-	if (!(newitem = (struct aim_ssi_item *)malloc(sizeof(struct aim_ssi_item))))
+	if (!(newitem = (struct aim_ssi_item *)g_malloc(sizeof(struct aim_ssi_item))))
 		return NULL;
 
 	/* Set the name */
 	if (name) {
-		if (!(newitem->name = (char *)malloc((strlen(name)+1)*sizeof(char)))) {
-			free(newitem);
+		if (!(newitem->name = (char *)g_malloc((strlen(name)+1)*sizeof(char)))) {
+			g_free(newitem);
 			return NULL;
 		}
 		strcpy(newitem->name, name);
@@ -119,7 +119,7 @@ static int aim_ssi_itemlist_rebuildgroup(struct aim_ssi_item **list, struct aim_
 	if (newlen>0) {
 		fu8_t *newdata;
 
-		if (!(newdata = (fu8_t *)malloc((newlen)*sizeof(fu8_t))))
+		if (!(newdata = (fu8_t *)g_malloc((newlen)*sizeof(fu8_t))))
 			return -ENOMEM;
 		newlen = 0;
 		if (parentgroup->gid == 0x0000) {
@@ -133,7 +133,7 @@ static int aim_ssi_itemlist_rebuildgroup(struct aim_ssi_item **list, struct aim_
 		}
 		aim_addtlvtochain_raw((aim_tlvlist_t **)&(parentgroup->data), 0x00c8, newlen, newdata);
 
-		free(newdata);
+		g_free(newdata);
 	}
 
 	return 0;
@@ -151,11 +151,11 @@ static int aim_ssi_freelist(aim_session_t *sess)
 
 	cur = sess->ssi.items;
 	while (cur) {
-		if (cur->name)  free(cur->name);
+		if (cur->name)  g_free(cur->name);
 		if (cur->data)  aim_freetlvchain((aim_tlvlist_t **)&cur->data);
 		delitem = cur;
 		cur = cur->next;
-		free(delitem);
+		g_free(delitem);
 	}
 
 	sess->ssi.items = NULL;
@@ -359,7 +359,7 @@ faim_export int aim_ssi_deletelist(aim_session_t *sess, aim_conn_t *conn)
 	for (cur=sess->ssi.items, num=0; cur; cur=cur->next)
 		num++;
 
-	if (!(items = (struct aim_ssi_item **)malloc(num*sizeof(struct aim_ssi_item *))))
+	if (!(items = (struct aim_ssi_item **)g_malloc(num*sizeof(struct aim_ssi_item *))))
 		return -ENOMEM;
 	memset(items, 0, num*sizeof(struct aim_ssi_item *));
 	for (cur=sess->ssi.items, num=0; cur; cur=cur->next) {
@@ -368,7 +368,7 @@ faim_export int aim_ssi_deletelist(aim_session_t *sess, aim_conn_t *conn)
 	}
 
 	aim_ssi_addmoddel(sess, conn, items, num, AIM_CB_SSI_DEL);
-	free(items);
+	g_free(items);
 	aim_ssi_dispatch(sess, conn);
 	aim_ssi_freelist(sess);
 
@@ -414,7 +414,7 @@ faim_export int aim_ssi_cleanlist(aim_session_t *sess, aim_conn_t *conn)
 		for (parentgroup=sess->ssi.items; ((parentgroup) && (parentgroup->type!=AIM_SSI_TYPE_GROUP) && (parentgroup->gid==0x0000)); parentgroup=parentgroup->next);
 		if (!parentgroup) {
 			char *newgroup;
-			newgroup = (char*)malloc(strlen("Unknown")*sizeof(char));
+			newgroup = (char*)g_malloc(strlen("Unknown")*sizeof(char));
 			strcpy(newgroup, "Unknown");
 			aim_ssi_addgroups(sess, conn, &newgroup, 1);
 		}
@@ -444,7 +444,7 @@ faim_export int aim_ssi_cleanlist(aim_session_t *sess, aim_conn_t *conn)
 	if (i > 0) {
 		/* Allocate an array of pointers to each of the groups */
 		struct aim_ssi_item **groups;
-		if (!(groups = (struct aim_ssi_item **)malloc(i*sizeof(struct aim_ssi_item *))))
+		if (!(groups = (struct aim_ssi_item **)g_malloc(i*sizeof(struct aim_ssi_item *))))
 			return -ENOMEM;
 
 		for (cur=sess->ssi.items, i=0; cur; cur=cur->next)
@@ -452,7 +452,7 @@ faim_export int aim_ssi_cleanlist(aim_session_t *sess, aim_conn_t *conn)
 				groups[i] = cur;
 
 		aim_ssi_addmoddel(sess, conn, groups, i, AIM_CB_SSI_MOD);
-		free(groups);
+		g_free(groups);
 	}
 
 	/* Send a del snac for any empty groups */
@@ -463,7 +463,7 @@ faim_export int aim_ssi_cleanlist(aim_session_t *sess, aim_conn_t *conn)
 	if (i > 0) {
 		/* Allocate an array of pointers to each of the groups */
 		struct aim_ssi_item **groups;
-		if (!(groups = (struct aim_ssi_item **)malloc(i*sizeof(struct aim_ssi_item *))))
+		if (!(groups = (struct aim_ssi_item **)g_malloc(i*sizeof(struct aim_ssi_item *))))
 			return -ENOMEM;
 
 		for (cur=sess->ssi.items, i=0; cur; cur=cur->next)
@@ -471,7 +471,7 @@ faim_export int aim_ssi_cleanlist(aim_session_t *sess, aim_conn_t *conn)
 				groups[i] = cur;
 
 		aim_ssi_addmoddel(sess, conn, groups, i, AIM_CB_SSI_DEL);
-		free(groups);
+		g_free(groups);
 	}
 
 	/* Begin sending SSI SNACs */
@@ -506,24 +506,24 @@ faim_export int aim_ssi_addbuddies(aim_session_t *sess, aim_conn_t *conn, char *
 	}
 
 	/* Allocate an array of pointers to each of the new items */
-	if (!(newitems = (struct aim_ssi_item **)malloc(num*sizeof(struct aim_ssi_item *))))
+	if (!(newitems = (struct aim_ssi_item **)g_malloc(num*sizeof(struct aim_ssi_item *))))
 		return -ENOMEM;
 
 	/* Add items to the local list, and index them in the array */
 	for (i=0; i<num; i++)
 		if (!(newitems[i] = aim_ssi_itemlist_add(&sess->ssi.items, parentgroup, sn[i], AIM_SSI_TYPE_BUDDY))) {
-			free(newitems);
+			g_free(newitems);
 			return -ENOMEM;
 		}
 
 	/* Send the add item SNAC */
 	if ((i = aim_ssi_addmoddel(sess, conn, newitems, num, AIM_CB_SSI_ADD))) {
-		free(newitems);
+		g_free(newitems);
 		return -i;
 	}
 
 	/* Free the array of pointers to each of the new items */
-	free(newitems);
+	g_free(newitems);
 
 	/* Rebuild the additional data in the parent group */
 	if ((i = aim_ssi_itemlist_rebuildgroup(&sess->ssi.items, parentgroup)))
@@ -597,24 +597,24 @@ faim_export int aim_ssi_addgroups(aim_session_t *sess, aim_conn_t *conn, char **
 	}
 
 	/* Allocate an array of pointers to each of the new items */
-	if (!(newitems = (struct aim_ssi_item **)malloc(num*sizeof(struct aim_ssi_item *))))
+	if (!(newitems = (struct aim_ssi_item **)g_malloc(num*sizeof(struct aim_ssi_item *))))
 		return -ENOMEM;
 
 	/* Add items to the local list, and index them in the array */
 	for (i=0; i<num; i++)
 		if (!(newitems[i] = aim_ssi_itemlist_add(&sess->ssi.items, parentgroup, gn[i], AIM_SSI_TYPE_GROUP))) {
-			free(newitems);
+			g_free(newitems);
 			return -ENOMEM;
 		}
 
 	/* Send the add item SNAC */
 	if ((i = aim_ssi_addmoddel(sess, conn, newitems, num, AIM_CB_SSI_ADD))) {
-		free(newitems);
+		g_free(newitems);
 		return -i;
 	}
 
 	/* Free the array of pointers to each of the new items */
-	free(newitems);
+	g_free(newitems);
 
 	/* Rebuild the additional data in the parent group */
 	if ((i = aim_ssi_itemlist_rebuildgroup(&sess->ssi.items, parentgroup)))
@@ -653,24 +653,24 @@ faim_export int aim_ssi_addpord(aim_session_t *sess, aim_conn_t *conn, char **sn
 		return -EINVAL;
 
 	/* Allocate an array of pointers to each of the new items */
-	if (!(newitems = (struct aim_ssi_item **)malloc(num*sizeof(struct aim_ssi_item *))))
+	if (!(newitems = (struct aim_ssi_item **)g_malloc(num*sizeof(struct aim_ssi_item *))))
 		return -ENOMEM;
 
 	/* Add items to the local list, and index them in the array */
 	for (i=0; i<num; i++)
 		if (!(newitems[i] = aim_ssi_itemlist_add(&sess->ssi.items, NULL, sn[i], type))) {
-			free(newitems);
+			g_free(newitems);
 			return -ENOMEM;
 		}
 
 	/* Send the add item SNAC */
 	if ((i = aim_ssi_addmoddel(sess, conn, newitems, num, AIM_CB_SSI_ADD))) {
-		free(newitems);
+		g_free(newitems);
 		return -i;
 	}
 
 	/* Free the array of pointers to each of the new items */
-	free(newitems);
+	g_free(newitems);
 
 	/* Begin sending SSI SNACs */
 	if (!(i = aim_ssi_dispatch(sess, conn)))
@@ -703,18 +703,18 @@ faim_export int aim_ssi_movebuddy(aim_session_t *sess, aim_conn_t *conn, char *o
 		return -ENOMEM;
 
 	/* Allocate an array of pointers to the two groups */
-	if (!(groups = (struct aim_ssi_item **)malloc(2*sizeof(struct aim_ssi_item *))))
+	if (!(groups = (struct aim_ssi_item **)g_malloc(2*sizeof(struct aim_ssi_item *))))
 		return -ENOMEM;
 
 	/* Look up the old parent group */
 	if (!(groups[0] = aim_ssi_itemlist_finditem(sess->ssi.items, NULL, oldgn, AIM_SSI_TYPE_GROUP))) {
-		free(groups);
+		g_free(groups);
 		return -ENOMEM;
 	}
 
 	/* Look up the new parent group */
 	if (!(groups[1] = aim_ssi_itemlist_finditem(sess->ssi.items, NULL, newgn, AIM_SSI_TYPE_GROUP))) {
-		free(groups);
+		g_free(groups);
 		return -ENOMEM;
 	}
 
@@ -744,7 +744,7 @@ faim_export int aim_ssi_movebuddy(aim_session_t *sess, aim_conn_t *conn, char *o
 	aim_ssi_addmoddel(sess, conn, groups, 2, AIM_CB_SSI_MOD);
 
 	/* Free the temporary array */
-	free(groups);
+	g_free(groups);
 
 	/* Begin sending SSI SNACs */
 	aim_ssi_dispatch(sess, conn);
@@ -775,13 +775,13 @@ faim_export int aim_ssi_delbuddies(aim_session_t *sess, aim_conn_t *conn, char *
 		return -EINVAL;
 
 	/* Allocate an array of pointers to each of the items to be deleted */
-	delitems = (struct aim_ssi_item **)malloc(num*sizeof(struct aim_ssi_item *));
+	delitems = (struct aim_ssi_item **)g_malloc(num*sizeof(struct aim_ssi_item *));
 	memset(delitems, 0, num*sizeof(struct aim_ssi_item *));
 
 	/* Make the delitems array a pointer to the aim_ssi_item structs to be deleted */
 	for (i=0; i<num; i++) {
 		if (!(delitems[i] = aim_ssi_itemlist_finditem(sess->ssi.items, NULL, sn[i], AIM_SSI_TYPE_BUDDY))) {
-			free(delitems);
+			g_free(delitems);
 			return -EINVAL;
 		}
 
@@ -801,12 +801,12 @@ faim_export int aim_ssi_delbuddies(aim_session_t *sess, aim_conn_t *conn, char *
 	/* Free the items */
 	for (i=0; i<num; i++) {
 		if (delitems[i]->name)
-			free(delitems[i]->name);
+			g_free(delitems[i]->name);
 		if (delitems[i]->data)
 			aim_freetlvchain((aim_tlvlist_t **)&delitems[i]->data);
-		free(delitems[i]);
+		g_free(delitems[i]);
 	}
-	free(delitems);
+	g_free(delitems);
 
 	/* Rebuild the additional data in the parent group */
 	aim_ssi_itemlist_rebuildgroup(&sess->ssi.items, parentgroup);
@@ -857,10 +857,10 @@ faim_export int aim_ssi_delmastergroup(aim_session_t *sess, aim_conn_t *conn)
 
 	/* Free the item */
 	if (delitem->name)
-		free(delitem->name);
+		g_free(delitem->name);
 	if (delitem->data)
 		aim_freetlvchain((aim_tlvlist_t **)&delitem->data);
-	free(delitem);
+	g_free(delitem);
 
 	/* Begin sending SSI SNACs */
 	aim_ssi_dispatch(sess, conn);
@@ -889,13 +889,13 @@ faim_export int aim_ssi_delgroups(aim_session_t *sess, aim_conn_t *conn, char **
 		return -EINVAL;
 
 	/* Allocate an array of pointers to each of the items to be deleted */
-	delitems = (struct aim_ssi_item **)malloc(num*sizeof(struct aim_ssi_item *));
+	delitems = (struct aim_ssi_item **)g_malloc(num*sizeof(struct aim_ssi_item *));
 	memset(delitems, 0, num*sizeof(struct aim_ssi_item *));
 
 	/* Make the delitems array a pointer to the aim_ssi_item structs to be deleted */
 	for (i=0; i<num; i++) {
 		if (!(delitems[i] = aim_ssi_itemlist_finditem(sess->ssi.items, NULL, gn[i], AIM_SSI_TYPE_GROUP))) {
-			free(delitems);
+			g_free(delitems);
 			return -EINVAL;
 		}
 
@@ -915,12 +915,12 @@ faim_export int aim_ssi_delgroups(aim_session_t *sess, aim_conn_t *conn, char **
 	/* Free the items */
 	for (i=0; i<num; i++) {
 		if (delitems[i]->name)
-			free(delitems[i]->name);
+			g_free(delitems[i]->name);
 		if (delitems[i]->data)
 			aim_freetlvchain((aim_tlvlist_t **)&delitems[i]->data);
-		free(delitems[i]);
+		g_free(delitems[i]);
 	}
-	free(delitems);
+	g_free(delitems);
 
 	/* Rebuild the additional data in the parent group */
 	aim_ssi_itemlist_rebuildgroup(&sess->ssi.items, parentgroup);
@@ -957,13 +957,13 @@ faim_export int aim_ssi_delpord(aim_session_t *sess, aim_conn_t *conn, char **sn
 		return -EINVAL;
 
 	/* Allocate an array of pointers to each of the items to be deleted */
-	delitems = (struct aim_ssi_item **)malloc(num*sizeof(struct aim_ssi_item *));
+	delitems = (struct aim_ssi_item **)g_malloc(num*sizeof(struct aim_ssi_item *));
 	memset(delitems, 0, num*sizeof(struct aim_ssi_item *));
 
 	/* Make the delitems array a pointer to the aim_ssi_item structs to be deleted */
 	for (i=0; i<num; i++) {
 		if (!(delitems[i] = aim_ssi_itemlist_finditem(sess->ssi.items, NULL, sn[i], type))) {
-			free(delitems);
+			g_free(delitems);
 			return -EINVAL;
 		}
 
@@ -983,12 +983,12 @@ faim_export int aim_ssi_delpord(aim_session_t *sess, aim_conn_t *conn, char **sn
 	/* Free the items */
 	for (i=0; i<num; i++) {
 		if (delitems[i]->name)
-			free(delitems[i]->name);
+			g_free(delitems[i]->name);
 		if (delitems[i]->data)
 			aim_freetlvchain((aim_tlvlist_t **)&delitems[i]->data);
-		free(delitems[i]);
+		g_free(delitems[i]);
 	}
-	free(delitems);
+	g_free(delitems);
 
 	/* Begin sending SSI SNACs */
 	aim_ssi_dispatch(sess, conn);
@@ -1028,8 +1028,8 @@ faim_export int aim_ssi_setpermdeny(aim_session_t *sess, aim_conn_t *conn, fu8_t
 			/* Just change the value of the x00ca TLV */
 			if (tlv->length != 1) {
 				tlv->length = 1;
-				free(tlv->value);
-				tlv->value = (fu8_t *)malloc(sizeof(fu8_t));
+				g_free(tlv->value);
+				tlv->value = (fu8_t *)g_malloc(sizeof(fu8_t));
 			}
 			tlv->value[0] = permdeny;
 		} else {
@@ -1041,8 +1041,8 @@ faim_export int aim_ssi_setpermdeny(aim_session_t *sess, aim_conn_t *conn, fu8_t
 			/* Just change the value of the x00cb TLV */
 			if (tlv->length != 4) {
 				tlv->length = 4;
-				free(tlv->value);
-				tlv->value = (fu8_t *)malloc(4*sizeof(fu8_t));
+				g_free(tlv->value);
+				tlv->value = (fu8_t *)g_malloc(4*sizeof(fu8_t));
 			}
 			aimutil_put32(tlv->value, vismask);
 		} else {
@@ -1093,8 +1093,8 @@ faim_export int aim_ssi_setpresence(aim_session_t *sess, aim_conn_t *conn, fu32_
 			/* Just change the value of the x00c9 TLV */
 			if (tlv->length != 4) {
 				tlv->length = 4;
-				free(tlv->value);
-				tlv->value = (fu8_t *)malloc(4*sizeof(fu8_t));
+				g_free(tlv->value);
+				tlv->value = (fu8_t *)g_malloc(4*sizeof(fu8_t));
 			}
 			aimutil_put32(tlv->value, presence);
 		} else {
@@ -1202,11 +1202,11 @@ static int parsedata(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, ai
 		fu16_t namelen, tbslen;
 
 		if (!sess->ssi.items) {
-			if (!(sess->ssi.items = malloc(sizeof(struct aim_ssi_item))))
+			if (!(sess->ssi.items = g_malloc(sizeof(struct aim_ssi_item))))
 				return -ENOMEM;
 			cur = sess->ssi.items;
 		} else {
-			if (!(cur->next = malloc(sizeof(struct aim_ssi_item))))
+			if (!(cur->next = g_malloc(sizeof(struct aim_ssi_item))))
 				return -ENOMEM;
 			cur = cur->next;
 		}

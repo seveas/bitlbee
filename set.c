@@ -22,7 +22,7 @@
   if not, write to the Free Software Foundation, Inc., 59 Temple Place,
   Suite 330, Boston, MA  02111-1307  USA
 */
-
+#define BITLBEE_CORE
 #include "bitlbee.h"
 
 set_t *set_add( irc_t *irc, char *key, char *def, void *eval )
@@ -34,27 +34,27 @@ set_t *set_add( irc_t *irc, char *key, char *def, void *eval )
 		if( ( s = irc->set ) )
 		{
 			while( s->next ) s = s->next;
-			s->next = malloc( sizeof( set_t ) );
+			s->next = bitlbee_alloc( sizeof( set_t ) );
 			s = s->next;
 		}
 		else
 		{
-			s = irc->set = malloc( sizeof( set_t ) );
+			s = irc->set = bitlbee_alloc( sizeof( set_t ) );
 		}
 		memset( s, 0, sizeof( set_t ) );
-		s->key = strdup( key );
+		s->key = g_strdup( key );
 	}
 	
 	if( s->def )
 	{
-		free( s->def );
+		g_free( s->def );
 		s->def = NULL;
 	}
-	if( def ) s->def = strdup( def );
+	if( def ) s->def = g_strdup( def );
 	
 	if( s->eval )
 	{
-		free( s->eval );
+		g_free( s->eval );
 		s->eval = NULL;
 	}
 	if( eval ) s->eval = eval;
@@ -68,7 +68,7 @@ set_t *set_find( irc_t *irc, char *key )
 	
 	while( s )
 	{
-		if( strcasecmp( s->key, key ) == 0 )
+		if( g_ascii_strcasecmp( s->key, key ) == 0 )
 			break;
 		s = s->next;
 	}
@@ -94,7 +94,7 @@ int set_getint( irc_t *irc, char *key )
 	if( !s )
 		return( 0 );
 	
-	if( ( strcasecmp( s, "true" ) == 0 ) || ( strcasecmp( s, "yes" ) == 0 ) || ( strcasecmp( s, "on" ) == 0 ) )
+	if( ( g_ascii_strcasecmp( s, "true" ) == 0 ) || ( g_ascii_strcasecmp( s, "yes" ) == 0 ) || ( g_ascii_strcasecmp( s, "on" ) == 0 ) )
 		return( 1 );
 	
 	if( sscanf( s, "%d", &i ) != 1 )
@@ -116,15 +116,15 @@ int set_setstr( irc_t *irc, char *key, char *value )
 	
 	if( s->value )
 	{
-		free( s->value );
+		g_free( s->value );
 		s->value = NULL;
 	}
 	
 	if( !s->def || ( strcmp( nv, s->def ) != 0 ) )
-		s->value = strdup( nv );
+		s->value = g_strdup( nv );
 	
 	if( nv != value )
-		free( nv );
+		g_free( nv );
 	
 	return( 1 );
 }
@@ -143,17 +143,17 @@ void set_del( irc_t *irc, char *key )
 	
 	while( s )
 	{
-		if( strcasecmp( s->key, key ) == 0 )
+		if( g_ascii_strcasecmp( s->key, key ) == 0 )
 			break;
 		s = (t=s)->next;
 	}
 	if( s )
 	{
 		t->next = s->next;
-		free( s->key );
-		if( s->value ) free( s->value );
-		if( s->def ) free( s->def );
-		free( s );
+		g_free( s->key );
+		if( s->value ) g_free( s->value );
+		if( s->def ) g_free( s->def );
+		g_free( s );
 	}
 }
 
@@ -170,9 +170,9 @@ char *set_eval_int( irc_t *irc, set_t *set, char *value )
 
 char *set_eval_bool( irc_t *irc, set_t *set, char *value )
 {
-	if( ( strcasecmp( value, "true" ) == 0 ) || ( strcasecmp( value, "yes" ) == 0 ) || ( strcasecmp( value, "on" ) == 0 ) )
+	if( ( g_ascii_strcasecmp( value, "true" ) == 0 ) || ( g_ascii_strcasecmp( value, "yes" ) == 0 ) || ( g_ascii_strcasecmp( value, "on" ) == 0 ) )
 		return( value );
-	if( ( strcasecmp( value, "false" ) == 0 ) || ( strcasecmp( value, "no" ) == 0 ) || ( strcasecmp( value, "off" ) == 0 ) )
+	if( ( g_ascii_strcasecmp( value, "false" ) == 0 ) || ( g_ascii_strcasecmp( value, "no" ) == 0 ) || ( g_ascii_strcasecmp( value, "off" ) == 0 ) )
 		return( value );
 	return( set_eval_int( irc, set, value ) );
 }
@@ -191,25 +191,25 @@ char *set_eval_to_char( irc_t *irc, set_t *set, char *value )
 
 char *set_eval_ops( irc_t *irc, set_t *set, char *value )
 {
-	if( strcasecmp( value, "user" ) == 0 )
+	if( g_ascii_strcasecmp( value, "user" ) == 0 )
 	{
 		irc_write( irc, ":%s!%s@%s MODE %s %s %s %s", irc->mynick, irc->mynick, irc->myhost,
 		                                              irc->channel, "+o-o", irc->nick, irc->mynick );
 		return( value );
 	}
-	else if( strcasecmp( value, "root" ) == 0 )
+	else if( g_ascii_strcasecmp( value, "root" ) == 0 )
 	{
 		irc_write( irc, ":%s!%s@%s MODE %s %s %s %s", irc->mynick, irc->mynick, irc->myhost,
 		                                              irc->channel, "-o+o", irc->nick, irc->mynick );
 		return( value );
 	}
-	else if( strcasecmp( value, "both" ) == 0 )
+	else if( g_ascii_strcasecmp( value, "both" ) == 0 )
 	{
 		irc_write( irc, ":%s!%s@%s MODE %s %s %s %s", irc->mynick, irc->mynick, irc->myhost,
 		                                              irc->channel, "+oo", irc->nick, irc->mynick );
 		return( value );
 	}
-	else if( strcasecmp( value, "none" ) == 0 )
+	else if( g_ascii_strcasecmp( value, "none" ) == 0 )
 	{
 		irc_write( irc, ":%s!%s@%s MODE %s %s %s %s", irc->mynick, irc->mynick, irc->myhost,
 		                                              irc->channel, "-oo", irc->nick, irc->mynick );

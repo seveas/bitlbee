@@ -43,6 +43,9 @@ The authors thank the following people:
 - Jonathan/rise, for reporting and fixing a problem with the Yahoo! servers
   and supporting BitlBee in other ways.
 - Philip S Tellis, for libyahoo2.
+- Simon Schubert, for providing code to read the names of ICQ contacts.
+- NETRIC (www.netric.org) for auditting the BitlBee code security (and
+  finding some small problems).
 
 - And all other users who help us by sending useful bug reports, positive
   feedback, nice patches and cool addons. Mentioning you all would make

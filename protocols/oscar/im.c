@@ -613,7 +613,7 @@ faim_internal int aim_request_directim(aim_session_t *sess, const char *destsn, 
 	aim_addtlvtochain_noval(&tl, 0x0003);
 
 	hdrlen = 2+8+16+6+8+6+4;
-	hdr = malloc(hdrlen);
+	hdr = g_malloc(hdrlen);
 	aim_bstream_init(&hdrbs, hdr, hdrlen);
 
 	aimbs_put16(&hdrbs, 0x0000);
@@ -631,7 +631,7 @@ faim_internal int aim_request_directim(aim_session_t *sess, const char *destsn, 
 
 	aim_writetlvchain(&fr->data, &tl);
 
-	free(hdr);
+	g_free(hdr);
 	aim_freetlvchain(&itl);
 	aim_freetlvchain(&tl);
 
@@ -981,7 +981,7 @@ static int outgoingim(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, a
 	if ((userfunc = aim_callhandler(sess, rx->conn, snac->family, snac->subtype)))
 		ret = userfunc(sess, rx, channel, sn, msg, icbmflags, flag1, flag2);
 
-	free(sn);
+	g_free(sn);
 	aim_freetlvchain(&tlvlist);
 
 	return ret;
@@ -1036,7 +1036,7 @@ static int mpmsg_addsection(aim_session_t *sess, aim_mpmsg_t *mpm, fu16_t charse
 {
 	aim_mpmsg_section_t *sec; 
 	
-	if (!(sec = malloc(sizeof(aim_mpmsg_section_t))))
+	if (!(sec = g_new0(aim_mpmsg_section_t,1)))
 		return -1;
 
 	sec->charset = charset;
@@ -1064,12 +1064,12 @@ faim_export int aim_mpmsg_addraw(aim_session_t *sess, aim_mpmsg_t *mpm, fu16_t c
 {
 	fu8_t *dup;
 
-	if (!(dup = malloc(datalen)))
+	if (!(dup = g_malloc(datalen)))
 		return -1;
 	memcpy(dup, data, datalen);
 
 	if (mpmsg_addsection(sess, mpm, charset, charsubset, dup, datalen) == -1) {
-		free(dup);
+		g_free(dup);
 		return -1;
 	}
 
@@ -1081,11 +1081,11 @@ faim_export int aim_mpmsg_addascii(aim_session_t *sess, aim_mpmsg_t *mpm, const 
 {
 	fu8_t *dup;
 
-	if (!(dup = strdup(ascii))) 
+	if (!(dup = g_strdup(ascii))) 
 		return -1;
 
 	if (mpmsg_addsection(sess, mpm, 0x0000, 0x0000, dup, strlen(ascii)) == -1) {
-		free(dup);
+		g_free(dup);
 		return -1;
 	}
 
@@ -1098,7 +1098,7 @@ faim_export int aim_mpmsg_addunicode(aim_session_t *sess, aim_mpmsg_t *mpm, cons
 	aim_bstream_t bs;
 	int i;
 
-	if (!(buf = malloc(unicodelen * 2)))
+	if (!(buf = g_malloc(unicodelen * 2)))
 		return -1;
 
 	aim_bstream_init(&bs, buf, unicodelen * 2);
@@ -1108,7 +1108,7 @@ faim_export int aim_mpmsg_addunicode(aim_session_t *sess, aim_mpmsg_t *mpm, cons
 		aimbs_put16(&bs, unicode[i]);
 
 	if (mpmsg_addsection(sess, mpm, 0x0002, 0x0000, buf, aim_bstream_curpos(&bs)) == -1) {
-		free(buf);
+		g_free(buf);
 		return -1;
 	}
 	
@@ -1123,8 +1123,8 @@ faim_export void aim_mpmsg_free(aim_session_t *sess, aim_mpmsg_t *mpm)
 		aim_mpmsg_section_t *tmp;
 		
 		tmp = cur->next;
-		free(cur->data);
-		free(cur);
+		g_free(cur->data);
+		g_free(cur);
 		cur = tmp;
 	}
 	
@@ -1370,7 +1370,7 @@ static int incomingim_ch1(aim_session_t *sess, aim_module_t *mod, aim_frame_t *r
 		ret = userfunc(sess, rx, channel, userinfo, &args);
 
 	aim_mpmsg_free(sess, &args.mpmsg);
-	free(args.extdata);
+	g_free(args.extdata);
 
 	return ret;
 }
@@ -1415,10 +1415,10 @@ static void incomingim_ch2_buddylist(aim_session_t *sess, aim_module_t *mod, aim
 
 			faimdprintf(sess, 0, "got a buddy list from %s: group %s, buddy %s\n", userinfo->sn, gn, bn);
 
-			free(bn);
+			g_free(bn);
 		}
 
-		free(gn);
+		g_free(gn);
 	}
 
 	return;
@@ -1427,7 +1427,7 @@ static void incomingim_ch2_buddylist(aim_session_t *sess, aim_module_t *mod, aim
 static void incomingim_ch2_buddyicon_free(aim_session_t *sess, struct aim_incomingim_ch2_args *args)
 {
 
-	free(args->info.icon.icon);
+	g_free(args->info.icon.icon);
 
 	return;
 }
@@ -1451,7 +1451,7 @@ static void incomingim_ch2_chat_free(aim_session_t *sess, struct aim_incomingim_
 {
 
 	/* XXX aim_chat_roominfo_free() */
-	free(args->info.chat.roominfo.name);
+	g_free(args->info.chat.roominfo.name);
 
 	return;
 }
@@ -1473,7 +1473,7 @@ static void incomingim_ch2_chat(aim_session_t *sess, aim_module_t *mod, aim_fram
 static void incomingim_ch2_icqserverrelay_free(aim_session_t *sess, struct aim_incomingim_ch2_args *args)
 {
 
-	free((char *)args->info.rtfmsg.rtfmsg);
+	g_free((char *)args->info.rtfmsg.rtfmsg);
 
 	return;
 }
@@ -1557,7 +1557,7 @@ static int incomingim_ch2(aim_session_t *sess, aim_module_t *mod, aim_frame_t *r
 	if (memcmp(cookie, cookie2, 8) != 0) 
 		faimdprintf(sess, 0, "rend: warning cookies don't match!\n");
 	memcpy(args.cookie, cookie2, 8);
-	free(cookie2);
+	g_free(cookie2);
 
 	/*
 	 * The next 16bytes are a capability block so we can
@@ -1581,7 +1581,7 @@ static int incomingim_ch2(aim_session_t *sess, aim_module_t *mod, aim_frame_t *r
 
 		iptlv = aim_gettlv(list2, 0x0002, 1);
 
-		snprintf(clientip1, sizeof(clientip1), "%d.%d.%d.%d",
+		g_snprintf(clientip1, sizeof(clientip1), "%d.%d.%d.%d",
 				aimutil_get8(iptlv->value+0),
 				aimutil_get8(iptlv->value+1),
 				aimutil_get8(iptlv->value+2),
@@ -1596,7 +1596,7 @@ static int incomingim_ch2(aim_session_t *sess, aim_module_t *mod, aim_frame_t *r
 
 		iptlv = aim_gettlv(list2, 0x0003, 1);
 
-		snprintf(clientip2, sizeof(clientip2), "%d.%d.%d.%d",
+		g_snprintf(clientip2, sizeof(clientip2), "%d.%d.%d.%d",
 				aimutil_get8(iptlv->value+0),
 				aimutil_get8(iptlv->value+1),
 				aimutil_get8(iptlv->value+2),
@@ -1613,7 +1613,7 @@ static int incomingim_ch2(aim_session_t *sess, aim_module_t *mod, aim_frame_t *r
 
 		iptlv = aim_gettlv(list2, 0x0004, 1);
 
-		snprintf(verifiedip, sizeof(verifiedip), "%d.%d.%d.%d",
+		g_snprintf(verifiedip, sizeof(verifiedip), "%d.%d.%d.%d",
 				aimutil_get8(iptlv->value+0),
 				aimutil_get8(iptlv->value+1),
 				aimutil_get8(iptlv->value+2),
@@ -1699,9 +1699,9 @@ static int incomingim_ch2(aim_session_t *sess, aim_module_t *mod, aim_frame_t *r
 	if (args.destructor)
 		((ch2_args_destructor_t)args.destructor)(sess, &args);
 
-	free((char *)args.msg);
-	free((char *)args.encoding);
-	free((char *)args.language);
+	g_free((char *)args.msg);
+	g_free((char *)args.encoding);
+	g_free((char *)args.language);
 
 	aim_freetlvchain(&list2);
 
@@ -1730,7 +1730,7 @@ static int incomingim_ch4(aim_session_t *sess, aim_module_t *mod, aim_frame_t *r
 	if ((userfunc = aim_callhandler(sess, rx->conn, snac->family, snac->subtype)))
 		ret = userfunc(sess, rx, channel, userinfo, &args);
 
-	free(args.msg);
+	g_free(args.msg);
 
 	return ret;
 }
@@ -2032,7 +2032,7 @@ static int clientautoresp(aim_session_t *sess, aim_module_t *mod, aim_frame_t *r
 			if ((userfunc = aim_callhandler(sess, rx->conn, snac->family, snac->subtype)))
 				ret = userfunc(sess, rx, channel, sn, reason, state, msg);
 
-			free(msg);
+			g_free(msg);
 		} break;
 
 		default: {
@@ -2041,8 +2041,8 @@ static int clientautoresp(aim_session_t *sess, aim_module_t *mod, aim_frame_t *r
 		} break;
 	} /* end switch */
 
-	free(ck);
-	free(sn);
+	g_free(ck);
+	g_free(sn);
 
 	return ret;
 }
@@ -2063,8 +2063,8 @@ static int msgack(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, aim_m
 	if ((userfunc = aim_callhandler(sess, rx->conn, snac->family, snac->subtype)))
 		ret = userfunc(sess, rx, type, sn);
 
-	free(sn);
-	free(ck);
+	g_free(sn);
+	g_free(ck);
 
 	return ret;
 }

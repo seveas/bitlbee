@@ -2,6 +2,7 @@
  *
  * Functions to login to microsoft passport service for Messenger
  * Copyright (C) 2004 Wouter Paesen <wouter@blue-gate.be>
+ * Copyright (C) 2004 Wilmer van der Gaast <wilmer@gaast.net>
  *
  * This program is free software; you can redistribute it and/or modify             
  * it under the terms of the GNU General Public License version 2                   
@@ -14,313 +15,314 @@
  *                                                                                   
  * You should have received a copy of the GNU General Public License                
  * along with this program; if not, write to the Free Software                      
- *  Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA          
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA          
  *
  */
 
+#include "ssl_client.h"
 #include "passport.h"
+#include "msn.h"
+#include "bitlbee.h"
 #include <ctype.h>
 #include <errno.h>
 
-#define __DEBUG__
 #define MSN_BUF_LEN 8192
 
-#ifdef __DEBUG__
-void do_error_dialog(char *msg, char *title);
-#define __log(msg) do_error_dialog( msg, "MSN" );
+#ifdef DEBUG
+#define __log(msg...) irc_usermsg( IRC, msg )
 #else
-#define __log(msg)
+void __log(char *fmt, ...) {}
 #endif
 
-char *url_decode(const char *msg)
+
+static char *prd_cached = NULL;
+
+
+static char *passport_create_header( char *reply, char *email, char *pwd );
+static int passport_retrieve_dalogin( gpointer data, gpointer func, char *header );
+static void passport_retrieve_dalogin_connected( gpointer data, void *ssl, GaimInputCondition cond );
+static int passport_get_id_from( gpointer data, gpointer func, char *header_i, char *url );
+static void passport_get_id_connected( gpointer data, void *ssl, GaimInputCondition cond );
+static void destroy_reply( struct passport_reply *rep );
+
+
+int passport_get_id( gpointer data, char *username, char *password, char *cookie, gpointer func )
 {
-	static char buf[MSN_BUF_LEN];
-	int i, j = 0;
-
-	bzero(buf, sizeof(buf));
-	for (i = 0; i < strlen(msg); i++) {
-		char hex[3];
-		if (msg[i] != '%') {
-			buf[j++] = msg[i];
-			continue;
-		}
-		strncpy(hex, msg + ++i, 2);
-		hex[2] = 0;
-		/* i is pointing to the start of the number */
-		i++;		/* now it's at the end and at the start of the for loop
-				   will be at the next character */
-		buf[j++] = strtol(hex, NULL, 16);
+	char *header = passport_create_header( cookie, username, password );
+	
+	if( prd_cached )
+	{
+		int st;
+		
+		st = passport_get_id_from( data, func, header, prd_cached );
+		g_free( header );
+		return( st );
 	}
-	buf[j] = 0;
-
-	return buf;
+	else
+	{
+		return( passport_retrieve_dalogin( data, func, header ) );
+	}
 }
 
-char *url_encode(const char *msg)
+
+static char *passport_create_header( char *reply, char *email, char *pwd )
 {
-	static char buf[MSN_BUF_LEN];
-	int i, j = 0;
-
-	bzero(buf, sizeof(buf));
-	for (i = 0; i < strlen(msg); i++) {
-		if (isalnum(msg[i]))
-			buf[j++] = msg[i];
-		else {
-			sprintf(buf + j, "%%%02x", (unsigned char) msg[i]);
-			j += 3;
-		}
-	}
-	buf[j] = 0;
-
-	return buf;
+	char *buffer = g_new0( char, 2048 );
+	char *currenttoken;
+	char *email_enc, *pwd_enc;
+	
+	email_enc = g_new0( char, strlen( email ) * 3 + 1 );
+	strcpy( email_enc, email );
+	http_encode( email_enc );
+	
+	pwd_enc = g_new0( char, strlen( pwd ) * 3 + 1 );
+	strcpy( pwd_enc, pwd );
+	http_encode( pwd_enc );
+	
+	currenttoken = strstr( reply, "lc=" );
+	if( currenttoken == NULL )
+		return( NULL );
+	
+	g_snprintf( buffer, 2048,
+	            "Authorization: Passport1.4 OrgVerb=GET,"
+	            "OrgURL=http%%3A%%2F%%2Fmessenger%%2Emsn%%2Ecom,"
+	            "sign-in=%s,pwd=%s,%s", email_enc, pwd_enc,
+	            currenttoken );
+	
+	g_free( email_enc );
+	g_free( pwd_enc );
+	
+	return( buffer );
 }
 
-/* Connects to the peer and returns a socket
- * descriptor.
- */
-int tcp_connect(const char *SERVER, const char *PORT)
+
+static int passport_retrieve_dalogin( gpointer data, gpointer func, char *header )
 {
-	int err, sd;
-	struct hostent *hostaddress;
-	struct sockaddr_in sa;
-
-	/* resolve the hostname */
-	hostaddress = gethostbyname(SERVER);
-	if (hostaddress == NULL) {
-		__log("Hostname unresolvable(001)");
-		return -1;
-	}
-
-	/* prepare socket */
-	sd = socket(AF_INET, SOCK_STREAM, 0);
-
-	memset(&sa, '\0', sizeof(sa));
-	sa.sin_family = AF_INET;
-	sa.sin_port = htons(atoi(PORT));
-	memcpy(&sa.sin_addr, hostaddress->h_addr_list[0],
-	       hostaddress->h_length);
-
-	/* unleash the beast */
-	err = connect(sd, (struct sockaddr *) &sa, sizeof(sa));
-	if (err < 0) {
-		__log("Could not connect to host(002)");
-		return -1;
-	}
-	return sd;
-}
-
-void tcp_disconnect(int sd)
-{
-	shutdown(sd, SHUT_RDWR);	/* no more receptions */
-	close(sd);
+	struct passport_reply *rep = g_new0( struct passport_reply, 1 );
+	void *ssl;
+	
+	rep->data = data;
+	rep->func = func;
+	rep->header = header;
+	
+	ssl = ssl_connect( "nexus.passport.com", 443, passport_retrieve_dalogin_connected, rep );
+	
+	if( !ssl )
+		destroy_reply( rep );
+	
+	return( ssl != NULL );
 }
 
 #define PPR_BUFFERSIZE 2048
 #define PPR_REQUEST "GET /rdr/pprdr.asp HTTP/1.0\r\n\r\n"
-char *passport_retrieve_dalogin()
+static void passport_retrieve_dalogin_connected( gpointer data, void *ssl, GaimInputCondition cond )
 {
-	int ret, sd;
-	char *retv = NULL;
-	char *buffer = NULL;
-	gnutls_certificate_credentials xcred;
-	gnutls_session session;
-
-	buffer = (char *) malloc(PPR_BUFFERSIZE);
-	if (buffer == NULL) {
-		return NULL;
-	}
-
-	/* X509 stuff */
-	gnutls_certificate_allocate_credentials(&xcred);
-	/* initialize TLS session */
-	gnutls_init(&session, GNUTLS_CLIENT);
-	/* use the default priorities */
-	gnutls_set_default_priority(session);
-	gnutls_certificate_type_set_priority(session,
-					     pp_cert_type_priority);
-	/* put the x509 credentials to the current session */
-	gnutls_credentials_set(session, GNUTLS_CRD_CERTIFICATE, xcred);
-	/* create a connection to the nexus */
-	sd = tcp_connect("nexus.passport.com", "443");
-	/* associate the connection to the session */
-	gnutls_transport_set_ptr(session, (gnutls_transport_ptr) sd);
-	/* perform the TLS handshake */
-	ret = gnutls_handshake(session);
-
-	if (ret < 0) {
-		__log("Handshake unsuccessful(003)");
-		goto end;
-	}
-
-	gnutls_record_send(session, PPR_REQUEST, strlen(PPR_REQUEST));
-
-	ret = gnutls_record_recv(session, buffer, PPR_BUFFERSIZE);
-
-	if (ret < 0) {
-		__log("Server did not respond(004)");
-		goto end;
-	}
-
-	/* parse the header to extract the login server */
+	int ret;
+	char buffer[PPR_BUFFERSIZE+1];
+	struct passport_reply *rep = data;
+	
+	if( !g_slist_find( msn_connections, rep->data ) )
 	{
-		char *dalogin = strstr(buffer, "DALogin=");
-		char *urlend;
-		dalogin += strlen("DALogin=");
-		urlend = dalogin;
-
-		urlend = strchr(dalogin, ',');
-		if (urlend)
-			*urlend = 0;
-
-		/* strip the http(s):// part from the url */
-		urlend = strstr(urlend, "://");
-		if (urlend)
-			dalogin = urlend + strlen("://");
-
-		retv = strdup(dalogin);
+		if( ssl ) ssl_disconnect( ssl );
+		destroy_reply( rep );
+		return;
+	}
+	
+	if( !ssl )
+	{
+		rep->func( rep );
+		destroy_reply( rep );
+		return;
+	}
+	
+	ssl_write( ssl, PPR_REQUEST, strlen( PPR_REQUEST ) );
+	
+	if( ( ret = ssl_read( ssl, buffer, PPR_BUFFERSIZE ) ) <= 0 )
+	{
+		__log( "Server did not respond(004,%d)", ret );
+		goto failure;
 	}
 
-	gnutls_bye(session, GNUTLS_SHUT_RDWR);
-
-      end:
-	free(buffer);
-	tcp_disconnect(sd);
-	gnutls_deinit(session);
-	gnutls_certificate_free_credentials(xcred);
-
-	return retv;
+	{
+		char *dalogin = strstr( buffer, "DALogin=" );
+		char *urlend;
+		
+		if( !dalogin )
+		{
+			__log( "Incorrect DALogin reply" );
+			goto failure;
+		}
+		
+		dalogin += strlen( "DALogin=" );
+		urlend = strchr( dalogin, ',' );
+		if( urlend )
+			*urlend = 0;
+		
+		/* strip the http(s):// part from the url */
+		urlend = strstr( urlend, "://" );
+		if( urlend )
+			dalogin = urlend + strlen( "://" );
+		
+		if( prd_cached == NULL )
+			prd_cached = g_strdup( dalogin );
+	}
+	
+	if( passport_get_id_from( rep->data, rep->func, rep->header, prd_cached ) )
+	{
+		ssl_disconnect( ssl );
+		destroy_reply( rep );
+		return;
+	}
+	
+failure:	
+	ssl_disconnect( ssl );
+	rep->func( rep );
+	destroy_reply( rep );
 }
 
-char *passport_create_header(char *reply, char *email, char *pwd)
+
+static int passport_get_id_from( gpointer data, gpointer func, char *header_i, char *url )
 {
-	char *buffer = malloc(2048);
-	char *currenttoken;
-
-	currenttoken = strstr(reply, "lc=");
-	if (currenttoken == NULL)
-		return NULL;
-
-	snprintf(buffer, 2048,
-		 "Authorization: Passport1.4 OrgVerb=GET,"
-		 "OrgURL=http%%3A%%2F%%2Fmessenger%%2Emsn%%2Ecom,"
-		 "sign-in=%s,pwd=%s,%s", url_encode(email), pwd,
-		 currenttoken);
-
-	return buffer;
+	struct passport_reply *rep = g_new0( struct passport_reply, 1 );
+	char server[512], *dummy;
+	void *ssl;
+	
+	rep->data = data;
+	rep->func = func;
+	rep->redirects = 4;
+	
+	strncpy( server, url, 512 );
+	dummy = strchr( server, '/' );
+	if( dummy )
+		*dummy = 0;
+	
+	ssl = ssl_connect( server, 443, passport_get_id_connected, rep );
+	
+	if( ssl )
+	{
+		rep->header = g_strdup( header_i );
+		rep->url = g_strdup( url );
+	}
+	else
+	{
+		destroy_reply( rep );
+	}
+	
+	return( ssl != NULL );
 }
 
 #define PPG_BUFFERSIZE 4096
-char *passport_get_id(char *header_i, char *url)
+static void passport_get_id_connected( gpointer data, void *ssl, GaimInputCondition cond )
 {
-	int ret, sd;
-	char *retv = NULL;
-	char server[512];
-
-	char *buffer = NULL;
-	char *dummy;
-	int redirects = 0;
-
-	gnutls_certificate_credentials xcred;
-	gnutls_session session;
-
-	buffer = (char *) malloc(PPG_BUFFERSIZE + 1);
-	if (buffer == NULL) {
-		return NULL;
+	struct passport_reply *rep = data;
+	char server[512], buffer[PPG_BUFFERSIZE+1], *dummy;
+	int ret;
+	
+	if( !g_slist_find( msn_connections, rep->data ) )
+	{
+		if( ssl ) ssl_disconnect( ssl );
+		destroy_reply( rep );
+		return;
 	}
-	strncpy(server, url, 512);
-
-      redirect:
-	++redirects;
-
-	dummy = strchr(server, '/');
-	if (dummy)
-		*dummy = 0;
-
-	sd = tcp_connect(server, "443");
 	
-	gnutls_certificate_allocate_credentials(&xcred);
-	gnutls_init(&session, GNUTLS_CLIENT);
-	gnutls_set_default_priority(session);
-	gnutls_credentials_set(session, GNUTLS_CRD_CERTIFICATE, xcred);
-	gnutls_transport_set_ptr(session, (gnutls_transport_ptr) sd);
+	if( !ssl )
+	{
+		rep->func( rep );
+		destroy_reply( rep );
+		return;
+	}
 	
-	ret = gnutls_handshake(session);
-
-	if (ret < 0) {
-		__log("Handshake unsuccessful(005)");
-		tcp_disconnect(sd);
+	memset( buffer, 0, PPG_BUFFERSIZE + 1 );
+	
+	strncpy( server, rep->url, 512 );
+	dummy = strchr( server, '/' );
+	if( dummy == NULL )
 		goto end;
-	}
-
-	snprintf(buffer, PPG_BUFFERSIZE - 1, "GET /%s HTTP/1.0\r\n"
-		 "%s\r\n\r\n", dummy + 1, header_i);
-
-	gnutls_record_send(session, buffer, strlen(buffer));
-	memset(buffer, 0, PPG_BUFFERSIZE + 1);
-
+	
+	g_snprintf( buffer, PPG_BUFFERSIZE - 1, "GET %s HTTP/1.0\r\n"
+	            "%s\r\n\r\n", dummy, rep->header );
+	
+	ssl_write( ssl, buffer, strlen( buffer ) );
+	memset( buffer, 0, PPG_BUFFERSIZE + 1 );
+	
 	{
 		char *buffer2 = buffer;
-		ret = gnutls_record_recv(session, buffer2, BUFFER_SIZE);
-
-		while ((ret > 0) && (buffer + PPG_BUFFERSIZE - buffer2 - ret - 512 >= 0)) {
-			buffer2 += ret;
-			ret = gnutls_record_recv(session, buffer2, 512);
-		}
 		
-		gnutls_bye(session, GNUTLS_SHUT_WR);
-		tcp_disconnect(sd);
+		while( ( ( ret = ssl_read( ssl, buffer2, 512 ) ) > 0 ) &&
+		       ( buffer + PPG_BUFFERSIZE - buffer2 - ret - 512 >= 0 ) )
+		{
+			buffer2 += ret;
+		}
 	}
-
-	if (*buffer == 0) {
-		__log("Server did not respond(006)");
+	
+	if( *buffer == 0 )
+	{
+		__log( "Server did not respond(006,%d)", ret );
 		goto end;
 	}
-
-	/* test for a redirect */
-	dummy = strstr(buffer, "Location:");
-	if (dummy != NULL) {
-		char *urlend;
-		dummy += strlen("Location:");
-		// need to redirect, parse the redirect request, and goto
-		while (isspace(*dummy))
-			++dummy;
-		// now dummy pointer to the start of the url
-		urlend = dummy;
-		while (!isspace(*urlend))
-			++urlend;
-		*urlend = 0;
-		urlend = strstr(dummy, "://");
-		if (urlend)
-			dummy = urlend + strlen("://");
-
-		strncpy(server, dummy, 512);
-
-		if (redirects > 10) {
-			__log("Too many redirect(007)");
-			goto end;
-		}
-		gnutls_deinit(session);
-		gnutls_certificate_free_credentials(xcred);
-		goto redirect;
-	}
-
-	/* no redirect found, check the response code */
-	if (strstr(buffer, "200 OK")) {
-		char *responseend;
-		dummy = strstr(buffer, "from-PP='");
-		if (dummy) {
-			dummy += strlen("from-PP='");
-			responseend = strchr(dummy, '\'');
-			if (responseend)
-				*responseend = 0;
-			retv = strdup(dummy);
-		}
-	}
-
-      end:
-	gnutls_deinit(session);
-	gnutls_certificate_free_credentials(xcred);
-	free(buffer);
 	
-	return retv;
+	if( ( dummy = strstr( buffer, "Location:" ) ) )
+	{
+		char *urlend;
+		
+		rep->redirects --;
+		if( rep->redirects == 0 )
+			goto end;
+		
+		dummy += strlen( "Location:" );
+		while( isspace( *dummy ) ) dummy ++;
+		urlend = dummy;
+		while( !isspace( *urlend ) ) urlend ++;
+		*urlend = 0;
+		if( ( urlend = strstr( dummy, "://" ) ) )
+			dummy = urlend + strlen( "://" );
+		
+		g_free( rep->url );
+		rep->url = g_strdup( dummy );
+		
+		strncpy( server, dummy, sizeof( server ) - 1 );
+		dummy = strchr( server, '/' );
+		if( dummy ) *dummy = 0;
+		
+		ssl_disconnect( ssl );
+		
+		if( ssl_connect( server, 443, passport_get_id_connected, rep ) )
+		{
+			return;
+		}
+		else
+		{
+			rep->func( rep );
+			destroy_reply( rep );
+			return;
+		}
+	}
+	else if( strstr( buffer, "200 OK" ) )
+	{
+		if( ( dummy = strstr( buffer, "from-PP='" ) ) )
+		{
+			char *responseend;
+			
+			dummy += strlen( "from-PP='" );
+			responseend = strchr( dummy, '\'' );
+			if( responseend )
+				*responseend = 0;
+			
+			rep->result = g_strdup( dummy );
+		}
+	}
+	
+end:
+	ssl_disconnect( ssl );
+	rep->func( rep );
+	destroy_reply( rep );
+}
+
+
+static void destroy_reply( struct passport_reply *rep )
+{
+	if( rep->result ) g_free( rep->result );
+	if( rep->url ) g_free( rep->url );
+	if( rep->header ) g_free( rep->header );
+	if( rep ) g_free( rep );
 }

@@ -181,10 +181,6 @@ static Processor prologInitProcessor;
 static Processor contentProcessor;
 static Processor cdataSectionProcessor;
 static Processor epilogProcessor;
-static Processor externalEntityInitProcessor;
-static Processor externalEntityInitProcessor2;
-static Processor externalEntityInitProcessor3;
-static Processor externalEntityContentProcessor;
 
 static enum XML_Error
 handleUnknownEncoding(XML_Parser parser, const XML_Char *encodingName);
@@ -222,11 +218,9 @@ static void
 reportDefault(XML_Parser parser, const ENCODING *enc, const char *start, const char *end);
 
 static const XML_Char *getContext(XML_Parser parser);
-static int setContext(XML_Parser parser, const XML_Char *context);
 static void normalizePublicId(XML_Char *s);
 static int dtdInit(DTD *);
 static void dtdDestroy(DTD *);
-static int dtdCopy(DTD *newDtd, const DTD *oldDtd);
 static void poolInit(STRING_POOL *);
 static void poolClear(STRING_POOL *);
 static void poolDestroy(STRING_POOL *);
@@ -236,7 +230,8 @@ static XML_Char *poolStoreString(STRING_POOL *pool, const ENCODING *enc,
                                  const char *ptr, const char *end);
 static int poolGrow(STRING_POOL *pool);
 static const XML_Char *poolCopyString(STRING_POOL *pool, const XML_Char *s);
-static const XML_Char *poolCopyStringN(STRING_POOL *pool, const XML_Char *s, int n);
+static void *XML_GetBuffer(XML_Parser parser, int len);
+static int XML_ParseBuffer(XML_Parser parser, int len, int isFinal);
 
 #define poolStart(pool) ((pool)->start)
 #define poolEnd(pool) ((pool)->ptr)
@@ -469,105 +464,6 @@ XML_Parser XML_ParserCreate(const XML_Char *encodingName)
     return parser;
 }
 
-XML_Parser XML_ParserCreateNS(const XML_Char *encodingName, XML_Char nsSep)
-{
-    static
-    const XML_Char implicitContext[] = {
-        XML_T('x'), XML_T('m'), XML_T('l'), XML_T('='),
-        XML_T('h'), XML_T('t'), XML_T('t'), XML_T('p'), XML_T(':'),
-        XML_T('/'), XML_T('/'), XML_T('w'), XML_T('w'), XML_T('w'),
-        XML_T('.'), XML_T('w'), XML_T('3'),
-        XML_T('.'), XML_T('o'), XML_T('r'), XML_T('g'),
-        XML_T('/'), XML_T('X'), XML_T('M'), XML_T('L'),
-        XML_T('/'), XML_T('1'), XML_T('9'), XML_T('9'), XML_T('8'),
-        XML_T('/'), XML_T('n'), XML_T('a'), XML_T('m'), XML_T('e'),
-        XML_T('s'), XML_T('p'), XML_T('a'), XML_T('c'), XML_T('e'),
-        XML_T('\0')
-    };
-
-    XML_Parser parser = XML_ParserCreate(encodingName);
-    if (parser) {
-        XmlInitEncodingNS(&initEncoding, &encoding, 0);
-        ns = 1;
-        namespaceSeparator = nsSep;
-    }
-    if (!setContext(parser, implicitContext)) {
-        XML_ParserFree(parser);
-        return 0;
-    }
-    return parser;
-}
-
-int XML_SetEncoding(XML_Parser parser, const XML_Char *encodingName)
-{
-    if (!encodingName)
-        protocolEncodingName = 0;
-    else {
-        protocolEncodingName = poolCopyString(&tempPool, encodingName);
-        if (!protocolEncodingName)
-            return 0;
-    }
-    return 1;
-}
-
-XML_Parser XML_ExternalEntityParserCreate(XML_Parser oldParser,
-        const XML_Char *context,
-        const XML_Char *encodingName)
-{
-    XML_Parser parser = oldParser;
-    DTD *oldDtd = &dtd;
-    XML_StartElementHandler oldStartElementHandler = startElementHandler;
-    XML_EndElementHandler oldEndElementHandler = endElementHandler;
-    XML_CharacterDataHandler oldCharacterDataHandler = characterDataHandler;
-    XML_ProcessingInstructionHandler oldProcessingInstructionHandler = processingInstructionHandler;
-    XML_CommentHandler oldCommentHandler = commentHandler;
-    XML_StartCdataSectionHandler oldStartCdataSectionHandler = startCdataSectionHandler;
-    XML_EndCdataSectionHandler oldEndCdataSectionHandler = endCdataSectionHandler;
-    XML_DefaultHandler oldDefaultHandler = defaultHandler;
-    XML_StartNamespaceDeclHandler oldStartNamespaceDeclHandler = startNamespaceDeclHandler;
-    XML_EndNamespaceDeclHandler oldEndNamespaceDeclHandler = endNamespaceDeclHandler;
-    XML_NotStandaloneHandler oldNotStandaloneHandler = notStandaloneHandler;
-    XML_ExternalEntityRefHandler oldExternalEntityRefHandler = externalEntityRefHandler;
-    XML_UnknownEncodingHandler oldUnknownEncodingHandler = unknownEncodingHandler;
-    void *oldUserData = userData;
-    void *oldHandlerArg = handlerArg;
-    int oldDefaultExpandInternalEntities = defaultExpandInternalEntities;
-    void *oldExternalEntityRefHandlerArg = externalEntityRefHandlerArg;
-
-    parser = (ns
-              ? XML_ParserCreateNS(encodingName, namespaceSeparator)
-              : XML_ParserCreate(encodingName));
-    if (!parser)
-        return 0;
-    startElementHandler = oldStartElementHandler;
-    endElementHandler = oldEndElementHandler;
-    characterDataHandler = oldCharacterDataHandler;
-    processingInstructionHandler = oldProcessingInstructionHandler;
-    commentHandler = oldCommentHandler;
-    startCdataSectionHandler = oldStartCdataSectionHandler;
-    endCdataSectionHandler = oldEndCdataSectionHandler;
-    defaultHandler = oldDefaultHandler;
-    startNamespaceDeclHandler = oldStartNamespaceDeclHandler;
-    endNamespaceDeclHandler = oldEndNamespaceDeclHandler;
-    notStandaloneHandler = oldNotStandaloneHandler;
-    externalEntityRefHandler = oldExternalEntityRefHandler;
-    unknownEncodingHandler = oldUnknownEncodingHandler;
-    userData = oldUserData;
-    if (oldUserData == oldHandlerArg)
-        handlerArg = userData;
-    else
-        handlerArg = parser;
-    if (oldExternalEntityRefHandlerArg != oldParser)
-        externalEntityRefHandlerArg = oldExternalEntityRefHandlerArg;
-    defaultExpandInternalEntities = oldDefaultExpandInternalEntities;
-    if (!dtdCopy(&dtd, oldDtd) || !setContext(parser, context)) {
-        XML_ParserFree(parser);
-        return 0;
-    }
-    processor = externalEntityInitProcessor;
-    return parser;
-}
-
 static
 void destroyBindings(BINDING *bindings)
 {
@@ -576,8 +472,8 @@ void destroyBindings(BINDING *bindings)
         if (!b)
             break;
         bindings = b->nextTagBinding;
-        free(b->uri);
-        free(b);
+        g_free(b->uri);
+        g_free(b);
     }
 }
 
@@ -593,28 +489,23 @@ void XML_ParserFree(XML_Parser parser)
         }
         p = tagStack;
         tagStack = tagStack->parent;
-        free(p->buf);
+        g_free(p->buf);
         destroyBindings(p->bindings);
-        free(p);
+        g_free(p);
     }
     destroyBindings(freeBindingList);
     destroyBindings(inheritedBindings);
     poolDestroy(&tempPool);
     poolDestroy(&temp2Pool);
     dtdDestroy(&dtd);
-    free((void *)atts);
-    free(groupConnector);
-    free(buffer);
-    free(dataBuf);
-    free(unknownEncodingMem);
+    g_free((void *)atts);
+    g_free(groupConnector);
+    g_free(buffer);
+    g_free(dataBuf);
+    g_free(unknownEncodingMem);
     if (unknownEncodingRelease)
         unknownEncodingRelease(unknownEncodingData);
-    free(parser);
-}
-
-void XML_UseParserAsHandlerArg(XML_Parser parser)
-{
-    handlerArg = parser;
+    g_free(parser);
 }
 
 void XML_SetUserData(XML_Parser parser, void *p)
@@ -623,29 +514,6 @@ void XML_SetUserData(XML_Parser parser, void *p)
         handlerArg = userData = p;
     else
         userData = p;
-}
-
-int XML_SetBase(XML_Parser parser, const XML_Char *p)
-{
-    if (p) {
-        p = poolCopyString(&dtd.pool, p);
-        if (!p)
-            return 0;
-        dtd.base = p;
-    }
-    else
-        dtd.base = 0;
-    return 1;
-}
-
-const XML_Char *XML_GetBase(XML_Parser parser)
-{
-    return dtd.base;
-}
-
-int XML_GetSpecifiedAttributeCount(XML_Parser parser)
-{
-    return nSpecifiedAtts;
 }
 
 void XML_SetElementHandler(XML_Parser parser,
@@ -660,88 +528,6 @@ void XML_SetCharacterDataHandler(XML_Parser parser,
                                  XML_CharacterDataHandler handler)
 {
     characterDataHandler = handler;
-}
-
-void XML_SetProcessingInstructionHandler(XML_Parser parser,
-        XML_ProcessingInstructionHandler handler)
-{
-    processingInstructionHandler = handler;
-}
-
-void XML_SetCommentHandler(XML_Parser parser,
-                           XML_CommentHandler handler)
-{
-    commentHandler = handler;
-}
-
-void XML_SetCdataSectionHandler(XML_Parser parser,
-                                XML_StartCdataSectionHandler start,
-                                XML_EndCdataSectionHandler end)
-{
-    startCdataSectionHandler = start;
-    endCdataSectionHandler = end;
-}
-
-void XML_SetDefaultHandler(XML_Parser parser,
-                           XML_DefaultHandler handler)
-{
-    defaultHandler = handler;
-    defaultExpandInternalEntities = 0;
-}
-
-void XML_SetDefaultHandlerExpand(XML_Parser parser,
-                                 XML_DefaultHandler handler)
-{
-    defaultHandler = handler;
-    defaultExpandInternalEntities = 1;
-}
-
-void XML_SetUnparsedEntityDeclHandler(XML_Parser parser,
-                                      XML_UnparsedEntityDeclHandler handler)
-{
-    unparsedEntityDeclHandler = handler;
-}
-
-void XML_SetNotationDeclHandler(XML_Parser parser,
-                                XML_NotationDeclHandler handler)
-{
-    notationDeclHandler = handler;
-}
-
-void XML_SetNamespaceDeclHandler(XML_Parser parser,
-                                 XML_StartNamespaceDeclHandler start,
-                                 XML_EndNamespaceDeclHandler end)
-{
-    startNamespaceDeclHandler = start;
-    endNamespaceDeclHandler = end;
-}
-
-void XML_SetNotStandaloneHandler(XML_Parser parser,
-                                 XML_NotStandaloneHandler handler)
-{
-    notStandaloneHandler = handler;
-}
-
-void XML_SetExternalEntityRefHandler(XML_Parser parser,
-                                     XML_ExternalEntityRefHandler handler)
-{
-    externalEntityRefHandler = handler;
-}
-
-void XML_SetExternalEntityRefHandlerArg(XML_Parser parser, void *arg)
-{
-    if (arg)
-        externalEntityRefHandlerArg = arg;
-    else
-        externalEntityRefHandlerArg = parser;
-}
-
-void XML_SetUnknownEncodingHandler(XML_Parser parser,
-                                   XML_UnknownEncodingHandler handler,
-                                   void *data)
-{
-    unknownEncodingHandler = handler;
-    unknownEncodingHandlerData = data;
 }
 
 int XML_Parse(XML_Parser parser, const char *s, int len, int isFinal)
@@ -798,7 +584,7 @@ int XML_Parse(XML_Parser parser, const char *s, int len, int isFinal)
     }
 }
 
-int XML_ParseBuffer(XML_Parser parser, int len, int isFinal)
+static int XML_ParseBuffer(XML_Parser parser, int len, int isFinal)
 {
     const char *start = bufferPtr;
     positionPtr = start;
@@ -817,7 +603,7 @@ int XML_ParseBuffer(XML_Parser parser, int len, int isFinal)
     }
 }
 
-void *XML_GetBuffer(XML_Parser parser, int len)
+static void *XML_GetBuffer(XML_Parser parser, int len)
 {
     if (len > bufferLim - bufferEnd) {
         /* FIXME avoid integer overflow */
@@ -843,95 +629,13 @@ void *XML_GetBuffer(XML_Parser parser, int len)
             bufferLim = newBuf + bufferSize;
             if (bufferPtr) {
                 memcpy(newBuf, bufferPtr, bufferEnd - bufferPtr);
-                free(buffer);
+                g_free(buffer);
             }
             bufferEnd = newBuf + (bufferEnd - bufferPtr);
             bufferPtr = buffer = newBuf;
         }
     }
     return bufferEnd;
-}
-
-enum XML_Error XML_GetErrorCode(XML_Parser parser)
-{
-    return errorCode;
-}
-
-long XML_GetCurrentByteIndex(XML_Parser parser)
-{
-    if (eventPtr)
-        return parseEndByteIndex - (parseEndPtr - eventPtr);
-    return -1;
-}
-
-int XML_GetCurrentByteCount(XML_Parser parser)
-{
-    if (eventEndPtr && eventPtr)
-        return eventEndPtr - eventPtr;
-    return 0;
-}
-
-int XML_GetCurrentLineNumber(XML_Parser parser)
-{
-    if (eventPtr) {
-        XmlUpdatePosition(encoding, positionPtr, eventPtr, &position);
-        positionPtr = eventPtr;
-    }
-    return position.lineNumber + 1;
-}
-
-int XML_GetCurrentColumnNumber(XML_Parser parser)
-{
-    if (eventPtr) {
-        XmlUpdatePosition(encoding, positionPtr, eventPtr, &position);
-        positionPtr = eventPtr;
-    }
-    return position.columnNumber;
-}
-
-void XML_DefaultCurrent(XML_Parser parser)
-{
-    if (defaultHandler) {
-        if (openInternalEntities)
-            reportDefault(parser,
-                          ns ? XmlGetInternalEncodingNS() : XmlGetInternalEncoding(),
-                          openInternalEntities->internalEventPtr,
-                          openInternalEntities->internalEventEndPtr);
-        else
-            reportDefault(parser, encoding, eventPtr, eventEndPtr);
-    }
-}
-
-const XML_LChar *XML_ErrorString(int code)
-{
-    static const XML_LChar *message[] = {
-        0,
-        XML_T("out of memory"),
-        XML_T("syntax error"),
-        XML_T("no element found"),
-        XML_T("not well-formed"),
-        XML_T("unclosed token"),
-        XML_T("unclosed token"),
-        XML_T("mismatched tag"),
-        XML_T("duplicate attribute"),
-        XML_T("junk after document element"),
-        XML_T("illegal parameter entity reference"),
-        XML_T("undefined entity"),
-        XML_T("recursive entity reference"),
-        XML_T("asynchronous entity"),
-        XML_T("reference to invalid character number"),
-        XML_T("reference to binary entity"),
-        XML_T("reference to external entity in attribute"),
-        XML_T("xml processing instruction not at start of external entity"),
-        XML_T("unknown encoding"),
-        XML_T("encoding specified in XML declaration is incorrect"),
-        XML_T("unclosed CDATA section"),
-        XML_T("error in processing external entity reference"),
-        XML_T("document is not standalone")
-    };
-    if (code > 0 && code < sizeof(message)/sizeof(message[0]))
-        return message[code];
-    return 0;
 }
 
 static
@@ -941,96 +645,6 @@ enum XML_Error contentProcessor(XML_Parser parser,
                                 const char **endPtr)
 {
     return doContent(parser, 0, encoding, start, end, endPtr);
-}
-
-static
-enum XML_Error externalEntityInitProcessor(XML_Parser parser,
-        const char *start,
-        const char *end,
-        const char **endPtr)
-{
-    enum XML_Error result = initializeEncoding(parser);
-    if (result != XML_ERROR_NONE)
-        return result;
-    processor = externalEntityInitProcessor2;
-    return externalEntityInitProcessor2(parser, start, end, endPtr);
-}
-
-static
-enum XML_Error externalEntityInitProcessor2(XML_Parser parser,
-        const char *start,
-        const char *end,
-        const char **endPtr)
-{
-    const char *next;
-    int tok = XmlContentTok(encoding, start, end, &next);
-    switch (tok) {
-    case XML_TOK_BOM:
-        start = next;
-        break;
-    case XML_TOK_PARTIAL:
-        if (endPtr) {
-            *endPtr = start;
-            return XML_ERROR_NONE;
-        }
-        eventPtr = start;
-        return XML_ERROR_UNCLOSED_TOKEN;
-    case XML_TOK_PARTIAL_CHAR:
-        if (endPtr) {
-            *endPtr = start;
-            return XML_ERROR_NONE;
-        }
-        eventPtr = start;
-        return XML_ERROR_PARTIAL_CHAR;
-    }
-    processor = externalEntityInitProcessor3;
-    return externalEntityInitProcessor3(parser, start, end, endPtr);
-}
-
-static
-enum XML_Error externalEntityInitProcessor3(XML_Parser parser,
-        const char *start,
-        const char *end,
-        const char **endPtr)
-{
-    const char *next;
-    int tok = XmlContentTok(encoding, start, end, &next);
-    switch (tok) {
-    case XML_TOK_XML_DECL:
-        {
-            enum XML_Error result = processXmlDecl(parser, 1, start, next);
-            if (result != XML_ERROR_NONE)
-                return result;
-            start = next;
-        }
-        break;
-    case XML_TOK_PARTIAL:
-        if (endPtr) {
-            *endPtr = start;
-            return XML_ERROR_NONE;
-        }
-        eventPtr = start;
-        return XML_ERROR_UNCLOSED_TOKEN;
-    case XML_TOK_PARTIAL_CHAR:
-        if (endPtr) {
-            *endPtr = start;
-            return XML_ERROR_NONE;
-        }
-        eventPtr = start;
-        return XML_ERROR_PARTIAL_CHAR;
-    }
-    processor = externalEntityContentProcessor;
-    tagLevel = 1;
-    return doContent(parser, 1, encoding, start, end, endPtr);
-}
-
-static
-enum XML_Error externalEntityContentProcessor(XML_Parser parser,
-        const char *start,
-        const char *end,
-        const char **endPtr)
-{
-    return doContent(parser, 1, encoding, start, end, endPtr);
 }
 
 static enum XML_Error
@@ -1686,7 +1300,7 @@ int addBinding(XML_Parser parser, PREFIX *prefix, const ATTRIBUTE_ID *attId, con
             return 0;
         b->uri = malloc(sizeof(XML_Char) * len + EXPAND_SPARE);
         if (!b->uri) {
-            free(b);
+            g_free(b);
             return 0;
         }
         b->uriAlloc = len;
@@ -2813,61 +2427,6 @@ const XML_Char *getContext(XML_Parser parser)
 }
 
 static
-int setContext(XML_Parser parser, const XML_Char *context)
-{
-    const XML_Char *s = context;
-
-    while (*context != XML_T('\0')) {
-        if (*s == CONTEXT_SEP || *s == XML_T('\0')) {
-            ENTITY *e;
-            if (!poolAppendChar(&tempPool, XML_T('\0')))
-                return 0;
-            e = (ENTITY *)lookup(&dtd.generalEntities, poolStart(&tempPool), 0);
-            if (e)
-                e->open = 1;
-            if (*s != XML_T('\0'))
-                s++;
-            context = s;
-            poolDiscard(&tempPool);
-        }
-        else if (*s == '=') {
-            PREFIX *prefix;
-            if (poolLength(&tempPool) == 0)
-                prefix = &dtd.defaultPrefix;
-            else {
-                if (!poolAppendChar(&tempPool, XML_T('\0')))
-                    return 0;
-                prefix = (PREFIX *)lookup(&dtd.prefixes, poolStart(&tempPool), sizeof(PREFIX));
-                if (!prefix)
-                    return 0;
-                if (prefix->name == poolStart(&tempPool))
-                    poolFinish(&tempPool);
-                else
-                    poolDiscard(&tempPool);
-            }
-            for (context = s + 1; *context != CONTEXT_SEP && *context != XML_T('\0'); context++)
-                if (!poolAppendChar(&tempPool, *context))
-                    return 0;
-            if (!poolAppendChar(&tempPool, XML_T('\0')))
-                return 0;
-            if (!addBinding(parser, prefix, 0, poolStart(&tempPool), &inheritedBindings))
-                return 0;
-            poolDiscard(&tempPool);
-            if (*context != XML_T('\0'))
-                ++context;
-            s = context;
-        }
-        else {
-            if (!poolAppendChar(&tempPool, *s))
-                return 0;
-            s++;
-        }
-    }
-    return 1;
-}
-
-
-static
 void normalizePublicId(XML_Char *publicId)
 {
     XML_Char *p = publicId;
@@ -2913,161 +2472,13 @@ static void dtdDestroy(DTD *p)
         if (!e)
             break;
         if (e->allocDefaultAtts != 0)
-            free(e->defaultAtts);
+            g_free(e->defaultAtts);
     }
     hashTableDestroy(&(p->generalEntities));
     hashTableDestroy(&(p->elementTypes));
     hashTableDestroy(&(p->attributeIds));
     hashTableDestroy(&(p->prefixes));
     poolDestroy(&(p->pool));
-}
-
-/* Do a deep copy of the DTD.  Return 0 for out of memory; non-zero otherwise.
-The new DTD has already been initialized. */
-
-static int dtdCopy(DTD *newDtd, const DTD *oldDtd)
-{
-    HASH_TABLE_ITER iter;
-
-    if (oldDtd->base) {
-        const XML_Char *tem = poolCopyString(&(newDtd->pool), oldDtd->base);
-        if (!tem)
-            return 0;
-        newDtd->base = tem;
-    }
-
-    /* Copy the prefix table. */
-
-    hashTableIterInit(&iter, &(oldDtd->prefixes));
-    for (;;) {
-        const XML_Char *name;
-        const PREFIX *oldP = (PREFIX *)hashTableIterNext(&iter);
-        if (!oldP)
-            break;
-        name = poolCopyString(&(newDtd->pool), oldP->name);
-        if (!name)
-            return 0;
-        if (!lookup(&(newDtd->prefixes), name, sizeof(PREFIX)))
-            return 0;
-    }
-
-    hashTableIterInit(&iter, &(oldDtd->attributeIds));
-
-    /* Copy the attribute id table. */
-
-    for (;;) {
-        ATTRIBUTE_ID *newA;
-        const XML_Char *name;
-        const ATTRIBUTE_ID *oldA = (ATTRIBUTE_ID *)hashTableIterNext(&iter);
-
-        if (!oldA)
-            break;
-        /* Remember to allocate the scratch byte before the name. */
-        if (!poolAppendChar(&(newDtd->pool), XML_T('\0')))
-            return 0;
-        name = poolCopyString(&(newDtd->pool), oldA->name);
-        if (!name)
-            return 0;
-        ++name;
-        newA = (ATTRIBUTE_ID *)lookup(&(newDtd->attributeIds), name, sizeof(ATTRIBUTE_ID));
-        if (!newA)
-            return 0;
-        newA->maybeTokenized = oldA->maybeTokenized;
-        if (oldA->prefix) {
-            newA->xmlns = oldA->xmlns;
-            if (oldA->prefix == &oldDtd->defaultPrefix)
-                newA->prefix = &newDtd->defaultPrefix;
-            else
-                newA->prefix = (PREFIX *)lookup(&(newDtd->prefixes), oldA->prefix->name, 0);
-        }
-    }
-
-    /* Copy the element type table. */
-
-    hashTableIterInit(&iter, &(oldDtd->elementTypes));
-
-    for (;;) {
-        int i;
-        ELEMENT_TYPE *newE;
-        const XML_Char *name;
-        const ELEMENT_TYPE *oldE = (ELEMENT_TYPE *)hashTableIterNext(&iter);
-        if (!oldE)
-            break;
-        name = poolCopyString(&(newDtd->pool), oldE->name);
-        if (!name)
-            return 0;
-        newE = (ELEMENT_TYPE *)lookup(&(newDtd->elementTypes), name, sizeof(ELEMENT_TYPE));
-        if (!newE)
-            return 0;
-        if (oldE->nDefaultAtts) {
-            newE->defaultAtts = (DEFAULT_ATTRIBUTE *)malloc(oldE->nDefaultAtts * sizeof(DEFAULT_ATTRIBUTE));
-            if (!newE->defaultAtts)
-                return 0;
-        }
-        newE->allocDefaultAtts = newE->nDefaultAtts = oldE->nDefaultAtts;
-        if (oldE->prefix)
-            newE->prefix = (PREFIX *)lookup(&(newDtd->prefixes), oldE->prefix->name, 0);
-        for (i = 0; i < newE->nDefaultAtts; i++) {
-            newE->defaultAtts[i].id = (ATTRIBUTE_ID *)lookup(&(newDtd->attributeIds), oldE->defaultAtts[i].id->name, 0);
-            newE->defaultAtts[i].isCdata = oldE->defaultAtts[i].isCdata;
-            if (oldE->defaultAtts[i].value) {
-                newE->defaultAtts[i].value = poolCopyString(&(newDtd->pool), oldE->defaultAtts[i].value);
-                if (!newE->defaultAtts[i].value)
-                    return 0;
-            }
-            else
-                newE->defaultAtts[i].value = 0;
-        }
-    }
-
-    /* Copy the entity table. */
-
-    hashTableIterInit(&iter, &(oldDtd->generalEntities));
-
-    for (;;) {
-        ENTITY *newE;
-        const XML_Char *name;
-        const ENTITY *oldE = (ENTITY *)hashTableIterNext(&iter);
-        if (!oldE)
-            break;
-        name = poolCopyString(&(newDtd->pool), oldE->name);
-        if (!name)
-            return 0;
-        newE = (ENTITY *)lookup(&(newDtd->generalEntities), name, sizeof(ENTITY));
-        if (!newE)
-            return 0;
-        if (oldE->systemId) {
-            const XML_Char *tem = poolCopyString(&(newDtd->pool), oldE->systemId);
-            if (!tem)
-                return 0;
-            newE->systemId = tem;
-            if (oldE->base) {
-                if (oldE->base == oldDtd->base)
-                    newE->base = newDtd->base;
-                tem = poolCopyString(&(newDtd->pool), oldE->base);
-                if (!tem)
-                    return 0;
-                newE->base = tem;
-            }
-        }
-        else {
-            const XML_Char *tem = poolCopyStringN(&(newDtd->pool), oldE->textPtr, oldE->textLen);
-            if (!tem)
-                return 0;
-            newE->textPtr = tem;
-            newE->textLen = oldE->textLen;
-        }
-        if (oldE->notation) {
-            const XML_Char *tem = poolCopyString(&(newDtd->pool), oldE->notation);
-            if (!tem)
-                return 0;
-            newE->notation = tem;
-        }
-    }
-
-    newDtd->complete = oldDtd->complete;
-    newDtd->standalone = oldDtd->standalone;
-    return 1;
 }
 
 static
@@ -3106,14 +2517,14 @@ void poolDestroy(STRING_POOL *pool)
     BLOCK *p = pool->blocks;
     while (p) {
         BLOCK *tem = p->next;
-        free(p);
+        g_free(p);
         p = tem;
     }
     pool->blocks = 0;
     p = pool->freeBlocks;
     while (p) {
         BLOCK *tem = p->next;
-        free(p);
+        g_free(p);
         p = tem;
     }
     pool->freeBlocks = 0;
@@ -3144,20 +2555,6 @@ static const XML_Char *poolCopyString(STRING_POOL *pool, const XML_Char *s)
         if (!poolAppendChar(pool, *s))
             return 0;
     } while (*s++);
-    s = pool->start;
-    poolFinish(pool);
-    return s;
-}
-
-static const XML_Char *poolCopyStringN(STRING_POOL *pool, const XML_Char *s, int n)
-{
-    if (!pool->ptr && !poolGrow(pool))
-        return 0;
-    for (; n > 0; --n, s++) {
-        if (!poolAppendChar(pool, *s))
-            return 0;
-
-    }
     s = pool->start;
     poolFinish(pool);
     return s;

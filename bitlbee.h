@@ -29,33 +29,53 @@
 #define _GNU_SOURCE /* Stupid GNU :-P */
 
 #define PACKAGE "BitlBee"
-#define BITLBEE_VERSION "0.85"
+#define BITLBEE_VERSION "0.90"
 #define VERSION BITLBEE_VERSION
+
+#define MAX_STRING 128
 
 #include "config.h"
 
 #include <fcntl.h>
-#include <unistd.h>
 #include <time.h>
 #include <sys/stat.h>
 #include <sys/types.h>
-#include <sys/time.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <netdb.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdarg.h>
 #include <stdio.h>
+#include <ctype.h>
+#ifndef _WIN32
 #include <syslog.h>
 #include <errno.h>
 
 #ifndef NO_TCPD
 #include <tcpd.h>
 #endif
+#endif
 
 #include <glib.h>
+#include <gmodule.h>
+
+/* The following functions should not be used if we want to maintain Windows compatibility... */
+#undef free
+#define free		__PLEASE_USE_THE_GLIB_MEMORY_ALLOCATION_SYSTEM_INSTEAD__
+#undef malloc
+#define malloc		__PLEASE_USE_THE_GLIB_MEMORY_ALLOCATION_SYSTEM_INSTEAD__
+#undef calloc
+#define calloc		__PLEASE_USE_THE_GLIB_MEMORY_ALLOCATION_SYSTEM_INSTEAD__
+#undef realloc
+#define realloc		__PLEASE_USE_THE_GLIB_MEMORY_ALLOCATION_SYSTEM_INSTEAD__
+#undef strdup
+#define strdup		__PLEASE_USE_THE_GLIB_STRDUP_FUNCTIONS_SYSTEM_INSTEAD__
+#undef strndup
+#define strndup		__PLEASE_USE_THE_GLIB_STRDUP_FUNCTIONS_SYSTEM_INSTEAD__
+#undef snprintf
+#define snprintf	__PLEASE_USE_G_SNPRINTF_INSTEAD__
+#undef strcasecmp
+#define strcasecmp	__PLEASE_USE_G_STRCASECMP_INSTEAD__
+#undef strncasecmp
+#define strncasecmp	__PLEASE_USE_G_STRNCASECMP_INSTEAD__
 
 #define _( x ) x
 
@@ -71,10 +91,10 @@
 
 #define MAX_NICK_LENGTH 24
 
-#define HELP_FILE DATADIR "/help.txt"
-#define CONF_FILE_DEF ETCDIR "/bitlbee.conf"
+#define HELP_FILE DATADIR "help.txt"
+#define CONF_FILE_DEF ETCDIR "bitlbee.conf"
 
-char *CONF_FILE;
+extern char *CONF_FILE;
 
 #include "irc.h"
 #include "set.h"
@@ -85,6 +105,9 @@ char *CONF_FILE;
 #include "log.h"
 #include "ini.h"
 #include "help.h"
+#include "query.h"
+
+#include "sock.h"
 
 typedef struct global_t {
 	fd_set readfds[1];
@@ -92,6 +115,7 @@ typedef struct global_t {
 	int listen_socket;
 	help_t *help;
 	conf_t *conf;
+	char *helpfile;
 } global_t;
 
 int bitlbee_daemon_main_loop( void );
@@ -107,11 +131,13 @@ int root_command( irc_t *irc, char *command[] );
 int bitlbee_load( irc_t *irc, char *password );
 int bitlbee_save( irc_t *irc );
 double gettime( void );
-void http_encode( char *s );
-void http_decode( char *s );
+G_MODULE_EXPORT void http_encode( char *s );
+G_MODULE_EXPORT void http_decode( char *s );
 
 void *bitlbee_alloc(size_t size);
 void *bitlbee_realloc(void *oldmem, size_t newsize);
+
+G_MODULE_EXPORT irc_t *get_IRC();
 
 extern irc_t *IRC;
 extern global_t global;

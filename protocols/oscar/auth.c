@@ -158,11 +158,11 @@ static int goddamnicq2(aim_session_t *sess, aim_conn_t *conn, const char *sn, co
 	aim_tlvlist_t *tl = NULL;
 	char *password_encoded;
 
-	if (!(password_encoded = (char *) malloc(strlen(password))))
+	if (!(password_encoded = (char *) g_malloc(strlen(password))))
 		return -ENOMEM;
 
 	if (!(fr = aim_tx_new(sess, conn, AIM_FRAMETYPE_FLAP, 0x01, 1152))) {
-		free(password_encoded);
+		g_free(password_encoded);
 		return -ENOMEM;
 	}
 
@@ -183,7 +183,7 @@ static int goddamnicq2(aim_session_t *sess, aim_conn_t *conn, const char *sn, co
 
 	aim_writetlvchain(&fr->data, &tl);
 
-	free(password_encoded);
+	g_free(password_encoded);
 	aim_freetlvchain(&tl);
 
 	aim_tx_enqueue(sess, fr);
@@ -479,16 +479,16 @@ static int parse(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, aim_mo
 	if ((userfunc = aim_callhandler(sess, rx->conn, snac ? snac->family : 0x0017, snac ? snac->subtype : 0x0003)))
 		ret = userfunc(sess, rx, &info);
 
-	free(info.sn);
-	free(info.bosip);
-	free(info.errorurl);
-	free(info.email);
-	free(info.latestrelease.name);
-	free(info.latestrelease.url);
-	free(info.latestrelease.info);
-	free(info.latestbeta.name);
-	free(info.latestbeta.url);
-	free(info.latestbeta.info);
+	g_free(info.sn);
+	g_free(info.bosip);
+	g_free(info.errorurl);
+	g_free(info.email);
+	g_free(info.latestrelease.name);
+	g_free(info.latestrelease.url);
+	g_free(info.latestrelease.info);
+	g_free(info.latestbeta.name);
+	g_free(info.latestbeta.url);
+	g_free(info.latestbeta.info);
 
 	aim_freetlvchain(&tlvlist);
 
@@ -514,7 +514,7 @@ static int keyparse(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, aim
 	if ((userfunc = aim_callhandler(sess, rx->conn, snac->family, snac->subtype)))
 		ret = userfunc(sess, rx, keystr);
 
-	free(keystr); 
+	g_free(keystr); 
 
 	return ret;
 }

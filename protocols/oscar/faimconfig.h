@@ -47,13 +47,6 @@
  */
 #define FAIM_SNAC_HASH_SIZE 16
 
-/*
- * If building on Win32, define WIN32_STATIC if you don't want
- * to compile libfaim as a DLL (and instead link it right into
- * your app).
- */
-#define WIN32_STATIC
-
 #endif /* __FAIMCONFIG_H__ */
 
 

@@ -23,7 +23,9 @@
   Suite 330, Boston, MA  02111-1307  USA
 */
 
+#define BITLBEE_CORE
 #include "bitlbee.h"
+#include <syslog.h>
 
 static log_t logoutput;
 
@@ -114,7 +116,7 @@ void log_message(int level, char *message, ... ) {
 		(*(logoutput.debug))(level, msgstring);
 #endif
 
-	free(msgstring);
+	g_free(msgstring);
 	
 	return;
 }

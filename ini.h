@@ -26,10 +26,6 @@
 #ifndef _INI_H
 #define _INI_H
 
-#ifndef MAX_STRING
-#define MAX_STRING 128
-#endif
-
 typedef struct
 {
 	FILE *fp;

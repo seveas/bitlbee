@@ -22,7 +22,7 @@
   if not, write to the Free Software Foundation, Inc., 59 Temple Place,
   Suite 330, Boston, MA  02111-1307  USA
 */
-
+#define BITLBEE_CORE
 #include "bitlbee.h"
 
 ini_t *ini_open( char *file )
@@ -32,7 +32,7 @@ ini_t *ini_open( char *file )
 	memset( ini, 0, sizeof( ini_t ) );
 	if( ( ini->fp = fopen( file, "r" ) ) == NULL )
 	{
-		free( ini );
+		g_free( ini );
 		return( NULL );
 	}
 	
@@ -47,7 +47,7 @@ int ini_read( ini_t *file )
 	while( !feof( file->fp ) )
 	{
 		*s = 0;
-		fscanf( file->fp, "%255[^\n#]s", s );
+		fscanf( file->fp, "%127[^\n#]s", s );
 		fscanf( file->fp, "%*[^\n]s" );
 		fgetc( file->fp );		/* Skip newline		*/
 		file->line ++;
@@ -87,5 +87,5 @@ int ini_read( ini_t *file )
 void ini_close( ini_t *file )
 {
 	fclose( file->fp );
-	free( file );
+	g_free( file );
 }

@@ -6,7 +6,7 @@ static aim_tlv_t *createtlv(void)
 {
 	aim_tlv_t *newtlv;
 
-	if (!(newtlv = (aim_tlv_t *)malloc(sizeof(aim_tlv_t))))
+	if (!(newtlv = (aim_tlv_t *)g_malloc(sizeof(aim_tlv_t))))
 		return NULL;
 	memset(newtlv, 0, sizeof(aim_tlv_t));
 
@@ -19,8 +19,8 @@ static void freetlv(aim_tlv_t **oldtlv)
 	if (!oldtlv || !*oldtlv)
 		return;
 	
-	free((*oldtlv)->value);
-	free(*oldtlv);
+	g_free((*oldtlv)->value);
+	g_free(*oldtlv);
 	*oldtlv = NULL;
 
 	return;
@@ -70,7 +70,7 @@ faim_internal aim_tlvlist_t *aim_readtlvchain(aim_bstream_t *bs)
 #endif
 		else {
 
-			cur = (aim_tlvlist_t *)malloc(sizeof(aim_tlvlist_t));
+			cur = (aim_tlvlist_t *)g_malloc(sizeof(aim_tlvlist_t));
 			memset(cur, 0, sizeof(aim_tlvlist_t));
 
 			cur->tlv = createtlv();	
@@ -108,7 +108,7 @@ faim_internal void aim_freetlvchain(aim_tlvlist_t **list)
 		freetlv(&cur->tlv);
 
 		tmp = cur->next;
-		free(cur);
+		g_free(cur);
 		cur = tmp;
 	}
 
@@ -178,17 +178,17 @@ faim_internal int aim_addtlvtochain_raw(aim_tlvlist_t **list, const fu16_t t, co
 	if (!list)
 		return 0;
 
-	if (!(newtlv = (aim_tlvlist_t *)malloc(sizeof(aim_tlvlist_t))))
+	if (!(newtlv = (aim_tlvlist_t *)g_malloc(sizeof(aim_tlvlist_t))))
 		return 0;
 	memset(newtlv, 0x00, sizeof(aim_tlvlist_t));
 
 	if (!(newtlv->tlv = createtlv())) {
-		free(newtlv);
+		g_free(newtlv);
 		return 0;
 	}
 	newtlv->tlv->type = t;
 	if ((newtlv->tlv->length = l)) {
-		newtlv->tlv->value = (fu8_t *)malloc(newtlv->tlv->length);
+		newtlv->tlv->value = (fu8_t *)g_malloc(newtlv->tlv->length);
 		memcpy(newtlv->tlv->value, v, newtlv->tlv->length);
 	}
 
@@ -340,7 +340,7 @@ faim_internal int aim_addtlvtochain_frozentlvlist(aim_tlvlist_t **list, fu16_t t
 	if (buflen <= 0)
 		return 0;
 
-	if (!(buf = malloc(buflen)))
+	if (!(buf = g_malloc(buflen)))
 		return 0;
 
 	aim_bstream_init(&bs, buf, buflen);
@@ -349,7 +349,7 @@ faim_internal int aim_addtlvtochain_frozentlvlist(aim_tlvlist_t **list, fu16_t t
 
 	aim_addtlvtochain_raw(list, type, aim_bstream_curpos(&bs), buf);
 
-	free(buf);
+	g_free(buf);
 
 	return buflen;
 }
@@ -441,7 +441,7 @@ faim_internal char *aim_gettlv_str(aim_tlvlist_t *list, const fu16_t t, const in
 	if (!(tlv = aim_gettlv(list, t, n)))
 		return NULL;
 
-	newstr = (char *) malloc(tlv->length + 1);
+	newstr = (char *) g_malloc(tlv->length + 1);
 	memcpy(newstr, tlv->value, tlv->length);
 	*(newstr + tlv->length) = '\0';
 

@@ -192,7 +192,7 @@ static int icqresponse(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, 
 		if ((userfunc = aim_callhandler(sess, rx->conn, AIM_CB_FAM_ICQ, AIM_CB_ICQ_OFFLINEMSG)))
 			ret = userfunc(sess, rx, &msg);
 
-		free(msg.msg);
+		g_free(msg.msg);
 
 	} else if (cmd == 0x0042) {
 		aim_rxcallback_t userfunc;
@@ -227,10 +227,10 @@ static int icqresponse(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, 
 			if ((userfunc = aim_callhandler(sess, rx->conn, AIM_CB_FAM_ICQ, AIM_CB_ICQ_SIMPLEINFO)))
 				ret = userfunc(sess, rx, &info);
 
-			free(info.nick);
-			free(info.first);
-			free(info.last);
-			free(info.email);
+			g_free(info.nick);
+			g_free(info.first);
+			g_free(info.last);
+			g_free(info.email);
 		}
 
 	}

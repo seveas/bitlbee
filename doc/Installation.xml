@@ -34,7 +34,7 @@ all the users. <filename>/var/lib/bitlbee/</filename> is the default
 value.</para></listitem>
 <listitem><para>tcpd - If you enable this one, you can specify what hosts
 should be allowed to use your BitlBee by editting
-<filename>/etc/hosts.deny</filename> and/or <filename>/etc/hosts.deny</filename>.
+<filename>/etc/hosts.deny</filename> and/or <filename>/etc/hosts.deny</filename>.</para></listitem>
 </itemizedlist>
 
 <para>

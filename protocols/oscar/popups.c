@@ -33,8 +33,8 @@ static int parsepopup(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, a
 		ret = userfunc(sess, rx, msg, url, width, height, delay);
 
 	aim_freetlvchain(&tl);
-	free(msg);
-	free(url);
+	g_free(msg);
+	g_free(url);
 
 	return ret;
 }

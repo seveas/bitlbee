@@ -32,7 +32,7 @@ typedef struct
 } nick_t;
 
 void nick_set( irc_t *irc, char *handle, int proto, char *nick );
-char *nick_get( irc_t *irc, char *handle, int proto );
+char *nick_get( irc_t *irc, char *handle, int proto, const char *realname );
 void nick_del( irc_t *irc, char *nick );
 void nick_strip( char *nick );
 

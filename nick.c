@@ -23,6 +23,7 @@
   Suite 330, Boston, MA  02111-1307  USA
 */
 
+#define BITLBEE_CORE
 #include "bitlbee.h"
 
 void nick_set( irc_t *irc, char *handle, int proto, char *nick )
@@ -31,9 +32,9 @@ void nick_set( irc_t *irc, char *handle, int proto, char *nick )
 	
 	while( n )
 	{
-		if( ( strcasecmp( n->handle, handle ) == 0 ) && n->proto == proto )
+		if( ( g_ascii_strcasecmp( n->handle, handle ) == 0 ) && n->proto == proto )
 		{
-			free( n->nick );
+			g_free( n->nick );
 			n->nick = nick_dup( nick );
 			nick_strip( n->nick );
 			
@@ -48,14 +49,14 @@ void nick_set( irc_t *irc, char *handle, int proto, char *nick )
 		n = irc->nicks = bitlbee_alloc( sizeof( nick_t ) );
 	memset( n, 0, sizeof( nick_t ) );
 	
-	n->handle = strdup( handle );
+	n->handle = g_strdup( handle );
 	n->proto = proto;
 	n->nick = nick_dup( nick );
 	
 	nick_strip( n->nick );
 }
 
-char *nick_get( irc_t *irc, char *handle, int proto )
+char *nick_get( irc_t *irc, char *handle, int proto, const char *realname )
 {
 	static char nick[MAX_NICK_LENGTH+1];
 	nick_t *n = irc->nicks;
@@ -64,7 +65,7 @@ char *nick_get( irc_t *irc, char *handle, int proto )
 	memset( nick, 0, MAX_NICK_LENGTH + 1 );
 	
 	while( n && !*nick )
-		if( ( n->proto == proto ) && ( strcasecmp( n->handle, handle ) == 0 ) )
+		if( ( n->proto == proto ) && ( g_ascii_strcasecmp( n->handle, handle ) == 0 ) )
 			strcpy( nick, n->nick );
 		else
 			n = n->next;
@@ -73,11 +74,19 @@ char *nick_get( irc_t *irc, char *handle, int proto )
 	{
 		char *s;
 		
-		snprintf( nick, MAX_NICK_LENGTH, "%s", handle );
+		g_snprintf( nick, MAX_NICK_LENGTH, "%s", handle );
 		if( ( s = strchr( nick, '@' ) ) )
 			while( *s )
 				*(s++) = 0;
+		
+		/* All-digit handles (mainly ICQ UINs) aren't cool, try to
+		   use the realname instead. */
+		for( s = nick; *s && isdigit( *s ); s ++ );
+		if( !*s && realname && *realname )
+			g_snprintf( nick, MAX_NICK_LENGTH, "%s", realname );
+		
 		nick_strip( nick );
+		nick_lc( nick );
 	}
 	
 	while( !nick_ok( nick ) || user_find( irc, nick ) )
@@ -105,7 +114,7 @@ char *nick_get( irc_t *irc, char *handle, int proto )
 			                  "Good luck, and please don't forget to paste the lines up here "
 			                  "in #bitlbee on OFTC or in a mail to wilmer@gaast.net" );
 			
-			snprintf( nick, MAX_NICK_LENGTH + 1, "xx%x", rand() );
+			g_snprintf( nick, MAX_NICK_LENGTH + 1, "xx%x", rand() );
 			
 			break;
 		}
@@ -120,16 +129,16 @@ void nick_del( irc_t *irc, char *nick )
 	
 	while( n )
 	{
-		if( strcasecmp( n->nick, nick ) == 0 )
+		if( g_ascii_strcasecmp( n->nick, nick ) == 0 )
 		{
 			if( l )
 				l->next = n->next;
 			else
 				irc->nicks = n->next;
 			
-			free( n->handle );
-			free( n->nick );
-			free( n );
+			g_free( n->handle );
+			g_free( n->nick );
+			g_free( n );
 			
 			break;
 		}
@@ -153,8 +162,8 @@ void nick_strip( char * nick )
 	
 	for( i = j = 0; nick[i] && i < MAX_NICK_LENGTH; i++ )
 	{
-		if(strchr(nick_lc_chars,nick[i]) || 
-		   strchr(nick_uc_chars,nick[i]))
+		if( strchr( nick_lc_chars, nick[i] ) || 
+		    strchr( nick_uc_chars, nick[i] ) )
 		{
 			nick[j] = nick[i];
 			j++;
@@ -181,16 +190,22 @@ int nick_ok( char *nick )
 
 int nick_lc( char *nick )
 {
-	char *s, *t;
-	int diff = nick_lc_chars - nick_uc_chars;
+	static char tab[128] = { 0 };
+	int i;
 	
-	for( s = nick; *s; s ++ )
+	if( tab['A'] == 0 )
+		for( i = 0; nick_lc_chars[i]; i ++ )
+		{
+			tab[(int)nick_uc_chars[i]] = nick_lc_chars[i];
+			tab[(int)nick_lc_chars[i]] = nick_lc_chars[i];
+		}
+	
+	for( i = 0; nick[i]; i ++ )
 	{
-		t = strchr( nick_uc_chars, *s );
-		if( t )
-			*s = *(t+diff);
-		else if( !strchr( nick_lc_chars, *s ) )
+		if( !tab[(int)nick[i]] )
 			return( 0 );
+		
+		nick[i] = tab[(int)nick[i]];
 	}
 	
 	return( 1 );
@@ -198,16 +213,22 @@ int nick_lc( char *nick )
 
 int nick_uc( char *nick )
 {
-	char *s, *t;
-	int diff = nick_uc_chars - nick_lc_chars;
+	static char tab[128] = { 0 };
+	int i;
 	
-	for( s = nick; *s; s ++ )
+	if( tab['A'] == 0 )
+		for( i = 0; nick_lc_chars[i]; i ++ )
+		{
+			tab[(int)nick_uc_chars[i]] = nick_uc_chars[i];
+			tab[(int)nick_lc_chars[i]] = nick_uc_chars[i];
+		}
+	
+	for( i = 0; nick[i]; i ++ )
 	{
-		t = strchr( nick_lc_chars, *s );
-		if( t )
-			*s = *(t+diff);
-		else if( !strchr( nick_uc_chars, *s ) )
+		if( !tab[(int)nick[i]] )
 			return( 0 );
+		
+		nick[i] = tab[(int)nick[i]];
 	}
 	
 	return( 1 );
@@ -215,30 +236,25 @@ int nick_uc( char *nick )
 
 int nick_cmp( char *a, char *b )
 {
-	char *aa, *bb;
-	int res;
+	char aa[1024] = "", bb[1024] = "";
 	
-	aa = strdup( a );
-	bb = strdup( b );
+	strncpy( aa, a, sizeof( aa ) - 1 );
+	strncpy( bb, b, sizeof( bb ) - 1 );
 	if( nick_lc( aa ) && nick_lc( bb ) )
 	{
-		res = strcmp( aa, bb );
+		return( strcmp( aa, bb ) );
 	}
 	else
 	{
-		res = -1;	/* Hmm... Not a clear answer.. :-/ */
+		return( -1 );	/* Hmm... Not a clear answer.. :-/ */
 	}
-	free( aa );
-	free( bb );
-	
-	return( res );
 }
 
 char *nick_dup( char *nick )
 {
 	char *cp;
 	
-	cp = malloc( MAX_NICK_LENGTH + 1 );
+	cp = bitlbee_alloc( MAX_NICK_LENGTH + 1 );
 	memset( cp, 0, MAX_NICK_LENGTH + 1 );
 	strncpy( cp, nick, MAX_NICK_LENGTH );
 	

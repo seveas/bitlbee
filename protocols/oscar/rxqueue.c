@@ -40,7 +40,7 @@ faim_internal int aim_recv(int fd, void *buf, size_t count)
  * Read into a byte stream.  Will not read more than count, but may read
  * less if there is not enough room in the stream buffer.
  */
-faim_internal int aim_bstream_recv(aim_bstream_t *bs, int fd, size_t count)
+int aim_bstream_recv(aim_bstream_t *bs, int fd, size_t count)
 {
 	int red = 0;
 
@@ -264,11 +264,11 @@ faim_internal fu8_t *aimbs_getraw(aim_bstream_t *bs, int len)
 {
 	fu8_t *ob;
 
-	if (!(ob = malloc(len)))
+	if (!(ob = g_malloc(len)))
 		return NULL;
 
 	if (aimbs_getrawbuf(bs, ob, len) < len) {
-		free(ob);
+		g_free(ob);
 		return NULL;
 	}
 
@@ -279,11 +279,11 @@ faim_internal char *aimbs_getstr(aim_bstream_t *bs, int len)
 {
 	char *ob;
 
-	if (!(ob = malloc(len+1)))
+	if (!(ob = g_malloc(len+1)))
 		return NULL;
 
 	if (aimbs_getrawbuf(bs, ob, len) < len) {
-		free(ob);
+		g_free(ob);
 		return NULL;
 	}
 	
@@ -330,11 +330,11 @@ faim_internal int aimbs_putbs(aim_bstream_t *bs, aim_bstream_t *srcbs, int len)
 faim_internal void aim_frame_destroy(aim_frame_t *frame)
 {
 
-	free(frame->data.data); /* XXX aim_bstream_free */
+	g_free(frame->data.data); /* XXX aim_bstream_free */
 
 	if (frame->hdrtype == AIM_FRAMETYPE_OFT)
-		free(frame->hdr.oft.hdr2);
-	free(frame);
+		g_free(frame->hdr.oft.hdr2);
+	g_free(frame);
 	
 	return;
 } 
@@ -406,9 +406,8 @@ faim_export int aim_get_command(aim_session_t *sess, aim_conn_t *conn)
 	}	
 
 	/* allocate a new struct */
-	if (!(newrx = (aim_frame_t *)malloc(sizeof(aim_frame_t))))
+	if (!(newrx = (aim_frame_t *)g_new0(aim_frame_t,1)))
 		return -1;
-	memset(newrx, 0, sizeof(aim_frame_t));
 
 	/* we're doing FLAP if we're here */
 	newrx->hdrtype = AIM_FRAMETYPE_FLAP;
@@ -422,7 +421,7 @@ faim_export int aim_get_command(aim_session_t *sess, aim_conn_t *conn)
 	if (payloadlen) {
 		fu8_t *payload = NULL;
 
-		if (!(payload = (fu8_t *) malloc(payloadlen))) {
+		if (!(payload = (fu8_t *) g_malloc(payloadlen))) {
 			aim_frame_destroy(newrx);
 			return -1;
 		}

@@ -1,3 +1,75 @@
+Version 0.90:
+- A complete rewrite of the MSN module. This gives BitlBee the following
+  new features/improvements:
+  * You can now start groupchats with MSN people without having to send them
+    a bogus message first.
+  * People who are in your MSN block/allow list, but not in your contact
+    list, shouldn't show up in your BitlBee buddy lists anymore.
+  * Passport authentication shouldn't lock up the whole program for a couple
+    of seconds anymore. Additionally, it should also work behind proxies now.
+  * Better recognition of incoming file transfers; they're now recognized
+    when coming from non-English MS Messenger clients too.
+  * Fixed a problem with MSN passwords with non-alphanumeric characters.
+  * Mail notification support (also for Yahoo!)...
+  * Parsing of maintenance messages (ie "Server is going down in x minutes").
+  * Hopefully more stability.
+- Changes in the OSCAR module:
+  * Better reading of ICQ-away-states.
+  * Lots of cleanups.
+- Yahoo! module:
+  * Fixed authentication on 64-bit machines. (Patch from Matt Rogers)
+  * Better stripping of markup tags.
+- Lots of cleanup in all IM-modules.
+- Added support for using libnss instead of libgnutls.
+- Reverse hostname lookups work on IPv6 sockets too now. (And don't crash
+  the program anymore.)
+- Fixed a little problem with identifying right after registering a nick.
+- Restored complete proxy support and added a proxy setting to the conffile.
+- BitlBee can now tell you when people in your buddy list change their
+  "friendly name".
+- Instead of an account number, you can also specify the protocol name or
+  (part of) the username as an account identification with commands like
+  "account on", "add", etc.
+- BitlBee remembers what connection a question (i.e. authorization request)
+  belongs to and cleans it up when the connection goes down; this fixes
+  (one of) the last known crash bugs.
+- Plus some other changes in question management. (The query_order setting
+  is one of them. The default behaviour changed a bit, for more information
+  please read "help set query_order".)
+- Also fixed a memory management bug in the question code which caused some
+  crashes.
+- Optimized some nick handling functions and added a hash of all the users
+  to speed up user_find() a bit (especially good for people with large
+  buddy and notify lists).
+- Lots of changes for the Win32 port (see http://jelmer.vernstok.nl/).
+- Added the drop-command.
+- Fixed small problem with versions of sed which don't support the +
+  "operator" (the BSD version, for example, even though the operator is
+  documented properly in the re_format manpage...).
+- Added the default_target setting.
+- Added a CenterICQ2BitlBee conversion script.
+- Put back the evaluator for "set charset" (which got lost somewhere between
+  0.84 and 0.85), so an incorrect charset will be rejected again.
+- ISON now (A) gives one single reply and (B) also replies when none of the
+  persons asked for are on-line.
+- Using GConv instead of iconv now.
+- Incoming messages larger than 450 characters are now split into parts
+  before sending them to the user.
+- Fixed a bug in irc_exec() which could crash the program when some commands
+  were called with too little arguments.
+- Fixed a dumb NULL pointer dereference in the JOIN command.
+- Added rate limiting to bitlbeed. (Against server hammering)
+- Added handling of CTCP PINGs (yet another self-ping used by some IRC
+  clients...)
+- Added bitlbee_tab_completion.pl.
+- Removed the vCard handling code from Jabber because it's (A) not used and
+  (B) had a possible format string vulnerability.
+- Got rid of strcpy() in account.c. (Thanks to NETRIC for reporting these two
+  problems.)
+- ISO8859-15 is now the default charset.
+
+Finished 28 May 2004
+
 Version 0.85a:
 - Fixed an authentication problem with logging into some MSN accounts.
 - Removed a non-critical warning message from the ICQ servers when logging

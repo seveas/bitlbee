@@ -1,7 +1,8 @@
-<!DOCTYPE book PUBLIC "-//OASIS//DTD DocBook V4.1//EN" [
-<!ENTITY INSTALLATION SYSTEM "Installation.sgml">
-<!ENTITY USAGE SYSTEM "Usage.sgml">
-<!ENTITY SUPPORT SYSTEM "Support.sgml">
+<?xml version="1.0" encoding="iso-8859-1"?>
+<!DOCTYPE book PUBLIC "-//OASIS//DTD DocBook V4.2//EN" "http://www.oasis-open.org/docbook/xml/4.2/docbookx.dtd" [
+<!ENTITY INSTALLATION SYSTEM "Installation.xml">
+<!ENTITY USAGE SYSTEM "Usage.xml">
+<!ENTITY SUPPORT SYSTEM "Support.xml">
 ]>
 
 <book id="BitlBee-User-Guide">

@@ -7,6 +7,7 @@
 
 #define FAIM_INTERNAL
 #include <aim.h> 
+#include <glib.h>
 
 /* Stored in the ->priv of chat connections */
 struct chatconnpriv {
@@ -20,8 +21,8 @@ faim_internal void aim_conn_kill_chat(aim_session_t *sess, aim_conn_t *conn)
 	struct chatconnpriv *ccp = (struct chatconnpriv *)conn->priv;
 
 	if (ccp)
-		free(ccp->name);
-	free(ccp);
+		g_free(ccp->name);
+	g_free(ccp);
 
 	return;
 }
@@ -71,13 +72,13 @@ faim_export int aim_chat_attachname(aim_conn_t *conn, fu16_t exchange, const cha
 		return -EINVAL;
 
 	if (conn->priv)
-		free(conn->priv);
+		g_free(conn->priv);
 
-	if (!(ccp = malloc(sizeof(struct chatconnpriv))))
+	if (!(ccp = g_malloc(sizeof(struct chatconnpriv))))
 		return -ENOMEM;
 
 	ccp->exchange = exchange;
-	ccp->name = strdup(roomname);
+	ccp->name = g_strdup(roomname);
 	ccp->instance = instance;
 
 	conn->priv = (void *)ccp;
@@ -190,7 +191,7 @@ static int aim_addtlvtochain_chatroom(aim_tlvlist_t **list, fu16_t type, fu16_t 
 
 	buflen = 2 + 1 + strlen(roomname) + 2;
 	
-	if (!(buf = malloc(buflen)))
+	if (!(buf = g_malloc(buflen)))
 		return 0;
 
 	aim_bstream_init(&bs, buf, buflen);
@@ -202,7 +203,7 @@ static int aim_addtlvtochain_chatroom(aim_tlvlist_t **list, fu16_t type, fu16_t 
 
 	aim_addtlvtochain_raw(list, type, aim_bstream_curpos(&bs), buf);
 
-	free(buf);
+	g_free(buf);
 
 	return 0;
 }
@@ -311,9 +312,9 @@ faim_export int aim_chat_invite(aim_session_t *sess, aim_conn_t *conn, const cha
 		aimutil_put8(ckstr, (fu8_t) rand());
 
 	/* XXX should be uncached by an unwritten 'invite accept' handler */
-	if ((priv = malloc(sizeof(struct aim_invite_priv)))) {
-		priv->sn = strdup(sn);
-		priv->roomname = strdup(roomname);
+	if ((priv = g_malloc(sizeof(struct aim_invite_priv)))) {
+		priv->sn = g_strdup(sn);
+		priv->roomname = g_strdup(roomname);
 		priv->exchange = exchange;
 		priv->instance = instance;
 	}
@@ -321,7 +322,7 @@ faim_export int aim_chat_invite(aim_session_t *sess, aim_conn_t *conn, const cha
 	if ((cookie = aim_mkcookie(ckstr, AIM_COOKIETYPE_INVITE, priv)))
 		aim_cachecookie(sess, cookie);
 	else
-		free(priv);
+		g_free(priv);
 
 	for (i = 0; i < sizeof(ckstr); i++)
 		aimbs_put8(&fr->data, ckstr[i]);
@@ -349,7 +350,7 @@ faim_export int aim_chat_invite(aim_session_t *sess, aim_conn_t *conn, const cha
 	 *
 	 */
 	hdrlen = 2+8+16+6+4+4+strlen(msg)+4+2+1+strlen(roomname)+2;
-	hdr = malloc(hdrlen);
+	hdr = g_malloc(hdrlen);
 	aim_bstream_init(&hdrbs, hdr, hdrlen);
 	
 	aimbs_put16(&hdrbs, 0x0000); /* Unknown! */
@@ -366,7 +367,7 @@ faim_export int aim_chat_invite(aim_session_t *sess, aim_conn_t *conn, const cha
 
 	aim_writetlvchain(&fr->data, &otl);
 
-	free(hdr);
+	g_free(hdr);
 	aim_freetlvchain(&itl);
 	aim_freetlvchain(&otl);
 	
@@ -440,7 +441,7 @@ static int infoupdate(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, a
 		tmptlv = aim_gettlv(tlvlist, 0x0073, 1);
 
 		/* Allocate enough userinfo structs for all occupants */
-		userinfo = calloc(usercount, sizeof(aim_userinfo_t));
+		userinfo = g_new0(aim_userinfo_t, usercount);
 
 		aim_bstream_init(&occbs, tmptlv->value, tmptlv->length);
 
@@ -537,10 +538,10 @@ static int infoupdate(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, a
 				maxvisiblemsglen);
 	}
 
-	free(roominfo.name);
-	free(userinfo);
-	free(roomname);
-	free(roomdesc);
+	g_free(roominfo.name);
+	g_free(userinfo);
+	g_free(roomname);
+	g_free(roomdesc);
 	aim_freetlvchain(&tlvlist);
 
 	return ret;
@@ -554,14 +555,14 @@ static int userlistchange(aim_session_t *sess, aim_module_t *mod, aim_frame_t *r
 
 	while (aim_bstream_empty(bs)) {
 		curcount++;
-		userinfo = realloc(userinfo, curcount * sizeof(aim_userinfo_t));
+		userinfo = g_realloc(userinfo, curcount * sizeof(aim_userinfo_t));
 		aim_extractuserinfo(sess, bs, &userinfo[curcount-1]);
 	}
 
 	if ((userfunc = aim_callhandler(sess, rx->conn, snac->family, snac->subtype)))
 		ret = userfunc(sess, rx, curcount, userinfo);
 
-	free(userinfo);
+	g_free(userinfo);
 
 	return ret;
 }
@@ -608,8 +609,8 @@ static int incomingmsg(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, 
 	cookie = aimbs_getraw(bs, 8);
 
 	if ((ck = aim_uncachecookie(sess, cookie, AIM_COOKIETYPE_CHAT))) {
-		free(ck->data);
-		free(ck);
+		g_free(ck->data);
+		g_free(ck);
 	}
 
 	/*
@@ -677,8 +678,8 @@ static int incomingmsg(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, 
 	if ((userfunc = aim_callhandler(sess, rx->conn, snac->family, snac->subtype)))
 		ret = userfunc(sess, rx, &userinfo, msg);
 
-	free(cookie);
-	free(msg);
+	g_free(cookie);
+	g_free(msg);
 	aim_freetlvchain(&otl);
 
 	return ret;

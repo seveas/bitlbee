@@ -27,10 +27,13 @@
 #define _PROXY_H_
 
 #include <sys/types.h>
+#ifndef _WIN32
 #include <sys/socket.h>
 #include <netdb.h>
 #include <netinet/in.h>
+#endif
 #include <glib.h>
+#include <gmodule.h>
 
 #define PROXY_NONE 0
 #define PROXY_HTTP 1
@@ -49,9 +52,9 @@ typedef enum {
 } GaimInputCondition;
 typedef void (*GaimInputFunction)(gpointer, gint, GaimInputCondition);
 
-extern gint gaim_input_add(int, GaimInputCondition, GaimInputFunction, gpointer);
-extern void gaim_input_remove(gint);
+G_MODULE_EXPORT gint gaim_input_add(int, GaimInputCondition, GaimInputFunction, gpointer);
+G_MODULE_EXPORT void gaim_input_remove(gint);
 
-extern int proxy_connect(char *host, int port, GaimInputFunction func, gpointer data);
+G_MODULE_EXPORT int proxy_connect(char *host, int port, GaimInputFunction func, gpointer data);
 
 #endif /* _PROXY_H_ */

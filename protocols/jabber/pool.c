@@ -39,7 +39,9 @@
  * 
  * --------------------------------------------------------------------------*/
 
-#include "../lib.h"
+#include "jabber.h"
+#include "bitlbee.h"
+#include <glib.h>
 
 
 #ifdef POOL_DEBUG
@@ -49,16 +51,16 @@ HASHTABLE pool__disturbed = NULL;
 void *_pool__malloc(size_t size)
 {
     pool__total++;
-    return malloc(size);
+    return g_malloc(size);
 }
 void _pool__free(void *block)
 {
     pool__total--;
-    free(block);
+    g_free(block);
 }
 #else
-#define _pool__malloc malloc
-#define _pool__free free
+#define _pool__malloc g_malloc
+#define _pool__free g_free
 #endif
 
 
@@ -90,7 +92,7 @@ pool _pool_new(char *zone)
 }
 
 /* free a heap */
-void _pool_heap_free(void *arg)
+static void _pool_heap_free(void *arg)
 {
     struct pheap *h = (struct pheap *)arg;
 
@@ -99,7 +101,7 @@ void _pool_heap_free(void *arg)
 }
 
 /* mem should always be freed last */
-void _pool_cleanup_append(pool p, struct pfree *pf)
+static void _pool_cleanup_append(pool p, struct pfree *pf)
 {
     struct pfree *cur;
 
@@ -116,7 +118,7 @@ void _pool_cleanup_append(pool p, struct pfree *pf)
 }
 
 /* create a cleanup tracker */
-struct pfree *_pool_free(pool p, pool_cleaner f, void *arg)
+static struct pfree *_pool_free(pool p, pool_cleaner f, void *arg)
 {
     struct pfree *ret;
 
@@ -130,7 +132,7 @@ struct pfree *_pool_free(pool p, pool_cleaner f, void *arg)
 }
 
 /* create a heap and make sure it get's cleaned up */
-struct pheap *_pool_heap(pool p, int size)
+static struct pheap *_pool_heap(pool p, int size)
 {
     struct pheap *ret;
     struct pfree *clean;
@@ -221,19 +223,6 @@ char *pstrdup(pool p, const char *src)
     return ret;
 }
 
-/* when move above, this one would actually return a new block */
-char *pstrdupx(pool p, const char *src)
-{
-    return pstrdup(p, src);
-}
-
-int pool_size(pool p)
-{
-    if(p == NULL) return 0;
-
-    return p->size;
-}
-
 void pool_free(pool p)
 {
     struct pfree *cur, *stub;
@@ -256,44 +245,3 @@ void pool_free(pool p)
     _pool__free(p);
 
 }
-
-/* public cleanup utils, insert in a way that they are run FIFO, before mem frees */
-void pool_cleanup(pool p, pool_cleaner f, void *arg)
-{
-    struct pfree *clean;
-
-    clean = _pool_free(p, f, arg);
-    clean->next = p->cleanup;
-    p->cleanup = clean;
-}
-
-#ifdef POOL_DEBUG
-void debug_log(char *zone, const char *msgfmt, ...);
-int _pool_stat(void *arg, const void *key, void *data)
-{
-    pool p = (pool)data;
-
-    if(p->lsize == -1)
-        debug_log("leak","%s: %X is a new pool",p->zone,p->name);
-    else if(p->size > p->lsize)
-        debug_log("leak","%s: %X grew %d",p->zone,p->name, p->size - p->lsize);
-    else if((int)arg)
-        debug_log("leak","%s: %X exists %d",p->zone,p->name, p->size);
-    p->lsize = p->size;
-    return 1;
-}
-
-void pool_stat(int full)
-{
-    ghash_walk(pool__disturbed,_pool_stat,(void *)full);
-    if(pool__total != pool__ltotal)
-        debug_log("leak","%d\ttotal missed mallocs",pool__total);
-    pool__ltotal = pool__total;
-    return;
-}
-#else
-void pool_stat(int full)
-{
-    return;
-}
-#endif

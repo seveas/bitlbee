@@ -32,9 +32,8 @@
 */
 
 /* Parts from util.c from gaim needed by nogaim */
-
-#include "bitlbee.h"
-#include <unistd.h>
+#define BITLBEE_CORE
+#include "nogaim.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -302,7 +301,7 @@ static htmlentity_t ent[] =
 void strip_html( char *in )
 {
 	char *start = in;
-	char *out = malloc( strlen( in ) + 1 );
+	char *out = g_malloc( strlen( in ) + 1 );
 	char *s = out, *cs;
 	int i;
 	int matched;
@@ -326,7 +325,7 @@ void strip_html( char *in )
 			matched = 0;
 			
 			for( i = 0; *ent[i].code; i ++ )
-				if( strncasecmp( ent[i].code, cs, strlen( ent[i].code ) ) == 0 )
+				if( g_ascii_strncasecmp( ent[i].code, cs, strlen( ent[i].code ) ) == 0 )
 				{
 					*(s++) = ent[i].is;
 					matched = 1;
@@ -346,5 +345,5 @@ void strip_html( char *in )
 	}
 	
 	strcpy( start, out );
-	free( out );
+	g_free( out );
 } 

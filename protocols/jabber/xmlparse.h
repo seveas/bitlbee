@@ -391,12 +391,6 @@ len may be zero for this call (or any other). */
 int XMLPARSEAPI
 XML_Parse(XML_Parser parser, const char *s, int len, int isFinal);
 
-void XMLPARSEAPI *
-XML_GetBuffer(XML_Parser parser, int len);
-
-int XMLPARSEAPI
-XML_ParseBuffer(XML_Parser parser, int len, int isFinal);
-
 /* Creates an XML_Parser object that can parse an external general entity;
 context is a '\0'-terminated string specifying the parse context;
 encoding is a '\0'-terminated string giving the name of the externally specified encoding,

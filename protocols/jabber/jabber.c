@@ -25,26 +25,18 @@
 #include "config.h"
 #endif
 
-#include <netdb.h>
-#include <unistd.h>
+#ifndef _WIN32
+#include <sys/utsname.h>
+#endif
 #include <errno.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <time.h>
-#include <sys/socket.h>
-#include <sys/utsname.h>
 #include <sys/stat.h>
-#include "nogaim.h"
-#ifdef MAX
-#undef MAX
-#endif
-#ifdef MIN
-#undef MIN
-#endif
 #include "jabber.h"
+#include "nogaim.h"
+#include "bitlbee.h"
 #include "proxy.h"
 
 /* The priv member of gjconn's is a gaim_connection for now. */
@@ -172,7 +164,6 @@ static char *jabber_name()
 
 #define STATE_EVT(arg) if(gjc->on_state) { (gjc->on_state)(gjc, (arg) ); }
 
-static void jabber_handlevcard(gjconn, xmlnode, char *);
 static void jabber_remove_buddy(struct gaim_connection *gc, char *name, char *group);
 
 static char *create_valid_jid(const char *given, char *server, char *resource)
@@ -256,7 +247,7 @@ static void gjab_stop(gjconn gjc)
 	gjab_send_raw(gjc, "</stream:stream>");
 	gjc->state = JCONN_STATE_OFF;
 	gjc->was_connected = 0;
-	close(gjc->fd);
+	closesocket(gjc->fd);
 	gjc->fd = -1;
 	XML_ParserFree(gjc->parser);
 	gjc->parser = NULL;
@@ -290,7 +281,7 @@ static char *gjab_getsid(gjconn gjc)
 
 static char *gjab_getid(gjconn gjc)
 {
-	snprintf(gjc->idbuf, 8, "%d", gjc->id++);
+	g_snprintf(gjc->idbuf, 8, "%d", gjc->id++);
 	return &gjc->idbuf[0];
 }
 
@@ -488,8 +479,8 @@ static void gjab_connected(gpointer data, gint source, GaimInputCondition cond)
 	struct jabber_data *jd;
 	gjconn gjc;
 
-	if (!g_slist_find(connections, gc)) {
-		close(source);
+	if (!g_slist_find(get_connections(), gc)) {
+		closesocket(source);
 		return;
 	}
 
@@ -561,7 +552,7 @@ static struct conversation *find_chat(struct gaim_connection *gc, char *name)
 
 	while (bcs) {
 		b = bcs->data;
-		if (!strcasecmp(normalize(b->name), chat))
+		if (!g_ascii_strcasecmp(normalize(b->name), chat))
 			break;
 		b = NULL;
 		bcs = bcs->next;
@@ -716,17 +707,17 @@ static void jabber_track_away(gjconn gjc, jpacket p, char *name, char *type)
 	char *status = NULL;
 	char *msg = NULL;
 
-	if (type && (strcasecmp(type, "unavailable") == 0)) {
+	if (type && (g_ascii_strcasecmp(type, "unavailable") == 0)) {
 		vshow = _("Unavailable");
 	} else {
 		if((show = xmlnode_get_tag_data(p->x, "show")) != NULL) {
-			if (!strcasecmp(show, "away")) {
+			if (!g_ascii_strcasecmp(show, "away")) {
 				vshow = _("Away");
-			} else if (!strcasecmp(show, "chat")) {
+			} else if (!g_ascii_strcasecmp(show, "chat")) {
 				vshow = _("Online");
-			} else if (!strcasecmp(show, "xa")) {
+			} else if (!g_ascii_strcasecmp(show, "xa")) {
 				vshow = _("Extended Away");
-			} else if (!strcasecmp(show, "dnd")) {
+			} else if (!g_ascii_strcasecmp(show, "dnd")) {
 				vshow = _("Do Not Disturb");
 			}
 		}
@@ -799,7 +790,7 @@ static void jabber_handlemessage(gjconn gjc, jpacket p)
 	   z = xmlnode_get_nextsibling(z);
 	}
 
-	if (!type || !strcasecmp(type, "normal") || !strcasecmp(type, "chat")) {
+	if (!type || !g_ascii_strcasecmp(type, "normal") || !g_ascii_strcasecmp(type, "chat")) {
 
 		/* XXX namespaces could be handled better. (mid) */
 		if ((xmlns = xmlnode_get_tag(p->x, "x")))
@@ -815,14 +806,11 @@ static void jabber_handlemessage(gjconn gjc, jpacket p)
 			msg = xmlnode_get_data(y);
 		}
 
-#ifndef ICONV
-		msg = utf8_to_str(msg);
-#endif
 
 		if (!from)
 			return;
 
-		if (type && !strcasecmp(type, "jabber:x:conference")) {
+		if (type && !g_ascii_strcasecmp(type, "jabber:x:conference")) {
 			char *room;
 			GList *m = NULL;
 			char **data;
@@ -861,12 +849,7 @@ static void jabber_handlemessage(gjconn gjc, jpacket p)
 			}
 		}
 
-#ifndef ICONV
-		if (msg)
-			g_free(msg);
-#endif
-
-	} else if (!strcasecmp(type, "error")) {
+	} else if (!g_ascii_strcasecmp(type, "error")) {
 		if ((y = xmlnode_get_tag(p->x, "error"))) {
 			type = xmlnode_get_attrib(y, "code");
 			msg = xmlnode_get_data(y);
@@ -877,7 +860,7 @@ static void jabber_handlemessage(gjconn gjc, jpacket p)
 			do_error_dialog(msg, from);
 			g_free(from);
 		}
-	} else if (!strcasecmp(type, "groupchat")) {
+	} else if (!g_ascii_strcasecmp(type, "groupchat")) {
 		struct jabber_chat *jc;
 		static int i = 0;
 
@@ -967,20 +950,20 @@ static void jabber_handlepresence(gjconn gjc, jpacket p)
 	from = xmlnode_get_attrib(p->x, "from");
 	type = xmlnode_get_attrib(p->x, "type");
 	
-	if (type && strcasecmp(type, "error") == 0) {
+	if (type && g_ascii_strcasecmp(type, "error") == 0) {
 		return;
 	}
 	else if ((y = xmlnode_get_tag(p->x, "show"))) {
 		show = xmlnode_get_data(y);
 		if (!show) {
 			state = 0;
-		} else if (!strcasecmp(show, "away")) {
+		} else if (!g_ascii_strcasecmp(show, "away")) {
 			state = UC_AWAY;
-		} else if (!strcasecmp(show, "chat")) {
+		} else if (!g_ascii_strcasecmp(show, "chat")) {
 			state = UC_CHAT;
-		} else if (!strcasecmp(show, "xa")) {
+		} else if (!g_ascii_strcasecmp(show, "xa")) {
 			state = UC_XA;
-		} else if (!strcasecmp(show, "dnd")) {
+		} else if (!g_ascii_strcasecmp(show, "dnd")) {
 			state = UC_DND;
 		}
 	} else {
@@ -1023,7 +1006,7 @@ static void jabber_handlepresence(gjconn gjc, jpacket p)
 		/* keep track of away msg same as yahoo plugin */
 		jabber_track_away(gjc, p, normalize(b->name), type);
 
-		if (type && (strcasecmp(type, "unavailable") == 0)) {
+		if (type && (g_ascii_strcasecmp(type, "unavailable") == 0)) {
 			if (resources) {
 				g_free(resources->data);
 				b->proto_data = g_slist_remove(b->proto_data, resources->data);
@@ -1047,7 +1030,7 @@ static void jabber_handlepresence(gjconn gjc, jpacket p)
 			jabber_track_away(gjc, p, buf, type);
 			g_free(buf);
 
-			if (type && !strcasecmp(type, "unavailable")) {
+			if (type && !g_ascii_strcasecmp(type, "unavailable")) {
 				struct jabber_data *jd;
 				if (!jc && !(jc = find_existing_chat(GJ_GC(gjc), who))) {
 					g_free(buddy);
@@ -1158,7 +1141,7 @@ static void jabber_handles10n(gjconn gjc, jpacket p)
 
 		jap->gjc = gjc;
 		jap->user = g_strdup(Jid);
-		do_ask_dialog(msg, jap, jabber_accept_add, jabber_deny_add);
+		do_ask_dialog(GJ_GC(gjc), msg, jap, jabber_accept_add, jabber_deny_add);
 
 		g_free(msg);
 		xmlnode_free(g);	/* Never needed it here anyway */
@@ -1196,26 +1179,26 @@ static void jabber_handles10n(gjconn gjc, jpacket p)
 /*
  * Pending subscription to a buddy?
  */
-#define BUD_SUB_TO_PEND(sub, ask) ((!strcasecmp((sub), "none") || !strcasecmp((sub), "from")) && \
-					(ask) != NULL && !strcasecmp((ask), "subscribe")) 
+#define BUD_SUB_TO_PEND(sub, ask) ((!g_ascii_strcasecmp((sub), "none") || !g_ascii_strcasecmp((sub), "from")) && \
+					(ask) != NULL && !g_ascii_strcasecmp((ask), "subscribe")) 
 
 /*
  * Subscribed to a buddy?
  */
-#define BUD_SUBD_TO(sub, ask) ((!strcasecmp((sub), "to") || !strcasecmp((sub), "both")) && \
-					((ask) == NULL || !strcasecmp((ask), "subscribe")))
+#define BUD_SUBD_TO(sub, ask) ((!g_ascii_strcasecmp((sub), "to") || !g_ascii_strcasecmp((sub), "both")) && \
+					((ask) == NULL || !g_ascii_strcasecmp((ask), "subscribe")))
 
 /*
  * Pending unsubscription to a buddy?
  */
-#define BUD_USUB_TO_PEND(sub, ask) ((!strcasecmp((sub), "to") || !strcasecmp((sub), "both")) && \
-					(ask) != NULL && !strcasecmp((ask), "unsubscribe")) 
+#define BUD_USUB_TO_PEND(sub, ask) ((!g_ascii_strcasecmp((sub), "to") || !g_ascii_strcasecmp((sub), "both")) && \
+					(ask) != NULL && !g_ascii_strcasecmp((ask), "unsubscribe")) 
 
 /*
  * Unsubscribed to a buddy?
  */
-#define BUD_USUBD_TO(sub, ask) ((!strcasecmp((sub), "none") || !strcasecmp((sub), "from")) && \
-					((ask) == NULL || !strcasecmp((ask), "unsubscribe")))
+#define BUD_USUBD_TO(sub, ask) ((!g_ascii_strcasecmp((sub), "none") || !g_ascii_strcasecmp((sub), "from")) && \
+					((ask) == NULL || !g_ascii_strcasecmp((ask), "unsubscribe")))
 
 /*
  * If a buddy is added or removed from the roster on another resource
@@ -1290,7 +1273,7 @@ static void jabber_handlebuddy(gjconn gjc, xmlnode x)
 				handle_buddy_rename(b, buddyname);
 			}
 		}
-	}  else if (BUD_USUB_TO_PEND(sub, ask) || BUD_USUBD_TO(sub, ask) || !strcasecmp(sub, "remove")) {
+	}  else if (BUD_USUB_TO_PEND(sub, ask) || BUD_USUBD_TO(sub, ask) || !g_ascii_strcasecmp(sub, "remove")) {
 		jabber_remove_gaim_buddy(GJ_GC(gjc), buddyname);
 	}
 	g_free(buddyname);
@@ -1361,10 +1344,15 @@ static void jabber_handleversion(gjconn gjc, xmlnode iqnode) {
 	xmlnode querynode, x;
 	char *id, *from;
 	char os[1024];
+#ifndef _WIN32
 	struct utsname osinfo;
 
 	uname(&osinfo);
 	g_snprintf(os, sizeof os, "%s %s %s", osinfo.sysname, osinfo.release, osinfo.machine);
+#else
+	g_snprintf(os, sizeof os, "Windows %d %d", _winmajor, _winminor);
+#endif
+
 
 	id = xmlnode_get_attrib(iqnode, "id");
 	from = xmlnode_get_attrib(iqnode, "from");
@@ -1519,22 +1507,14 @@ static void jabber_handlepacket(gjconn gjc, jpacket p)
 				jabber_handleroster(gjc, querynode);
 			} else if (NSCHECK(querynode, NS_VCARD)) {
 				jabber_track_queries(gjc->queries, id, TRUE);	/* delete query track */
-			   	jabber_handlevcard(gjc, querynode, from);
 			} else if (vcard) {
 				jabber_track_queries(gjc->queries, id, TRUE);	/* delete query track */
-				jabber_handlevcard(gjc, vcard, from);
 			} else {
 				char *val;
 
 				/* handle "null" query results */
 				if((val = jabber_track_queries(gjc->queries, id, TRUE)) != NULL) {
-					if(strcmp((char *) val, "vCard") == 0) {
-						/*
-						 * No actual vCard, but there's other stuff.  This
-						 * way the user always gets some kind of response.
-						 */
-						jabber_handlevcard(gjc, NULL, from);
-					}
+					/* No-op */
 				}
 			}
 
@@ -1697,15 +1677,8 @@ static int jabber_send_im(struct gaim_connection *gc, char *who, char *message, 
 	xmlnode_put_attrib(x, "type", "chat");
 
 	if (message && strlen(message)) {
-#ifndef ICONV
-		char *utf8 = str_to_utf8(message);
-		y = xmlnode_insert_tag(x, "body");
-		xmlnode_insert_cdata(y, utf8, -1);
-		g_free(utf8);
-#else
 		y = xmlnode_insert_tag(x, "body");
 		xmlnode_insert_cdata(y, message, -1);
-#endif
 	}
 
 	gjab_send(((struct jabber_data *)gc->proto_data)->gjc, x);
@@ -2233,20 +2206,20 @@ static void jabber_set_away(struct gaim_connection *gc, char *state, char *messa
 		}
 	} else {
 		/* state is one of our own strings. it won't be NULL. */
-		if (!strcasecmp(state, "Online")) {
+		if (!g_ascii_strcasecmp(state, "Online")) {
 			/* once again, we don't have to put anything here */
-		} else if (!strcasecmp(state, "Chatty")) {
+		} else if (!g_ascii_strcasecmp(state, "Chatty")) {
 			y = xmlnode_insert_tag(x, "show");
 			xmlnode_insert_cdata(y, "chat", -1);
-		} else if (!strcasecmp(state, "Away")) {
+		} else if (!g_ascii_strcasecmp(state, "Away")) {
 			y = xmlnode_insert_tag(x, "show");
 			xmlnode_insert_cdata(y, "away", -1);
 			gc->away = "";
-		} else if (!strcasecmp(state, "Extended Away")) {
+		} else if (!g_ascii_strcasecmp(state, "Extended Away")) {
 			y = xmlnode_insert_tag(x, "show");
 			xmlnode_insert_cdata(y, "xa", -1);
 			gc->away = "";
-		} else if (!strcasecmp(state, "Do Not Disturb")) {
+		} else if (!g_ascii_strcasecmp(state, "Do Not Disturb")) {
 			y = xmlnode_insert_tag(x, "show");
 			xmlnode_insert_cdata(y, "dnd", -1);
 			gc->away = "";
@@ -2362,7 +2335,7 @@ static void jabber_buddy_free(struct buddy *b)
  *      construction routines.
  */
 
-struct vcard_template {
+static struct vcard_template {
 	char *label;			/* label text pointer */
 	char *text;			/* entry text pointer */
 	int  visible;			/* should entry field be "visible?" */
@@ -2397,20 +2370,6 @@ struct vcard_template {
 };
 
 /*
- * The "vCard" tag's attibute list...
- */
-struct tag_attr {
-	char *attr;
-	char *value;
-} vcard_tag_attr_list[] = {
-	{"prodid",   "-//HandGen//NONSGML vGen v1.0//EN"},
-	{"version",  "2.0",                             },
-	{"xmlns",    "vcard-temp",                      },
-	{NULL, NULL},
-};
-
-
-/*
  * V-Card user instructions
  */
 /* ** BitlBee ** Not needed now
@@ -2427,82 +2386,6 @@ typedef struct {
 	xmlnode current;
 } *xmlstr2xmlnode_parser, xmlstr2xmlnode_parser_struct;
 
-
-/*
- * Display a Jabber vCard
- */
-static void jabber_handlevcard(gjconn gjc, xmlnode querynode, char *from)
-{
-	/* ** Bitlbee **
-	struct gaim_connection *gc = GJ_GC(gjc);
-	** End - Bitlbee ** */
-	struct jabber_data *jd = GJ_GC(gjc)->proto_data;
-	jid who = jid_new(gjc->p, from);
-	char *cdata, *status;
-	
-	struct vcard_template *vc_tp = vcard_template_data;
-
-	/* space for all vCard elements + Jabber I.D. + "status" + NULL (list terminator) */
-	gchar **str_arr = (gchar **) g_new(gpointer,
-				(sizeof(vcard_template_data)/sizeof(struct vcard_template)) + 3);
-	gchar **ap = str_arr;
-	gchar *buddy, *final;
-
-	if(who->resource != NULL && (who->resource)[0] != '\0') {
-		buddy = g_strdup_printf("%s@%s/%s", who->user, who->server, who->resource);
-	} else {
-		buddy = g_strdup_printf("%s@%s", who->user, who->server);
-	}
-	*ap++ = g_strdup_printf("<B>Jabber ID:</B> %s<BR>\n", buddy);
-
-	for(vc_tp = vcard_template_data; vc_tp->label != NULL; ++vc_tp) {
-		if(strcmp(vc_tp->tag, "DESC") == 0)
-			continue;	/* special handling later */
-		if(vc_tp->ptag == NULL) {
-			cdata = xmlnode_get_tag_data(querynode, vc_tp->tag);
-		} else {
-			gchar *tag = g_strdup_printf("%s/%s", vc_tp->ptag, vc_tp->tag);
-			cdata = xmlnode_get_tag_data(querynode, tag);
-			g_free(tag);
-		}
-		if(cdata != NULL) {
-			if(vc_tp->url == NULL) {
-				*ap++ = g_strdup_printf("<B>%s:</B> %s<BR>\n", vc_tp->label, cdata);
-			} else {
-				gchar *fmt = g_strdup_printf("<B>%%s:</B> %s<BR>\n", vc_tp->url);
-				*ap++ = g_strdup_printf(fmt, vc_tp->label, cdata, cdata);
-				g_free(fmt);
-			}
-		}
-	}
-
-	if((status = g_hash_table_lookup(jd->hash, buddy)) == NULL) {
-		status = _("Unknown");
-	}
-	/* ** Bitlbee **
-	*ap++ = g_strdup_printf("<B>Status:</B> %s<BR>\n", status);
-	** End - Bitlbee ** */
-
-	/*
-	 * "Description" handled as a special case: get a copy of the
-	 * string and HTML-ize.
-	 */
-	if((cdata = xmlnode_get_tag_data(querynode, "DESC")) != NULL) {
-		gchar *tmp = g_strdup_printf("<HR>%s<BR>", cdata);
-		/* ** Bitlbee **
-		*ap++ = strdup_withhtml(tmp);
-		** End - Bitlbee ** */
-		g_free(tmp);
-	}
-
-	*ap = NULL;
-
-	final= g_strjoinv(NULL, str_arr);
-	g_strfreev(str_arr);
-
-	g_free(buddy);
-	g_free(final);
-}
 
 /*
  * Used by XML_Parse on parsing CDATA
@@ -2920,7 +2803,6 @@ void jabber_init(struct prpl *ret)
 	ret->change_passwd = NULL;
 ** End - Bitlbee ** */
 	ret->add_buddy = jabber_add_buddy;
-	ret->add_buddies = NULL;
 	ret->remove_buddy = jabber_remove_buddy;
 	ret->add_permit = NULL;
 	ret->add_deny = NULL;

@@ -40,7 +40,7 @@ static int infochange(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, a
 			if ((userfunc = aim_callhandler(sess, rx->conn, snac->family, snac->subtype)))
 				userfunc(sess, rx, (snac->subtype == 0x0005) ? 1 : 0, perms, type, len, val, str);
 
-			free(val);
+			g_free(val);
 
 			tlvcount--;
 		}

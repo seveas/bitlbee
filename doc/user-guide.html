@@ -1,444 +1,99 @@
-<HTML
-><HEAD
-><TITLE
->BitlBee User Guide</TITLE
-><META
-NAME="GENERATOR"
-CONTENT="Modular DocBook HTML Stylesheet Version 1.76b+
-"></HEAD
-><BODY
-CLASS="BOOK"
-><DIV
-CLASS="BOOK"
-><A
-NAME="BITLBEE-USER-GUIDE"><DIV
-CLASS="TITLEPAGE"
-><H1
-CLASS="TITLE"
-><A
-NAME="AEN2">BitlBee User Guide</H1
-><H3
-CLASS="AUTHOR"
-><A
-NAME="AEN4">Jelmer Vernooij</H3
-><DIV
-CLASS="LEGALNOTICE"
-><A
-NAME="LEGALNOTICE"><P
-></P
-><P
->         Permission is granted to copy, distribute and/or modify this
-         document under the terms of the <A
-HREF="gnome-help:fdl"
-TARGET="_top"
-><I
-CLASS="CITETITLE"
->GNU Free Documentation
-         License</I
-></A
->, Version 1.1 or any later version
+<html><head><meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1"><title>BitlBee User Guide</title><meta name="generator" content="DocBook XSL Stylesheets V1.64.1"></head><body bgcolor="white" text="black" link="#0000FF" vlink="#840084" alink="#0000FF"><div class="book" lang="en"><div class="titlepage"><div><div><h1 class="title"><a name="BitlBee-User-Guide"></a>BitlBee User Guide</h1></div><div><div class="author"><h3 class="author"><span class="firstname">Jelmer</span> <span class="surname">Vernooij</span></h3></div></div><div><p class="releaseinfo">
+   		This is the initial release of the BitlBee User Guide
+   </p></div><div><div class="legalnotice"><p>
+         Permission is granted to copy, distribute and/or modify this
+         document under the terms of the <a href="gnome-help:fdl" target="_top"><i class="citetitle">GNU Free Documentation
+         License</i></a>, Version 1.1 or any later version
          published by the Free Software Foundation with no Invariant
          Sections, no Front-Cover Texts, and no Back-Cover Texts. You
-         may obtain a copy of the <I
-CLASS="CITETITLE"
->GNU Free Documentation
-         License</I
-> from the Free Software Foundation by
-         visiting <A
-HREF="http://www.fsf.org"
-TARGET="_top"
->their
-         Web site</A
-> or by writing to: Free Software Foundation,
+         may obtain a copy of the <i class="citetitle">GNU Free Documentation
+         License</i> from the Free Software Foundation by
+         visiting <a href="http://www.fsf.org" target="_top">their
+         Web site</a> or by writing to: Free Software Foundation,
          Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307,
          USA.
-       </P
-><P
-></P
-></DIV
-><HR></DIV
-><DIV
-CLASS="TOC"
-><DL
-><DT
-><B
->Table of Contents</B
-></DT
-><DT
->1. <A
-HREF="#INSTALLATION"
->Installation</A
-></DT
-><DD
-><DL
-><DT
-><A
-HREF="#AEN18"
->Downloading the package</A
-></DT
-><DT
-><A
-HREF="#AEN23"
->Compiling</A
-></DT
-><DT
-><A
-HREF="#AEN41"
->Configuration</A
-></DT
-></DL
-></DD
-><DT
->2. <A
-HREF="#USAGE"
->Usage</A
-></DT
-><DD
-><DL
-><DT
-><A
-HREF="#AEN60"
->Connecting to the server</A
-></DT
-><DT
-><A
-HREF="#AEN63"
->The #bitlbee control channel</A
-></DT
-><DT
-><A
-HREF="#AEN67"
->Commands</A
-></DT
-><DT
-><A
-HREF="#AEN71"
->Talking to people</A
-></DT
-></DL
-></DD
-><DT
->3. <A
-HREF="#SUPPORT"
->Support</A
-></DT
-><DD
-><DL
-><DT
-><A
-HREF="#AEN80"
->BitlBee is beta software</A
-></DT
-><DT
-><A
-HREF="#AEN83"
->Support channels</A
-></DT
-><DD
-><DL
-><DT
-><A
-HREF="#AEN85"
->The World Wide Web</A
-></DT
-><DT
-><A
-HREF="#AEN89"
->IRC</A
-></DT
-><DT
-><A
-HREF="#AEN92"
->Mailinglists</A
-></DT
-></DL
-></DD
-></DL
-></DD
-></DL
-></DIV
-><DIV
-CLASS="CHAPTER"
-><HR><H1
-><A
-NAME="INSTALLATION">Chapter 1. Installation</H1
-><DIV
-CLASS="SECT1"
-><H2
-CLASS="SECT1"
-><A
-NAME="AEN18">Downloading the package</H2
-><P
->The latest BitlBee release is always available from <A
-HREF="http://www.bitlbee.org/"
-TARGET="_top"
->http://www.bitlbee.org/</A
->.
-Download the package with your favorite program and unpack it: <B
-CLASS="COMMAND"
->tar
-xvfz bitlbee-&lt;version&gt;.tar.gz</B
-> where &lt;version&gt; is to be
+       </p></div></div></div><div></div><hr></div><div class="toc"><p><b>Table of Contents</b></p><dl><dt><span class="chapter"><a href="#Installation">1. Installation</a></span></dt><dd><dl><dt><span class="sect1"><a href="#id2437942">Downloading the package</a></span></dt><dt><span class="sect1"><a href="#id2437901">Compiling</a></span></dt><dt><span class="sect1"><a href="#id2438539">Configuration</a></span></dt></dl></dd><dt><span class="chapter"><a href="#Usage">2. Usage</a></span></dt><dd><dl><dt><span class="sect1"><a href="#id2438400">Connecting to the server</a></span></dt><dt><span class="sect1"><a href="#id2438349">The #bitlbee control channel</a></span></dt><dt><span class="sect1"><a href="#id2438368">Commands</a></span></dt><dt><span class="sect1"><a href="#id2438422">Talking to people</a></span></dt></dl></dd><dt><span class="chapter"><a href="#Support">3. Support</a></span></dt><dd><dl><dt><span class="sect1"><a href="#id2439382">BitlBee is beta software</a></span></dt><dt><span class="sect1"><a href="#id2439399">Support channels</a></span></dt><dd><dl><dt><span class="sect2"><a href="#id2439404">The World Wide Web</a></span></dt><dt><span class="sect2"><a href="#id2439214">IRC</a></span></dt><dt><span class="sect2"><a href="#id2439225">Mailinglists</a></span></dt></dl></dd></dl></dd></dl></div><div class="chapter" lang="en"><div class="titlepage"><div><div><h2 class="title"><a name="Installation"></a>Chapter 1. Installation</h2></div></div><div></div></div><div class="toc"><p><b>Table of Contents</b></p><dl><dt><span class="sect1"><a href="#id2437942">Downloading the package</a></span></dt><dt><span class="sect1"><a href="#id2437901">Compiling</a></span></dt><dt><span class="sect1"><a href="#id2438539">Configuration</a></span></dt></dl></div><div class="sect1" lang="en"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="id2437942"></a>Downloading the package</h2></div></div><div></div></div><p>
+The latest BitlBee release is always available from <a href="http://www.bitlbee.org/" target="_top">http://www.bitlbee.org/</a>.
+Download the package with your favorite program and unpack it: <span><b class="command">tar
+xvfz bitlbee-&lt;version&gt;.tar.gz</b></span> where &lt;version&gt; is to be
 replaced by the version number of the BitlBee you downloaded (e.g. 0.73,
-0.74a, 0.80).</P
-></DIV
-><DIV
-CLASS="SECT1"
-><HR><H2
-CLASS="SECT1"
-><A
-NAME="AEN23">Compiling</H2
-><P
->BitlBee's build system has to be configured before compiling. The
-<TT
-CLASS="FILENAME"
->configure</TT
-> script will do this for you. Just run
+0.74a, 0.80).
+</p></div><div class="sect1" lang="en"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="id2437901"></a>Compiling</h2></div></div><div></div></div><p>
+BitlBee's build system has to be configured before compiling. The
+<tt class="filename">configure</tt> script will do this for you. Just run
 it, it'll set up with nice and hopefully well-working defaults. If you
 want to change some settings, just try
-<B
-CLASS="COMMAND"
->./configure --help</B
-> and see what you can do.</P
-><P
->Some variables that might be of interest to the normal user:</P
-><P
-></P
-><UL
-><LI
-><P
->config - The place where BitlBee will save settings for
-all the users. <TT
-CLASS="FILENAME"
->/var/lib/bitlbee/</TT
-> is the default
-value.</P
-></LI
-><LI
-><P
->tcpd - If you enable this one, you can specify what hosts
+<span><b class="command">./configure --help</b></span> and see what you can do.
+</p><p>Some variables that might be of interest to the normal user:</p><div class="itemizedlist"><ul type="disc"><li><p>config - The place where BitlBee will save settings for
+all the users. <tt class="filename">/var/lib/bitlbee/</tt> is the default
+value.</p></li><li><p>tcpd - If you enable this one, you can specify what hosts
 should be allowed to use your BitlBee by editting
-<TT
-CLASS="FILENAME"
->/etc/hosts.deny</TT
-> and/or <TT
-CLASS="FILENAME"
->/etc/hosts.deny</TT
->.</P
-></LI
-></UL
-><P
->After running <TT
-CLASS="FILENAME"
->configure</TT
->, you should run
-<B
-CLASS="COMMAND"
->make</B
->. After that, run <B
-CLASS="COMMAND"
->make install</B
-> as 
-root.</P
-></DIV
-><DIV
-CLASS="SECT1"
-><HR><H2
-CLASS="SECT1"
-><A
-NAME="AEN41">Configuration</H2
-><P
->By default, BitlBee runs as the user nobody. You might want 
-to run it as a seperate user (some computers run named or apache as nobody). </P
-><P
->Since BitlBee uses inetd, you should add the following line to <TT
-CLASS="FILENAME"
->/etc/inetd.conf</TT
->:</P
-><P
-><TABLE
-BORDER="0"
-BGCOLOR="#E0E0E0"
-WIDTH="100%"
-><TR
-><TD
-><PRE
-CLASS="PROGRAMLISTING"
->6667    stream  tcp     nowait nobody /usr/local/sbin/bitlbee bitlbee</PRE
-></TD
-></TR
-></TABLE
-></P
-><P
->Inetd has to be restarted after changing the configuration. Either
-<B
-CLASS="COMMAND"
->killall -HUP inetd</B
-> or 
-<B
-CLASS="COMMAND"
->/etc/init.d/inetd restart</B
-> should do the job on most systems.</P
-><P
->You might be one of the.. ehr, lucky people running an xinetd-powered distro.
-<B
-CLASS="COMMAND"
->xinetd</B
-> is quite different and they seem to be proud of that.. ;-)
-Anyway, if you want BitlBee to work with <B
-CLASS="COMMAND"
->xinetd</B
->, just copy the
+<tt class="filename">/etc/hosts.deny</tt> and/or <tt class="filename">/etc/hosts.deny</tt>.</p></li></ul></div><p>
+After running <tt class="filename">configure</tt>, you should run
+<span><b class="command">make</b></span>. After that, run <span><b class="command">make install</b></span> as 
+root.
+</p></div><div class="sect1" lang="en"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="id2438539"></a>Configuration</h2></div></div><div></div></div><p>
+By default, BitlBee runs as the user nobody. You might want 
+to run it as a seperate user (some computers run named or apache as nobody). 
+</p><p>
+Since BitlBee uses inetd, you should add the following line to <tt class="filename">/etc/inetd.conf</tt>:
+</p><p>
+</p><pre class="programlisting">
+6667    stream  tcp     nowait nobody /usr/local/sbin/bitlbee bitlbee
+</pre><p>
+</p><p>
+Inetd has to be restarted after changing the configuration. Either
+<span><b class="command">killall -HUP inetd</b></span> or 
+<span><b class="command">/etc/init.d/inetd restart</b></span> should do the job on most systems.
+</p><p>
+You might be one of the.. ehr, lucky people running an xinetd-powered distro.
+<span><b class="command">xinetd</b></span> is quite different and they seem to be proud of that.. ;-)
+Anyway, if you want BitlBee to work with <span><b class="command">xinetd</b></span>, just copy the
 bitlbee.xinetd file to your /etc/xinetd.d/ directory (and probably edit it to suit
-your needs).</P
-><P
->You should create a directory where BitlBee can store it's data files. This 
+your needs).
+</p><p>
+You should create a directory where BitlBee can store it's data files. This 
 should be the directory named after the value 'CONFIG' in Makefile.settings. 
-The default is <TT
-CLASS="FILENAME"
->/var/lib/bitlbee</TT
->, which can be created 
-with the command <B
-CLASS="COMMAND"
->mkdir -p /var/lib/bitlbee</B
->. This 
+The default is <tt class="filename">/var/lib/bitlbee</tt>, which can be created 
+with the command <span><b class="command">mkdir -p /var/lib/bitlbee</b></span>. This 
 directory has to be owned by the user that runs bitlbee. To make 
-'nobody' owner of this directory, run <B
-CLASS="COMMAND"
->chown nobody /var/lib/bitlbee</B
->.
+'nobody' owner of this directory, run <span><b class="command">chown nobody /var/lib/bitlbee</b></span>.
 Because things like passwords are saved in this directory, it's probably
-a good idea to make this directory owner-read-/writable only.</P
-></DIV
-></DIV
-><DIV
-CLASS="CHAPTER"
-><HR><H1
-><A
-NAME="USAGE">Chapter 2. Usage</H1
-><DIV
-CLASS="SECT1"
-><H2
-CLASS="SECT1"
-><A
-NAME="AEN60">Connecting to the server</H2
-><P
->Since BitlBee acts just like any other irc daemon, you can connect to 
+a good idea to make this directory owner-read-/writable only.
+</p></div></div><div class="chapter" lang="en"><div class="titlepage"><div><div><h2 class="title"><a name="Usage"></a>Chapter 2. Usage</h2></div></div><div></div></div><div class="toc"><p><b>Table of Contents</b></p><dl><dt><span class="sect1"><a href="#id2438400">Connecting to the server</a></span></dt><dt><span class="sect1"><a href="#id2438349">The #bitlbee control channel</a></span></dt><dt><span class="sect1"><a href="#id2438368">Commands</a></span></dt><dt><span class="sect1"><a href="#id2438422">Talking to people</a></span></dt></dl></div><div class="sect1" lang="en"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="id2438400"></a>Connecting to the server</h2></div></div><div></div></div><p>
+Since BitlBee acts just like any other irc daemon, you can connect to 
 it with your favorite irc client. Launch it and connect to localhost port 6667
-(or whatever host/port you are running bitlbee on).</P
-></DIV
-><DIV
-CLASS="SECT1"
-><HR><H2
-CLASS="SECT1"
-><A
-NAME="AEN63">The #bitlbee control channel</H2
-><P
->Once you are connected to the BitlBee server, you are automatically joined
+(or whatever host/port you are running bitlbee on).
+</p></div><div class="sect1" lang="en"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="id2438349"></a>The #bitlbee control channel</h2></div></div><div></div></div><p>
+Once you are connected to the BitlBee server, you are automatically joined
 to #bitlbee on that server. This channel acts like the 'buddy list' you have
-on the various other chat networks.</P
-><P
->The user 'root' always hangs around in #bitlbee and acts as your interface 
-to bitlbee. All commands you give on #bitlbee are 'answered' by root.</P
-></DIV
-><DIV
-CLASS="SECT1"
-><HR><H2
-CLASS="SECT1"
-><A
-NAME="AEN67">Commands</H2
-><P
->BitlBee can be configured by giving 'commands' in the #bitlbee channel. 'root' 
+on the various other chat networks.
+</p><p>
+The user 'root' always hangs around in #bitlbee and acts as your interface 
+to bitlbee. All commands you give on #bitlbee are 'answered' by root.
+</p></div><div class="sect1" lang="en"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="id2438368"></a>Commands</h2></div></div><div></div></div><p>
+BitlBee can be configured by giving 'commands' in the #bitlbee channel. 'root' 
 responds to these commands. Use the command 'help' to retrieve a list of
 commands bitlbee supports with syntax. You can get an
-up-to-date list of available commands using the <B
-CLASS="COMMAND"
->help commands</B
->
-command.</P
-></DIV
-><DIV
-CLASS="SECT1"
-><HR><H2
-CLASS="SECT1"
-><A
-NAME="AEN71">Talking to people</H2
-><P
->You can talk to by starting a query with them. In most irc clients, 
-this can be done with either <B
-CLASS="COMMAND"
->/msg &lt;nick&gt; &lt;text&gt;</B
->
-or <B
-CLASS="COMMAND"
->/query &lt;nick&gt;</B
->.</P
-><P
->To keep the number of open query windows limited, you can also talk to people
-in the control channel, like <B
-CLASS="COMMAND"
->&lt;nick&gt;: &lt;text&gt;</B
->.</P
-></DIV
-></DIV
-><DIV
-CLASS="CHAPTER"
-><HR><H1
-><A
-NAME="SUPPORT">Chapter 3. Support</H1
-><DIV
-CLASS="SECT1"
-><H2
-CLASS="SECT1"
-><A
-NAME="AEN80">BitlBee is beta software</H2
-><P
->Although BitlBee has quite some functionality it is still beta. That means it 
+up-to-date list of available commands using the <span><b class="command">help commands</b></span>
+command.
+</p></div><div class="sect1" lang="en"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="id2438422"></a>Talking to people</h2></div></div><div></div></div><p>
+You can talk to by starting a query with them. In most irc clients, 
+this can be done with either <span><b class="command">/msg &lt;nick&gt; &lt;text&gt;</b></span>
+or <span><b class="command">/query &lt;nick&gt;</b></span>.
+</p><p>
+To keep the number of open query windows limited, you can also talk to people
+in the control channel, like <span><b class="command">&lt;nick&gt;: &lt;text&gt;</b></span>.
+</p></div></div><div class="chapter" lang="en"><div class="titlepage"><div><div><h2 class="title"><a name="Support"></a>Chapter 3. Support</h2></div></div><div></div></div><div class="toc"><p><b>Table of Contents</b></p><dl><dt><span class="sect1"><a href="#id2439382">BitlBee is beta software</a></span></dt><dt><span class="sect1"><a href="#id2439399">Support channels</a></span></dt><dd><dl><dt><span class="sect2"><a href="#id2439404">The World Wide Web</a></span></dt><dt><span class="sect2"><a href="#id2439214">IRC</a></span></dt><dt><span class="sect2"><a href="#id2439225">Mailinglists</a></span></dt></dl></dd></dl></div><div class="sect1" lang="en"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="id2439382"></a>BitlBee is beta software</h2></div></div><div></div></div><p>
+Although BitlBee has quite some functionality it is still beta. That means it 
 can crash at any time, corrupt your data or whatever. Don't use it in 
-any production environment and don't rely on it.</P
-></DIV
-><DIV
-CLASS="SECT1"
-><HR><H2
-CLASS="SECT1"
-><A
-NAME="AEN83">Support channels</H2
-><DIV
-CLASS="SECT2"
-><H3
-CLASS="SECT2"
-><A
-NAME="AEN85">The World Wide Web</H3
-><P
-><A
-HREF="http://www.bitlbee.org/"
-TARGET="_top"
->http://www.bitlbee.org/</A
-> 
+any production environment and don't rely on it.
+</p></div><div class="sect1" lang="en"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="id2439399"></a>Support channels</h2></div></div><div></div></div><div class="sect2" lang="en"><div class="titlepage"><div><div><h3 class="title"><a name="id2439404"></a>The World Wide Web</h3></div></div><div></div></div><p>
+<a href="http://www.bitlbee.org/" target="_top">http://www.bitlbee.org/</a> 
 is the homepage of bitlbee and contains the most recent news on bitlbee and 
-the latest releases.</P
-></DIV
-><DIV
-CLASS="SECT2"
-><HR><H3
-CLASS="SECT2"
-><A
-NAME="AEN89">IRC</H3
-><P
->BitlBee is discussed on #bitlbee on the OFTC IRC network (server: irc.oftc.net).</P
-></DIV
-><DIV
-CLASS="SECT2"
-><HR><H3
-CLASS="SECT2"
-><A
-NAME="AEN92">Mailinglists</H3
-><P
->BitlBee doesn't have any mailinglists.</P
-></DIV
-></DIV
-></DIV
-></DIV
-></BODY
-></HTML
->
+the latest releases.
+</p></div><div class="sect2" lang="en"><div class="titlepage"><div><div><h3 class="title"><a name="id2439214"></a>IRC</h3></div></div><div></div></div><p>
+BitlBee is discussed on #bitlbee on the OFTC IRC network (server: irc.oftc.net).
+</p></div><div class="sect2" lang="en"><div class="titlepage"><div><div><h3 class="title"><a name="id2439225"></a>Mailinglists</h3></div></div><div></div></div><p>
+BitlBee doesn't have any mailinglists.
+</p></div></div></div></div></body></html>

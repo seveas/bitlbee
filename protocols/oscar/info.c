@@ -252,7 +252,7 @@ faim_internal fu32_t aim_getcap(aim_session_t *sess, aim_bstream_t *bs, int len)
 					cap[14], cap[15]);
 		}
 
-		free(cap);
+		g_free(cap);
 	}
 
 	return flags;
@@ -660,14 +660,14 @@ static int userinfo(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, aim
 	if ((userfunc = aim_callhandler(sess, rx->conn, snac->family, snac->subtype)))
 		ret = userfunc(sess, rx, &userinfo, inforeq->infotype, text_encoding, text);
 
-	free(text_encoding);
-	free(text);
+	g_free(text_encoding);
+	g_free(text);
 
 	aim_freetlvchain(&tlvlist);
 
 	if (origsnac)
-		free(origsnac->data);
-	free(origsnac);
+		g_free(origsnac->data);
+	g_free(origsnac);
 
 	return ret;
 }

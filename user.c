@@ -23,11 +23,13 @@
   Suite 330, Boston, MA  02111-1307  USA
 */
 
+#define BITLBEE_CORE
 #include "bitlbee.h"
 
 user_t *user_add( irc_t *irc, char *nick )
 {
 	user_t *u;
+	char *key;
 	
 	u = irc->users;
 	if( u )
@@ -41,17 +43,20 @@ user_t *user_add( irc_t *irc, char *nick )
 			else
 				break;
 		}
-		u->next = bitlbee_alloc( sizeof( user_t ) );
+		u->next = g_new0( user_t, 1 );
 		u = u->next;
 	}
 	else
 	{
-		irc->users = u = bitlbee_alloc( sizeof( user_t ) );
+		irc->users = u = g_new0( user_t, 1 );
 	}
-	memset( u, 0, sizeof( user_t ) );
 	
-	u->user = u->realname = u->host = u->nick = strdup( nick );
-	u->private = set_getint( irc, "private" );
+	u->user = u->realname = u->host = u->nick = g_strdup( nick );
+	u->is_private = set_getint( irc, "private" );
+	
+	key = g_strdup( nick );
+	nick_lc( key );
+	g_hash_table_insert( irc->userhash, key, u );
 	
 	return( u );
 }
@@ -59,6 +64,8 @@ user_t *user_add( irc_t *irc, char *nick )
 int user_del( irc_t *irc, char *nick )
 {
 	user_t *u, *t;
+	char *key;
+	gpointer okey, ovalue;
 	
 	u = irc->users;
 	t = NULL;
@@ -66,21 +73,36 @@ int user_del( irc_t *irc, char *nick )
 	{
 		if( nick_cmp( u->nick, nick ) == 0 )
 		{
+			/* Get this key now already, since "nick" might be free()d
+			   at the time we start playing with the hash... */
+			key = g_strdup( nick );
+			nick_lc( key );
+			
 			if( t )
 				t->next = u->next;
 			else
 				irc->users = u->next;
 			if( u->online )
 				irc_kill( irc, u );
-			free( u->nick );
-			if( u->nick != u->user ) free( u->user );
-			if( u->nick != u->host ) free( u->host );
-			if( u->nick != u->realname ) free( u->realname );
-			if( u->away ) free( u->away );
-			if( u->handle ) free( u->handle );
-			if( u->sendbuf ) free( u->sendbuf );
+			g_free( u->nick );
+			if( u->nick != u->user ) g_free( u->user );
+			if( u->nick != u->host ) g_free( u->host );
+			if( u->nick != u->realname ) g_free( u->realname );
+			if( u->away ) g_free( u->away );
+			if( u->handle ) g_free( u->handle );
+			if( u->sendbuf ) g_free( u->sendbuf );
 			if( u->sendbuf_timer ) g_source_remove( u->sendbuf_timer );
-			free( u );
+			g_free( u );
+			
+			if( !g_hash_table_lookup_extended( irc->userhash, key, &okey, &ovalue ) || ovalue != u )
+			{
+				g_free( key );
+				return( 1 );	/* Although this is a severe error, the user is removed from the list... */
+			}
+			g_hash_table_remove( irc->userhash, key );
+			g_free( key );
+			g_free( okey );
+			
 			return( 1 );
 		}
 		u = (t=u)->next;
@@ -91,16 +113,12 @@ int user_del( irc_t *irc, char *nick )
 
 user_t *user_find( irc_t *irc, char *nick )
 {
-	user_t *u = irc->users;
+	char key[512] = "";
 	
-	while( u )
-	{
-		if( nick_cmp( u->nick, nick ) == 0 )
-			break;
-		u = u->next;
-	}
+	strncpy( key, nick, sizeof( key ) - 1 );
+	nick_lc( key );
 	
-	return( u );
+	return( g_hash_table_lookup( irc->userhash, key ) );
 }
 
 user_t *user_findhandle( struct gaim_connection *gc, char *handle )
@@ -115,4 +133,39 @@ user_t *user_findhandle( struct gaim_connection *gc, char *handle )
 	}
 	
 	return( u );
+}
+
+void user_rename( irc_t *irc, char *oldnick, char *newnick )
+{
+	user_t *u = user_find( irc, oldnick );
+	gpointer okey, ovalue;
+	char *key;
+	
+	if( !u ) return;	/* Should've been checked by the caller... */
+	
+	g_free( u->nick );
+	if( u->nick == u->user ) u->user = NULL;
+	if( u->nick == u->host ) u->host = NULL;
+	if( u->nick == u->realname ) u->realname = NULL;
+	u->nick = g_strdup( newnick );
+	if( !u->user ) u->user = u->nick;
+	if( !u->host ) u->user = u->host;
+	if( !u->realname ) u->user = u->realname;
+	
+	/* Remove the old reference to this user from the hash and create a
+	   new one with the new nick. This is indeed a bit messy. */
+	key = g_strdup( oldnick );
+	nick_lc( key );
+	if( !g_hash_table_lookup_extended( irc->userhash, key, &okey, &ovalue ) || ovalue != u )
+	{
+		g_free( key );
+		return;		/* This really shouldn't happen! */	
+	}
+	g_hash_table_remove( irc->userhash, key );
+	g_free( key );
+	g_free( okey );
+	
+	key = g_strdup( newnick );
+	nick_lc( key );
+	g_hash_table_insert( irc->userhash, key, u );
 }

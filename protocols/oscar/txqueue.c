@@ -47,9 +47,8 @@ faim_internal aim_frame_t *aim_tx_new(aim_session_t *sess, aim_conn_t *conn, fu8
 		}
 	}
 
-	if (!(fr = (aim_frame_t *)malloc(sizeof(aim_frame_t))))
+	if (!(fr = (aim_frame_t *)g_new0(aim_frame_t,1)))
 		return NULL;
-	memset(fr, 0, sizeof(aim_frame_t));
 
 	fr->conn = conn; 
 
@@ -70,7 +69,7 @@ faim_internal aim_frame_t *aim_tx_new(aim_session_t *sess, aim_conn_t *conn, fu8
 	if (datalen > 0) {
 		fu8_t *data;
 
-		if (!(data = (unsigned char *)malloc(datalen))) {
+		if (!(data = (unsigned char *)g_malloc(datalen))) {
 			aim_frame_destroy(fr);
 			return NULL;
 		}
@@ -286,7 +285,7 @@ static int sendframe_flap(aim_session_t *sess, aim_frame_t *fr)
 
 	payloadlen = aim_bstream_curpos(&fr->data);
 
-	if (!(obs_raw = malloc(6 + payloadlen)))
+	if (!(obs_raw = g_malloc(6 + payloadlen)))
 		return -ENOMEM;
 
 	aim_bstream_init(&obs, obs_raw, 6 + payloadlen);
@@ -306,7 +305,7 @@ static int sendframe_flap(aim_session_t *sess, aim_frame_t *fr)
 	if (aim_bstream_send(&obs, fr->conn, obslen) != obslen)
 		err = -errno;
 	
-	free(obs_raw); /* XXX aim_bstream_free */
+	g_free(obs_raw); /* XXX aim_bstream_free */
 
 	fr->handled = 1;
 	fr->conn->lastactivity = time(NULL);
@@ -322,7 +321,7 @@ static int sendframe_oft(aim_session_t *sess, aim_frame_t *fr)
 	int err = 0;
 	
 	hbslen = 8 + fr->hdr.oft.hdr2len;
-	if (!(hbs_raw = malloc(hbslen)))
+	if (!(hbs_raw = g_malloc(hbslen)))
 		return -1;
 
 	aim_bstream_init(&hbs, hbs_raw, hbslen);
@@ -349,7 +348,7 @@ static int sendframe_oft(aim_session_t *sess, aim_frame_t *fr)
 			err = -errno;
 	}
 
-	free(hbs_raw); /* XXX aim_bstream_free */
+	g_free(hbs_raw); /* XXX aim_bstream_free */
 
 	fr->handled = 1;
 	fr->conn->lastactivity = time(NULL);
@@ -441,7 +440,7 @@ faim_export void aim_tx_purgequeue(aim_session_t *sess)
  * disappear without warning.
  *
  */
-faim_export void aim_tx_cleanqueue(aim_session_t *sess, aim_conn_t *conn)
+faim_internal void aim_tx_cleanqueue(aim_session_t *sess, aim_conn_t *conn)
 {
 	aim_frame_t *cur;
 

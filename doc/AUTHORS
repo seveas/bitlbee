@@ -3,8 +3,8 @@ Current developers:
 Wilmer van der Gaast <wilmer@gaast.net>
 	Main developer
 
-Sjoerd 'lucumo' Hemminga <sjoerd@hemminga-online.nl>
-	NickServ, documentation
+Jelmer 'ctrlsoft' Vernooij <jelmer@nl.linux.org>
+	Documentation, general hacking, Win32 port
 
 Maurits Dijkstra <mauritsd@xs4all.nl>
 	Daemon dude, plus some other stuff
@@ -12,8 +12,8 @@ Maurits Dijkstra <mauritsd@xs4all.nl>
 
 Retired developer:
 
-Jelmer 'ctrlsoft' Vernooij <jelmer@nl.linux.org>
-	Documentation, general hacking
+Sjoerd 'lucumo' Hemminga <sjoerd@hemminga-online.nl>
+	NickServ, documentation
 
-The development team wishes to thank Jelmer for his contributions to the
+The development team wishes to thank Sjoerd for his contributions to the
 Bee.

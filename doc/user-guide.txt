@@ -2,6 +2,8 @@ BitlBee User Guide
 
 Jelmer Vernooij
 
+This is the initial release of the BitlBee User Guide
+
 Permission is granted to copy, distribute and/or modify this document under the
 terms of the GNU Free Documentation License, Version 1.1 or any later version
 published by the Free Software Foundation with no Invariant Sections, no
@@ -13,31 +15,36 @@ Suite 330, Boston, MA 02111-1307, USA.
 -------------------------------------------------------------------------------
 
 Table of Contents
+
 1. Installation
-   
+
     Downloading the package
     Compiling
     Configuration
-   
+
 2. Usage
-   
+
     Connecting to the server
     The #bitlbee control channel
     Commands
     Talking to people
-   
+
 3. Support
-   
+
     BitlBee is beta software
     Support channels
-       
+
         The World Wide Web
         IRC
         Mailinglists
-       
--------------------------------------------------------------------------------
 
 Chapter 1. Installation
+
+Table of Contents
+
+Downloading the package
+Compiling
+Configuration
 
 Downloading the package
 
@@ -45,8 +52,6 @@ The latest BitlBee release is always available from http://www.bitlbee.org/.
 Download the package with your favorite program and unpack it: tar xvfz
 bitlbee-<version>.tar.gz where <version> is to be replaced by the version
 number of the BitlBee you downloaded (e.g. 0.73, 0.74a, 0.80).
-
--------------------------------------------------------------------------------
 
 Compiling
 
@@ -59,14 +64,12 @@ Some variables that might be of interest to the normal user:
 
   * config - The place where BitlBee will save settings for all the users. /var
     /lib/bitlbee/ is the default value.
-   
+
   * tcpd - If you enable this one, you can specify what hosts should be allowed
     to use your BitlBee by editting /etc/hosts.deny and/or /etc/hosts.deny.
-   
+
 After running configure, you should run make. After that, run make install as
 root.
-
--------------------------------------------------------------------------------
 
 Configuration
 
@@ -80,7 +83,7 @@ Since BitlBee uses inetd, you should add the following line to /etc/inetd.conf:
 Inetd has to be restarted after changing the configuration. Either killall -HUP
 inetd or /etc/init.d/inetd restart should do the job on most systems.
 
-You might be one of the.. ehr, lucky people running an xinetd-powered distro. 
+You might be one of the.. ehr, lucky people running an xinetd-powered distro.
 xinetd is quite different and they seem to be proud of that.. ;-) Anyway, if
 you want BitlBee to work with xinetd, just copy the bitlbee.xinetd file to your
 /etc/xinetd.d/ directory (and probably edit it to suit your needs).
@@ -93,17 +96,20 @@ To make 'nobody' owner of this directory, run chown nobody /var/lib/bitlbee.
 Because things like passwords are saved in this directory, it's probably a good
 idea to make this directory owner-read-/writable only.
 
--------------------------------------------------------------------------------
-
 Chapter 2. Usage
+
+Table of Contents
+
+Connecting to the server
+The #bitlbee control channel
+Commands
+Talking to people
 
 Connecting to the server
 
 Since BitlBee acts just like any other irc daemon, you can connect to it with
 your favorite irc client. Launch it and connect to localhost port 6667 (or
 whatever host/port you are running bitlbee on).
-
--------------------------------------------------------------------------------
 
 The #bitlbee control channel
 
@@ -114,16 +120,12 @@ various other chat networks.
 The user 'root' always hangs around in #bitlbee and acts as your interface to
 bitlbee. All commands you give on #bitlbee are 'answered' by root.
 
--------------------------------------------------------------------------------
-
 Commands
 
 BitlBee can be configured by giving 'commands' in the #bitlbee channel. 'root'
 responds to these commands. Use the command 'help' to retrieve a list of
 commands bitlbee supports with syntax. You can get an up-to-date list of
 available commands using the help commands command.
-
--------------------------------------------------------------------------------
 
 Talking to people
 
@@ -133,17 +135,22 @@ done with either /msg <nick> <text> or /query <nick>.
 To keep the number of open query windows limited, you can also talk to people
 in the control channel, like <nick>: <text>.
 
--------------------------------------------------------------------------------
-
 Chapter 3. Support
+
+Table of Contents
+
+BitlBee is beta software
+Support channels
+
+    The World Wide Web
+    IRC
+    Mailinglists
 
 BitlBee is beta software
 
 Although BitlBee has quite some functionality it is still beta. That means it
 can crash at any time, corrupt your data or whatever. Don't use it in any
 production environment and don't rely on it.
-
--------------------------------------------------------------------------------
 
 Support channels
 
@@ -152,14 +159,10 @@ The World Wide Web
 http://www.bitlbee.org/ is the homepage of bitlbee and contains the most recent
 news on bitlbee and the latest releases.
 
--------------------------------------------------------------------------------
-
 IRC
 
 BitlBee is discussed on #bitlbee on the OFTC IRC network (server:
 irc.oftc.net).
-
--------------------------------------------------------------------------------
 
 Mailinglists
 

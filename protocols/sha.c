@@ -20,11 +20,12 @@
  *
  */
 
-#include "lib.h"
+#define BITLBEE_CORE
+#include "nogaim.h"
 
-static void shaHashBlock(j_SHA_CTX *ctx);
+static void shaHashBlock(SHA_CTX *ctx);
 
-void shaInit(j_SHA_CTX *ctx) {
+void shaInit(SHA_CTX *ctx) {
   int i;
 
   ctx->lenW = 0;
@@ -43,14 +44,14 @@ void shaInit(j_SHA_CTX *ctx) {
 }
 
 
-void shaUpdate(j_SHA_CTX *ctx, unsigned char *dataIn, int len) {
+void shaUpdate(SHA_CTX *ctx, unsigned char *dataIn, int len) {
   int i;
 
   /* Read the data into W and process blocks as they get full
    */
   for (i = 0; i < len; i++) {
     ctx->W[ctx->lenW / 4] <<= 8;
-    ctx->W[ctx->lenW / 4] |= (unsigned long)dataIn[i];
+    ctx->W[ctx->lenW / 4] |= (uint32)dataIn[i];
     if ((++ctx->lenW) % 64 == 0) {
       shaHashBlock(ctx);
       ctx->lenW = 0;
@@ -61,7 +62,7 @@ void shaUpdate(j_SHA_CTX *ctx, unsigned char *dataIn, int len) {
 }
 
 
-void shaFinal(j_SHA_CTX *ctx, unsigned char hashout[20]) {
+void shaFinal(SHA_CTX *ctx, unsigned char hashout[20]) {
   unsigned char pad0x80 = 0x80;
   unsigned char pad0x00 = 0x00;
   unsigned char padlen[8];
@@ -97,7 +98,7 @@ void shaFinal(j_SHA_CTX *ctx, unsigned char hashout[20]) {
 
 
 void shaBlock(unsigned char *dataIn, int len, unsigned char hashout[20]) {
-  j_SHA_CTX ctx;
+  SHA_CTX ctx;
 
   shaInit(&ctx);
   shaUpdate(&ctx, dataIn, len);
@@ -107,9 +108,9 @@ void shaBlock(unsigned char *dataIn, int len, unsigned char hashout[20]) {
 
 #define SHA_ROTL(X,n) ((((X) << (n)) | ((X) >> (32-(n)))) & 0xffffffffL)
 
-static void shaHashBlock(j_SHA_CTX *ctx) {
+static void shaHashBlock(SHA_CTX *ctx) {
   int t;
-  unsigned long A,B,C,D,E,TEMP;
+  uint32 A,B,C,D,E,TEMP;
 
   for (t = 16; t <= 79; t++)
     ctx->W[t] =
@@ -165,29 +166,8 @@ char *shahash(char *str)
     pos = final;
     for(x=0;x<20;x++)
     {
-        snprintf(pos, 3, "%02x", hashval[x]);
+        g_snprintf(pos, 3, "%02x", hashval[x]);
         pos += 2;
     }
     return (char *)final;
-}
-
-void shahash_r(const char* str, char hashbuf[41])
-{
-    int x;
-    char *pos;
-    unsigned char hashval[20];
-    
-    if(!str || strlen(str) == 0)
-        return;
-
-    shaBlock((unsigned char *)str, strlen(str), hashval);
-
-    pos = hashbuf;
-    for(x=0;x<20;x++)
-    {
-        snprintf(pos, 3, "%02x", hashval[x]);
-        pos += 2;
-    }
-
-    return;
 }

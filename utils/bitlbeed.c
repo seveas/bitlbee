@@ -5,7 +5,7 @@
 *  A tiny daemon to allow you to run The Bee as a non-root user  *
 *  (without access to /etc/inetd.conf or whatever)               *
 *                                                                *
-*  Copyright 2002 Wilmer van der Gaast <lintux@debian.org>       *
+*  Copyright 2002-2004 Wilmer van der Gaast <lintux@debian.org>  *
 *                                                                *
 *  Licensed under the GNU General Public License                 *
 *                                                                *
@@ -14,6 +14,7 @@
 /* 
    ChangeLog:
    
+   2004-05-15: Added rate limiting
    2003-12-26: Added the SO_REUSEADDR sockopt, logging and CPU-time limiting
                for clients using setrlimit(), fixed the execv() call
    2002-11-29: Added the timeout so old child processes clean up faster
@@ -35,6 +36,7 @@
 #include <sys/time.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <sys/resource.h>
 
 #include <netinet/in.h>
 #include <arpa/inet.h>
@@ -47,13 +49,30 @@ typedef struct settings
 	unsigned char max_conn;
 	int seconds;
 	
+	int rate_seconds;
+	int rate_times;
+	int rate_ignore;
+	
 	char **call;
 } settings_t;
 
+typedef struct ipstats
+{
+	unsigned int ip;
+	
+	time_t rate_start;
+	int rate_times;
+	time_t rate_ignore;
+	
+	struct ipstats *next;
+} ipstats_t;
+
 FILE *logfile;
+ipstats_t *ipstats;
 
 settings_t *set_load( int argc, char *argv[] );
 void log( char *fmt, ... );
+ipstats_t *ip_get( char *ip_txt );
 
 int main( int argc, char *argv[] )
 {
@@ -120,6 +139,8 @@ int main( int argc, char *argv[] )
 	{
 		int cli_fd, cli_len, i, st;
 		struct sockaddr_in cli_addr;
+		ipstats_t *ip;
+		char *cli_txt;
 		pid_t child;
 		
 		static int running = 0;
@@ -138,32 +159,57 @@ int main( int argc, char *argv[] )
 		{
 			cli_len = sizeof( cli_addr );
 			cli_fd = accept( serv_fd, (struct sockaddr *) &cli_addr, &cli_len );
+			cli_txt = inet_ntoa( cli_addr.sin_addr );
 			
-			/* We want this socket on stdout and stderr too! */
-			dup( cli_fd ); dup( cli_fd );
+			ip = ip_get( cli_txt );
 			
-			if( ( child = fork() ) == 0 )
+			if( set->rate_times == 0 || time( NULL ) > ip->rate_ignore )
 			{
-				if( set->seconds )
+				/* We want this socket on stdout and stderr too! */
+				dup( cli_fd ); dup( cli_fd );
+				
+				if( ( child = fork() ) == 0 )
 				{
-					struct rlimit li;
-					
-					li.rlim_cur = (rlim_t) set->seconds;
-					li.rlim_max = (rlim_t) set->seconds + 1;
-					setrlimit( RLIMIT_CPU, &li );
+					if( set->seconds )
+					{
+						struct rlimit li;
+						
+						li.rlim_cur = (rlim_t) set->seconds;
+						li.rlim_max = (rlim_t) set->seconds + 1;
+						setrlimit( RLIMIT_CPU, &li );
+					}
+					execv( set->call[0], set->call );
+					log( "Error while executing %s!", set->call[0] );
+					return( 1 );
 				}
-				execv( set->call[0], set->call );
-				log( "Error while executing %s!", set->call[0] );
-				return( 1 );
-			}
-			else
-			{
+				
 				running ++;
 				close( 0 );
 				close( 1 );
 				close( 2 );
 				
-				log( "Started child process for client %s (PID=%d), got %d clients now", inet_ntoa( cli_addr.sin_addr ), child, running );
+				log( "Started child process for client %s (PID=%d), got %d clients now", cli_txt, child, running );
+				
+				if( time( NULL ) < ( ip->rate_start + set->rate_seconds ) )
+				{
+					ip->rate_times ++;
+					if( ip->rate_times >= set->rate_times )
+					{
+						log( "Client %s crossed the limit; ignoring for the next %d seconds", cli_txt, set->rate_ignore );
+						ip->rate_ignore = time( NULL ) + set->rate_ignore;
+						ip->rate_start = 0;
+					}
+				}
+				else
+				{
+					ip->rate_start = time( NULL );
+					ip->rate_times = 1;
+				}
+			}
+			else
+			{
+				log( "Ignoring connection from %s", cli_txt );
+				close( cli_fd );
 			}
 		}
 		
@@ -206,7 +252,11 @@ settings_t *set_load( int argc, char *argv[] )
 	set->interface = "0.0.0.0";
 	set->port = 6667;
 	
-	while( ( opt = getopt( argc, argv, "i:p:n:t:l:h" ) ) >= 0 )
+	set->rate_seconds = 600;
+	set->rate_times = 5;
+	set->rate_ignore = 900;
+	
+	while( ( opt = getopt( argc, argv, "i:p:n:t:l:r:h" ) ) >= 0 )
 	{
 		if( opt == 'i' )
 		{
@@ -232,7 +282,7 @@ settings_t *set_load( int argc, char *argv[] )
 		}
 		else if( opt == 't' )
 		{
-			if( ( sscanf( optarg, "%d", &i ) != 1 ) || ( i < 0 ) || ( i > 128 ) )
+			if( ( sscanf( optarg, "%d", &i ) != 1 ) || ( i < 0 ) || ( i > 600 ) )
 			{
 				fprintf( stderr, "Invalid number of seconds: %s\n", optarg );
 				return( NULL );
@@ -249,9 +299,18 @@ settings_t *set_load( int argc, char *argv[] )
 			}
 			setbuf( logfile, NULL );
 		}
+		else if( opt == 'r' )
+		{
+			if( sscanf( optarg, "%d,%d,%d", &set->rate_seconds, &set->rate_times, &set->rate_ignore ) != 3 )
+			{
+				fprintf( stderr, "Invalid argument to -r.\n" );
+				return( NULL );
+			}
+		}
 		else if( opt == 'h' )
 		{
-			printf( "Usage: %s [-i <interface>] [-p <port>] [-n <num>] <command> <args...>\n"
+			printf( "Usage: %s [-i <interface>] [-p <port>] [-n <num>] [-r x,y,z] ...\n"
+			        "          ... <command> <args...>\n"
 			        "A simple inetd-like daemon to have a program listening on a TCP socket without\n"
 			        "needing root access to the machine\n"
 			        "\n"
@@ -262,6 +321,8 @@ settings_t *set_load( int argc, char *argv[] )
 			        "  -t  Specify the maximum number of CPU seconds per process.\n"
 			        "      (Default: 0 (unlimited))\n"
 			        "  -l  Specify a logfile. (Default: none)\n"
+			        "  -r  Rate limiting: Ignore a host for z seconds when it connects for more\n"
+			        "      than y times in x seconds. (Default: 600,5,900. Disable: 0,0,0)\n"
 			        "  -h  This information\n", argv[0] );
 			return( NULL );
 		}
@@ -290,7 +351,7 @@ void log( char *fmt, ... )
 	
 	memset( line, 0, MAX_LOG_LEN );
 	
-	time( &tm );
+	tm = time( NULL );
 	strcpy( line, ctime( &tm ) );
 	l = strlen( line );
 	line[l-1] = ' ';
@@ -301,4 +362,38 @@ void log( char *fmt, ... )
 	strcat( line, "\n" );
 	
 	fprintf( logfile, "%s", line );
+}
+
+ipstats_t *ip_get( char *ip_txt )
+{
+	unsigned int ip;
+	ipstats_t *l;
+	int p[4];
+	
+	sscanf( ip_txt, "%d.%d.%d.%d", p + 0, p + 1, p + 2, p + 3 );
+	ip = ( p[0] << 24 ) | ( p[1] << 16 ) | ( p[2] << 8 ) | ( p[3] );
+	
+	for( l = ipstats; l; l = l->next )
+	{
+		if( l->ip == ip )
+			return( l );
+	}
+	
+	if( ipstats )
+	{
+		for( l = ipstats; l->next; l = l->next );
+		
+		l->next = malloc( sizeof( ipstats_t ) );
+		l = l->next;
+	}
+	else
+	{
+		l = malloc( sizeof( ipstats_t ) );
+		ipstats = l;
+	}
+	memset( l, 0, sizeof( ipstats_t ) );
+	
+	l->ip = ip;
+	
+	return( l );
 }

@@ -29,7 +29,7 @@
    the programs will be built. */
 
 #ifndef CRYPTING_MAIN
-
+#define BITLBEE_CORE
 #include "bitlbee.h"
 #include "irc.h"
 #include "md5.h"
@@ -68,8 +68,12 @@ void setpassnc (irc_t *irc, char *pass) {
 	if (!set_find (irc, "password"))
 		set_add (irc, "password", NULL, passchange);
 	
-	if (irc->password) free (irc->password);
-	irc->password = strdup (pass);
+	if (irc->password) g_free (irc->password);
+	
+	if (pass)
+		irc->password = g_strdup (pass);
+	else
+		irc->password = NULL;
 }
 
 char *passchange (irc_t *irc, void *set, char *value) {
@@ -89,7 +93,7 @@ int setpass (irc_t *irc, char *pass, char* md5sum) {
 	
 	for (i = 0, j = 0; i < 16; i++, j += 2) {
 		/* Check password for correctness */
-		snprintf (digits, sizeof (digits), "%02x\n", digest[i]);
+		g_snprintf (digits, sizeof (digits), "%02x\n", digest[i]);
 		
 		if (digits[0] != md5sum[j]) return (-1);
 		if (digits[1] != md5sum[j + 1]) return (-1);
@@ -110,7 +114,7 @@ char *hashpass (irc_t *irc) {
 	
 	if (irc->password == NULL) return (NULL);
 	
-	rv = (char *)bitlbee_alloc (33);
+	rv = (char *)g_malloc (33);
 	memset (rv, 0, 33);
 	
 	md5_init (&md5state);
@@ -119,7 +123,7 @@ char *hashpass (irc_t *irc) {
 	
 	for (i = 0; i < 16; i++) {
 		/* Build a hash of the pass */
-		snprintf (digits, sizeof (digits), "%02x", digest[i]);
+		g_snprintf (digits, sizeof (digits), "%02x", digest[i]);
 		strcat (rv, digits);
 	}
 	
@@ -132,7 +136,7 @@ char *obfucrypt (irc_t *irc, char *line) {
 	
 	if (irc->password == NULL) return (NULL);
 	
-	rv = (char *)bitlbee_alloc (strlen (line) + 1);
+	rv = (char *)g_malloc (strlen (line) + 1);
 	memset (rv, '\0', strlen (line) + 1);
 	
 	i = j = 0;
@@ -157,7 +161,7 @@ char *deobfucrypt (irc_t *irc, char *line) {
 	
 	if (irc->password == NULL) return (NULL);
 	
-	rv = (char *)bitlbee_alloc (strlen (line) + 1);
+	rv = (char *)g_malloc (strlen (line) + 1);
 	memset (rv, '\0', strlen (line) + 1);
 	
 	i = j = 0;
@@ -180,7 +184,7 @@ char *deobfucrypt (irc_t *irc, char *line) {
 
 int main( int argc, char *argv[] )
 {
-	irc_t *irc = malloc( sizeof( irc_t ) );
+	irc_t *irc = g_malloc( sizeof( irc_t ) );
 	char *hash, *action, line[256];
 	char* (*func)( irc_t *, char * );
 	
@@ -193,7 +197,7 @@ int main( int argc, char *argv[] )
 	}
 	
 	memset( irc, 0, sizeof( irc_t ) );
-	irc->password = strdup( argv[1] );
+	irc->password = g_strdup( argv[1] );
 	
 	hash = hashpass( irc );
 	action = argv[0] + strlen( argv[0] ) - strlen( "encode" );
@@ -229,7 +233,7 @@ int main( int argc, char *argv[] )
 		
 		out = func( irc, line );
 		printf( "%s\n", out );
-		free( out );
+		g_free( out );
 	}
 	
 	return( 0 );

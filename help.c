@@ -38,8 +38,7 @@ help_t *help_init( help_t **help )
 	time_t mtime;
 	struct stat stat[1];
 	
-	*help = h = bitlbee_alloc( sizeof( help_t ) );
-	memset( h, 0, sizeof( help_t ) );
+	*help = h = g_new0 ( help_t, 1 );
 	
 	h->fd = open( global.helpfile, O_RDONLY
 #ifdef _WIN32
@@ -60,7 +59,7 @@ help_t *help_init( help_t **help )
 	}
 	mtime = stat->st_mtime;
 	
-	s = bitlbee_alloc( BUFSIZE + 1 );
+	s = g_new (char, BUFSIZE + 1 );
 	s[BUFSIZE] = 0;
 	
 	while( ( ( i = read( h->fd, s + buflen, BUFSIZE - buflen ) ) > 0 ) ||
@@ -80,10 +79,9 @@ help_t *help_init( help_t **help )
 		
 		if( h->string )
 		{
-			h = h->next = bitlbee_alloc( sizeof( help_t ) );
-			memset( h, 0, sizeof( help_t ) );
+			h = h->next = g_new0( help_t, 1 );
 		}
-		h->string = bitlbee_alloc( i );
+		h->string = g_new ( char, i );
 		
 		strncpy( h->string, s + 1, i - 1 );
 		h->string[i-1] = 0;
@@ -95,7 +93,7 @@ help_t *help_init( help_t **help )
 		buflen -= ( t + 3 - s );
 		t = g_strdup( t + 3 );
 		g_free( s );
-		s = bitlbee_realloc( t, BUFSIZE + 1 );
+		s = g_renew( char, t, BUFSIZE + 1 );
 		s[BUFSIZE] = 0;
 	}
 	
@@ -119,7 +117,7 @@ char *help_get( help_t **help, char *string )
 	}
 	if( h )
 	{
-		char *s = bitlbee_alloc( h->length + 1 );
+		char *s = g_new( char, h->length + 1 );
 		
 		if( fstat( h->fd, stat ) != 0 )
 		{

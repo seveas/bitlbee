@@ -1306,9 +1306,9 @@ int aim_ssi_auth_request( aim_session_t *sess, aim_conn_t *conn, char *uin, char
 	aim_putsnac( &fr->data, AIM_CB_FAM_SSI, AIM_CB_SSI_SENDAUTHREQ, 0x0000, snacid );
 	
 	aimbs_put8( &fr->data, strlen( uin ) );
-	aimbs_putraw( &fr->data, uin, strlen( uin ) );
+	aimbs_putraw( &fr->data, (guint8 *)uin, strlen( uin ) );
 	aimbs_put16( &fr->data, strlen( reason ) );
-	aimbs_putraw( &fr->data, reason, strlen( reason ) );
+	aimbs_putraw( &fr->data, (guint8 *)reason, strlen( reason ) );
 	aimbs_put16( &fr->data, 0 );
 	
 	aim_tx_enqueue( sess, fr );
@@ -1341,10 +1341,10 @@ int aim_ssi_auth_reply( aim_session_t *sess, aim_conn_t *conn, char *uin, int ye
 	aim_putsnac( &fr->data, AIM_CB_FAM_SSI, AIM_CB_SSI_SENDAUTHREP, 0x0000, snacid );
 	
 	aimbs_put8( &fr->data, strlen( uin ) );
-	aimbs_putraw( &fr->data, uin, strlen( uin ) );
+	aimbs_putraw( &fr->data, (guint8 *)uin, strlen( uin ) );
 	aimbs_put8( &fr->data, yesno );
 	aimbs_put16( &fr->data, strlen( reason ) );
-	aimbs_putraw( &fr->data, reason, strlen( reason ) );
+	aimbs_putraw( &fr->data, (guint8 *)reason, strlen( reason ) );
 	
 	aim_tx_enqueue( sess, fr );
 	
@@ -1404,7 +1404,7 @@ int aim_ssi_addmoddel(aim_session_t *sess, aim_conn_t *conn, struct aim_ssi_item
 	for (i=0; i<num; i++) {
 		aimbs_put16(&fr->data, items[i]->name ? strlen(items[i]->name) : 0);
 		if (items[i]->name)
-			aimbs_putraw(&fr->data, items[i]->name, strlen(items[i]->name));
+			aimbs_putraw(&fr->data, (guint8 *)items[i]->name, strlen(items[i]->name));
 		aimbs_put16(&fr->data, items[i]->gid);
 		aimbs_put16(&fr->data, items[i]->bid);
 		aimbs_put16(&fr->data, items[i]->type);

@@ -314,7 +314,18 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 		}
 		
 		if( --md->buddycount == 0 )
-			msn_logged_in( gc );
+		{
+			if( gc->flags & OPT_LOGGED_IN )
+			{
+				serv_got_crap( gc, "Successfully transferred to different server" );
+				g_snprintf( buf, sizeof( buf ), "CHG %d %s %d\r\n", ++md->trId, md->away_state->code, 0 );
+				return( msn_write( gc, buf, strlen( buf ) ) );
+			}
+			else
+			{
+				msn_logged_in( gc );
+			}
+		}
 	}
 	else if( strcmp( cmd[0], "BPR" ) == 0 )
 	{

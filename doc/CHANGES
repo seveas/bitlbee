@@ -1,3 +1,55 @@
+Version 0.92:
+- Fixed some formatting issues with the help.txt XSL-sheet.
+- Moved the polling of the IRC connections to glib instead of a separate
+  select().
+- Added ctags generation to the Makefiles.
+- Sending a CTCP TYPING message to a user in your buddy list now sends a
+  typing notification to that person, if the protocol supports it. You
+  probably want to write/use a script for your IRC client to do this.
+- A dash is no longer considered a lowercase underscore in nicknames.
+- CTCP's to buddies no longer alter their private/non-private state.
+- Clean shutdown (with saving settings) on SIGTERM.
+- Fixed a crash on connecting to unreachable Jabber/SSL servers.
+- On ICQ, offline messages are now requested after receiving the buddy
+  list. This should get rid of the "Message from unknown OSCAR handle"
+  messages on login.
+- The linked list of buddies/nicks is now always sorted, which makes the
+  blist output a bit more useful.
+- Fixed a crash on renaming NickServ. (There's no reason to do this, but
+  still crashing isn't really how BitlBee should tell you that. ;-)
+- Now the message about the "new" ICQ server-side buddy lists is only
+  displayed when the server-side list is still empty.
+- The Yahoo! markup language stripper is now less likely to strip things
+  that shouldn't be stripped.
+- Working around a shortcoming in the Yahoo! cleanup code that didn't
+  cause any serious problems in previous versions, but got pretty nasty
+  (100% CPU time usage) now with everything in the glib main loop.
+- Fixed a bug in http_encode that might have caused buffer overflows
+  (although not likely to be exploitable) when trying to encode strings
+  with non-ASCII characters.
+- Fixed AIM screenname handling on ICQ connections.
+- When blocking someone, the MSN module now closes the conversation you're
+  having with him/her (if any) so he/she can't continue talking to you
+  (for as long as the conversation lasts).
+- Away messages are only sent when messaging someone outside the control
+  channel. (And now also when the user is offline instead of just away.)
+- Moved charset conversion in serv_buddy_rename() to the right place so
+  bogus changes are always detected now.
+- iso8859-1 is now the default charset because -15 caused some problems
+  and because -1 is enough for most people anyway.
+- Fixed crashes on attempting to add a buddy (or do other things) on
+  connections that are still initializing.
+- Added support for server-side notifies using the WATCH command.
+- IRC_MAX_ARGS is dead, at least for IRC commands.
+- Fixed a bug that made BitlBee crash on failing fresh MSN switchboard
+  connections.
+- Fixed an invisibility bug in the MSN code that handled transfers to
+  other servers in the middle of a session.
+- Newline stripping added to prevent newline-in-friendlyname attacks.
+  (Which allowed remote people to make BitlBee send raw custom IRC lines.)
+
+Finished 23 Feb 2005
+
 Version 0.91:
 - Full support for ICQ server-side contact lists!
   NOTE: BitlBee now ignores your client-side contact list. If you want to

@@ -113,7 +113,7 @@ int aim_add_buddy(aim_session_t *sess, aim_conn_t *conn, const char *sn)
 	aim_putsnac(&fr->data, 0x0003, 0x0004, 0x0000, snacid);
 
 	aimbs_put8(&fr->data, strlen(sn));
-	aimbs_putraw(&fr->data, sn, strlen(sn));
+	aimbs_putraw(&fr->data, (guint8 *)sn, strlen(sn));
 
 	aim_tx_enqueue(sess, fr);
 
@@ -140,7 +140,7 @@ int aim_remove_buddy(aim_session_t *sess, aim_conn_t *conn, const char *sn)
 	aim_putsnac(&fr->data, 0x0003, 0x0005, 0x0000, snacid);
 
 	aimbs_put8(&fr->data, strlen(sn));
-	aimbs_putraw(&fr->data, sn, strlen(sn));
+	aimbs_putraw(&fr->data, (guint8 *)sn, strlen(sn));
 
 	aim_tx_enqueue(sess, fr);
 

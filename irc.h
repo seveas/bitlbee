@@ -92,21 +92,27 @@ typedef struct irc
 	
 	struct __USER *users;
 	GHashTable *userhash;
+	GHashTable *watches;
 	struct __NICK *nicks;
 	struct help *help;
 	struct set *set;
+
+	GIOChannel *io_channel;
+	gint r_watch_source_id;
+	gint w_watch_source_id;
+	gint ping_source_id;
 } irc_t;
 
 #include "user.h"
 #include "nick.h"
+
+extern GSList *irc_connection_list;
 
 irc_t *irc_new( int fd );
 void irc_free( irc_t *irc );
 
 int irc_exec( irc_t *irc, char **cmd );
 int irc_process( irc_t *irc );
-int irc_write_buffer( irc_t *irc );
-int irc_fill_buffer( irc_t *irc );
 int irc_process_line( irc_t *irc, char *line );
 
 void irc_vawrite( irc_t *irc, char *format, va_list params );
@@ -135,8 +141,6 @@ int irc_send( irc_t *irc, char *nick, char *s );
 int irc_privmsg( irc_t *irc, user_t *u, char *type, char *to, char *prefix, char *msg );
 int irc_msgfrom( irc_t *irc, char *nick, char *msg );
 int irc_noticefrom( irc_t *irc, char *nick, char *msg );
-
-int irc_userping( irc_t *irc );
 
 int buddy_send_handler( irc_t *irc, user_t *u, char *msg );
 

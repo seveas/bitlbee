@@ -222,7 +222,7 @@ int aim_send_im_ext(aim_session_t *sess, struct aim_sendimext_args *args)
 	 * Destination SN (prepended with byte length)
 	 */
 	aimbs_put8(&fr->data, strlen(args->destsn));
-	aimbs_putraw(&fr->data, args->destsn, strlen(args->destsn));
+	aimbs_putraw(&fr->data, (guint8 *)args->destsn, strlen(args->destsn));
 
 	/*
 	 * Message TLV (type 2).
@@ -287,7 +287,7 @@ int aim_send_im_ext(aim_session_t *sess, struct aim_sendimext_args *args)
 		/*
 		 * Message.  Not terminated.
 		 */
-		aimbs_putraw(&fr->data, args->msg, args->msglen);
+		aimbs_putraw(&fr->data, (guint8 *)args->msg, args->msglen);
 	}
 
 	/*
@@ -405,7 +405,7 @@ int aim_send_icon(aim_session_t *sess, const char *sn, const guint8 *icon, int i
 	 * Dest sn
 	 */
 	aimbs_put8(&fr->data, strlen(sn));
-	aimbs_putraw(&fr->data, sn, strlen(sn));
+	aimbs_putraw(&fr->data, (guint8 *)sn, strlen(sn));
 
 	/*
 	 * TLV t(0005)
@@ -436,7 +436,7 @@ int aim_send_icon(aim_session_t *sess, const char *sn, const guint8 *icon, int i
 	aimbs_put32(&fr->data, iconlen);
 	aimbs_put32(&fr->data, stamp);
 	aimbs_putraw(&fr->data, icon, iconlen);
-	aimbs_putraw(&fr->data, AIM_ICONIDENT, strlen(AIM_ICONIDENT));
+	aimbs_putraw(&fr->data, (guint8 *)AIM_ICONIDENT, strlen(AIM_ICONIDENT));
 
 	/* TLV t(0003) */
 	aimbs_put16(&fr->data, 0x0003);
@@ -501,7 +501,7 @@ int aim_send_rtfmsg(aim_session_t *sess, struct aim_sendrtfmsg_args *args)
 	 * Dest sn
 	 */
 	aimbs_put8(&fr->data, strlen(args->destsn));
-	aimbs_putraw(&fr->data, args->destsn, strlen(args->destsn));
+	aimbs_putraw(&fr->data, (guint8 *)args->destsn, strlen(args->destsn));
 
 	/*
 	 * TLV t(0005)
@@ -551,12 +551,12 @@ int aim_send_rtfmsg(aim_session_t *sess, struct aim_sendrtfmsg_args *args)
 	aimbs_putle16(&fr->data, 0x0001);
 	aimbs_putle32(&fr->data, 0);
 	aimbs_putle16(&fr->data, strlen(args->rtfmsg)+1);
-	aimbs_putraw(&fr->data, args->rtfmsg, strlen(args->rtfmsg)+1);
+	aimbs_putraw(&fr->data, (guint8 *)args->rtfmsg, strlen(args->rtfmsg)+1);
 
 	aimbs_putle32(&fr->data, args->fgcolor);
 	aimbs_putle32(&fr->data, args->bgcolor);
 	aimbs_putle32(&fr->data, strlen(rtfcap)+1);
-	aimbs_putraw(&fr->data, rtfcap, strlen(rtfcap)+1);
+	aimbs_putraw(&fr->data, (guint8 *)rtfcap, strlen(rtfcap)+1);
 
 	aim_tx_enqueue(sess, fr);
 
@@ -607,7 +607,7 @@ int aim_request_directim(aim_session_t *sess, const char *destsn, guint8 *ip, gu
 
 	/* Destination SN */
 	aimbs_put8(&fr->data, strlen(destsn));
-	aimbs_putraw(&fr->data, destsn, strlen(destsn));
+	aimbs_putraw(&fr->data, (guint8 *)destsn, strlen(destsn));
 
 	aim_addtlvtochain_noval(&tl, 0x0003);
 
@@ -680,7 +680,7 @@ int aim_request_sendfile(aim_session_t *sess, const char *sn, const char *filena
 	 * Dest sn
 	 */
 	aimbs_put8(&fr->data, strlen(sn));
-	aimbs_putraw(&fr->data, sn, strlen(sn));
+	aimbs_putraw(&fr->data, (guint8 *)sn, strlen(sn));
 
 	/*
 	 * TLV t(0005)
@@ -721,7 +721,7 @@ int aim_request_sendfile(aim_session_t *sess, const char *sn, const char *filena
 	aimbs_put16(&fr->data, 0x0001);
 	aimbs_put16(&fr->data, numfiles);
 	aimbs_put32(&fr->data, totsize);
-	aimbs_putraw(&fr->data, filename, strlen(filename));
+	aimbs_putraw(&fr->data, (guint8 *)filename, strlen(filename));
 
 	/* ? */
 	aimbs_put32(&fr->data, 0x00000000);
@@ -768,7 +768,7 @@ int aim_send_im_ch2_geticqmessage(aim_session_t *sess, const char *sn, int type)
 
 	/* Dest sn */
 	aimbs_put8(&fr->data, strlen(sn));
-	aimbs_putraw(&fr->data, sn, strlen(sn));
+	aimbs_putraw(&fr->data, (guint8 *)sn, strlen(sn));
 
 	/* TLV t(0005) - Encompasses almost everything below. */
 	aimbs_put16(&fr->data, 0x0005); /* T */
@@ -852,7 +852,7 @@ static int outgoingim(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, a
 	int snlen;
 	guint16 icbmflags = 0;
 	guint8 flag1 = 0, flag2 = 0;
-	guint8 *msg = NULL;
+	char *msg = NULL;
 	aim_tlv_t *msgblock;
 
 	/* ICBM Cookie. */
@@ -999,12 +999,12 @@ int aim_mpmsg_addraw(aim_session_t *sess, aim_mpmsg_t *mpm, guint16 charset, gui
 /* XXX should provide a way of saying ISO-8859-1 specifically */
 int aim_mpmsg_addascii(aim_session_t *sess, aim_mpmsg_t *mpm, const char *ascii)
 {
-	guint8 *dup;
+	char *dup;
 
 	if (!(dup = g_strdup(ascii))) 
 		return -1;
 
-	if (mpmsg_addsection(sess, mpm, 0x0000, 0x0000, dup, strlen(ascii)) == -1) {
+	if (mpmsg_addsection(sess, mpm, 0x0000, 0x0000, (guint8 *)dup, (guint16) strlen(ascii)) == -1) {
 		g_free(dup);
 		return -1;
 	}
@@ -1076,7 +1076,7 @@ static int incomingim_ch1_parsemsgs(aim_session_t *sess, guint8 *data, int len, 
 
 	while (aim_bstream_empty(&mbs)) {
 		guint16 msglen, flag1, flag2;
-		guint8 *msgbuf;
+		char *msgbuf;
 
 		aimbs_get8(&mbs); /* 01 */
 		aimbs_get8(&mbs); /* 01 */
@@ -1105,7 +1105,7 @@ static int incomingim_ch1_parsemsgs(aim_session_t *sess, guint8 *data, int len, 
 		 *
 		 */
 		msgbuf = aimbs_getstr(&mbs, msglen);
-		mpmsg_addsection(sess, &args->mpmsg, flag1, flag2, msgbuf, msglen);
+		mpmsg_addsection(sess, &args->mpmsg, flag1, flag2, (guint8 *)msgbuf, (guint16) msglen);
 
 	} /* while */
 
@@ -1163,7 +1163,7 @@ static int incomingim_ch1_parsemsgs(aim_session_t *sess, guint8 *data, int len, 
 			}
 #endif
 
-			args->msg = sec->data;
+			args->msg = (char *)sec->data;
 			args->msglen = sec->datalen;
 
 			return 0;
@@ -1643,7 +1643,7 @@ static int incomingim_ch4(aim_session_t *sess, aim_module_t *mod, aim_frame_t *r
 
 	args.uin = aimbs_getle32(&meat);
 	args.type = aimbs_getle16(&meat);
-	args.msg = aimbs_getraw(&meat, aimbs_getle16(&meat));
+	args.msg = (char *)aimbs_getraw(&meat, aimbs_getle16(&meat));
 
 	if ((userfunc = aim_callhandler(sess, rx->conn, snac->family, snac->subtype)))
 		ret = userfunc(sess, rx, channel, userinfo, &args);
@@ -1763,7 +1763,7 @@ static int incomingim(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, a
  *    AIM_TRANSFER_DENY_NOTACCEPTING -- "client is not accepting transfers"
  * 
  */
-int aim_denytransfer(aim_session_t *sess, const char *sender, const char *cookie, guint16 code)
+int aim_denytransfer(aim_session_t *sess, const char *sender, const guint8 *cookie, guint16 code)
 {
 	aim_conn_t *conn;
 	aim_frame_t *fr;
@@ -1783,7 +1783,7 @@ int aim_denytransfer(aim_session_t *sess, const char *sender, const char *cookie
 
 	aimbs_put16(&fr->data, 0x0002); /* channel */
 	aimbs_put8(&fr->data, strlen(sender));
-	aimbs_putraw(&fr->data, sender, strlen(sender));
+	aimbs_putraw(&fr->data, (guint8 *)sender, strlen(sender));
 
 	aim_addtlvtochain16(&tl, 0x0003, code);
 	aim_writetlvchain(&fr->data, &tl);

@@ -36,10 +36,10 @@ To add an account to the account list you will need to use the <emphasis>account
 For instance, suppose you have an ICQ account with UIN <emphasis>72696705</emphasis> with password <emphasis>QuickStart</emphasis>, you would:
 </para>
 
-<para>
-<emphasis>&lt;</emphasis>you<emphasis>&gt;</emphasis> account add oscar 72696705 QuickStart login.icq.com
-<emphasis>&lt;</emphasis>root<emphasis>&gt;</emphasis> Account successfully added
-</para>
+<ircexample>
+	<ircline nick="you">account add oscar 72696705 QuickStart login.icq.com</ircline>
+	<ircline nick="root">Account successfully added</ircline>
+</ircexample>
 
 <para>
 Other available IM protocols are jabber, msn, and yahoo. Oscar is the protocol used by ICQ and AOL. For oscar, you need to specify the IM-server as a fourth argument (for jabber, msn and yahoo there is no fourth argument). For AOL Instant Messenger, the server name is <emphasis>login.oscar.aol.com</emphasis>. For ICQ, the server name is <emphasis>login.icq.com</emphasis>.
@@ -71,11 +71,11 @@ BitlBee will convert names into irc-friendly form (for instance: tux@example.com
 It would be easy to get these two mixed up, so BitlBee has a <emphasis>rename</emphasis> command to change the nickname into something more suitable: <emphasis>rename &lt;</emphasis>oldnick<emphasis>&gt; &lt;</emphasis>newnick<emphasis>&gt;</emphasis>
 </para>
 
-<para>
-<emphasis>&lt;</emphasis>you<emphasis>&gt;</emphasis> rename tux_ bitlbeetux
-* <emphasis>tux_</emphasis> is now known as <emphasis>bitlbeetux</emphasis>
-<emphasis>&lt;</emphasis>root<emphasis>&gt;</emphasis> Nick successfully changed
-</para>
+<ircexample>
+	<ircline nick="you">rename tux_ bitlbeetux</ircline>
+	<ircaction nick="tux_">is now known as <emphasis>bitlbeetux</emphasis></ircaction>
+	<ircline nick="root">Nick successfully changed</ircline>
+</ircexample>
 
 <para>
 When finished, type <emphasis>help quickstart4</emphasis> to continue.
@@ -94,14 +94,10 @@ When finished, type <emphasis>help quickstart4</emphasis> to continue.
 Now you might want to add some contacts, to do this we will use the <emphasis>add</emphasis> command. It needs two arguments: a connection ID (which can be a number (try <emphasis>account list</emphasis>), protocol name or (part of) the screenname) and the user's handle. It is used in the following way: <emphasis>add &lt;</emphasis>connection<emphasis>&gt; &lt;</emphasis>handle<emphasis>&gt;</emphasis>
 </para>
 
-<para>
-For example:
-</para>
-
-<para>
-<emphasis>&lt;</emphasis>you<emphasis>&gt;</emphasis> add 0 r2d2@example.com
-<emphasis>-!- r2d2</emphasis> has joined <emphasis>#bitlbee</emphasis>
-</para>
+<ircexample>
+	<ircline nick="you">add 0 r2d2@example.com</ircline>
+	<ircaction nick="r2d2"> has joined <emphasis>#bitlbee</emphasis></ircaction>
+</ircexample>
 
 <para>
 In this case r2d2 is online, since he/she joins the channel immediately. If the user is not online you will not see them join until they log on.
@@ -128,10 +124,10 @@ When finished, type <emphasis>help quickstart5</emphasis> to continue.
 First of all, a person must be on your contact list for you to chat with them (unless it's a group chat, <emphasis>help groupchats</emphasis> for more). If someone not on your contact list sends you a message, simply add them to the proper account with the <emphasis>add</emphasis> command. Once they are on your list and online, you can chat with them in #bitlbee:
 </para>
 
-<para>
-<emphasis>&lt;</emphasis>you<emphasis>&gt;</emphasis> tux: hey, how's the weather down there?
-<emphasis>&lt;</emphasis>tux<emphasis>&gt;</emphasis> you: a bit chilly!
-</para>
+<ircexample>
+	<ircline nick="you">tux: hey, how's the weather down there?</ircline>
+	<ircline nick="tux"> you: a bit chilly!</ircline>
+</ircexample>
 
 <para>
 If you'd rather chat with them in a separate window use the <emphasis>/msg</emphasis> or <emphasis>/query</emphasis> command, just like you would for a private message in IRC.  If you want to have messages automatically come up in private messages rather than in the #bitlbee channel, use the <emphasis>set private</emphasis> command: <emphasis>set private true</emphasis> (<emphasis>set private false</emphasis> to change back).
@@ -143,7 +139,7 @@ You know the basics. If you want to get to know more about BitlBee, please type 
 
 </sect1>
 
-<sect1 id="quickstart5">
+<sect1 id="quickstart6">
 <title>Further Resources</title>
 
 <para>

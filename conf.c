@@ -43,8 +43,7 @@ conf_t *conf_load( int argc, char *argv[] )
 	conf_t *conf;
 	int opt, i;
 	
-	conf = bitlbee_alloc( sizeof( conf_t ) );
-	memset( conf, 0, sizeof( conf_t ) );
+	conf = g_new0( conf_t, 1 );
 	
 	conf->iface = "0.0.0.0";
 	conf->port = 6667;
@@ -130,7 +129,7 @@ conf_t *conf_load( int argc, char *argv[] )
 	
 	if( conf->configdir[strlen(conf->configdir)-1] != '/' )
 	{
-		char *s = bitlbee_alloc( strlen( conf->configdir ) + 2 );
+		char *s = g_new( char, strlen( conf->configdir ) + 2 );
 		
 		sprintf( s, "%s/", conf->configdir );
 		g_free( conf->configdir );

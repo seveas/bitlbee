@@ -110,9 +110,17 @@ static char *byahoo_strip( char *in )
 	len = strlen( in );
 	while( len > 0 && in[len-1] == '>' )
 	{
+		int blen = len;
+		
 		len --;
-		while( len > 0 && in[len] != '<' )
+		while( len > 0 && ( in[len] != '<' || in[len+1] != '/' ) )
 			len --;
+		
+		if( len == 0 && ( in[len] != '<' || in[len+1] != '/' ) )
+		{
+			len = blen;
+			break;
+		}
 	}
 	
 	return( g_strndup( in, len ) );
@@ -170,6 +178,15 @@ static int byahoo_send_im( struct gaim_connection *gc, char *who, char *what, in
 	struct byahoo_data *yd = gc->proto_data;
 	
 	yahoo_send_im( yd->y2_id, NULL, who, what, 1 );
+	
+	return 1;
+}
+
+static int byahoo_send_typing( struct gaim_connection *gc, char *who, int typing )
+{
+	struct byahoo_data *yd = gc->proto_data;
+	
+	yahoo_send_typing( yd->y2_id, NULL, who, typing );
 	
 	return 1;
 }
@@ -386,6 +403,7 @@ void byahoo_init( struct prpl *ret )
 	ret->login = byahoo_login;
 	ret->close = byahoo_close;
 	ret->send_im = byahoo_send_im;
+	ret->send_typing = byahoo_send_typing;
 	ret->get_info = byahoo_get_info;
 	ret->away_states = byahoo_away_states;
 	ret->set_away = byahoo_set_away;
@@ -449,6 +467,7 @@ struct byahoo_read_ready_data
 {
 	int id;
 	int fd;
+	int tag;
 	gpointer data;
 };
 
@@ -457,7 +476,11 @@ void byahoo_read_ready_callback( gpointer data, gint source, GaimInputCondition 
 	struct byahoo_read_ready_data *d = data;
 	
 	if( !byahoo_get_gc_by_id( d->id ) )
+	{
+		/* WTF doesn't libyahoo clean this up? */
+		ext_yahoo_remove_handler( d->id, d->tag );
 		return;
+	}
 	
 	yahoo_read_ready( d->id, d->fd, d->data );
 }
@@ -466,6 +489,7 @@ struct byahoo_write_ready_data
 {
 	int id;
 	int fd;
+	int tag;
 	gpointer data;
 };
 
@@ -474,7 +498,11 @@ void byahoo_write_ready_callback( gpointer data, gint source, GaimInputCondition
 	struct byahoo_write_ready_data *d = data;
 	
 	if( !byahoo_get_gc_by_id( d->id ) )
+	{
+		/* WTF doesn't libyahoo clean this up? */
+		ext_yahoo_remove_handler( d->id, d->tag );
 		return;
+	}
 	
 	yahoo_write_ready( d->id, d->fd, d->data );
 }
@@ -644,6 +672,7 @@ void ext_yahoo_error( int id, char *err, int fatal )
 	}
 }
 
+/* TODO: Clear up the mess of inp and d structures */
 int ext_yahoo_add_handler( int id, int fd, yahoo_input_condition cond, void *data )
 {
 	struct byahoo_input_data *inp = g_new0( struct byahoo_input_data, 1 );
@@ -657,7 +686,7 @@ int ext_yahoo_add_handler( int id, int fd, yahoo_input_condition cond, void *dat
 		d->data = data;
 		
 		inp->d = d;
-		inp->h = gaim_input_add( fd, GAIM_INPUT_READ, (GaimInputFunction) byahoo_read_ready_callback, (gpointer) d );
+		d->tag = inp->h = gaim_input_add( fd, GAIM_INPUT_READ, (GaimInputFunction) byahoo_read_ready_callback, (gpointer) d );
 	}
 	else if( cond == YAHOO_INPUT_WRITE )
 	{
@@ -668,7 +697,7 @@ int ext_yahoo_add_handler( int id, int fd, yahoo_input_condition cond, void *dat
 		d->data = data;
 		
 		inp->d = d;
-		inp->h = gaim_input_add( fd, GAIM_INPUT_WRITE, (GaimInputFunction) byahoo_write_ready_callback, (gpointer) d );
+		d->tag = inp->h = gaim_input_add( fd, GAIM_INPUT_WRITE, (GaimInputFunction) byahoo_write_ready_callback, (gpointer) d );
 	}
 	else
 	{

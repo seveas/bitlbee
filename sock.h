@@ -3,12 +3,16 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include <netdb.h>
 #define sock_make_nonblocking(fd) fcntl(fd, F_SETFL, O_NONBLOCK)
 #define sockerr_again() (errno == EINPROGRESS || errno == EINTR)
 #define closesocket(a) close(a)
 #else
-# include <winsock.h>
-# ifndef BITLBEE_CORE
+# include <winsock2.h>
+# ifndef _MSC_VER
+#  include <ws2tcpip.h>
+# endif
+# if !defined(BITLBEE_CORE) && defined(_MSC_VER)
 #   pragma comment(lib,"bitlbee.lib")
 # endif
 # include <io.h>

@@ -123,7 +123,7 @@ int aim_bos_changevisibility(aim_session_t *sess, aim_conn_t *conn, int changety
 		tmpptr = aimutil_itemidx(localcpy, i, '&');
 
 		aimbs_put8(&fr->data, strlen(tmpptr));
-		aimbs_putraw(&fr->data, tmpptr, strlen(tmpptr));
+		aimbs_putraw(&fr->data, (guint8 *)tmpptr, strlen(tmpptr));
 
 		g_free(tmpptr);
 	}

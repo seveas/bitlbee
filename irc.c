@@ -27,6 +27,10 @@
 #include "bitlbee.h"
 #include "crypting.h"
 
+static gboolean irc_userping( gpointer _irc );
+
+GSList *irc_connection_list = NULL;
+
 irc_t *irc_new( int fd )
 {
 	irc_t *irc = g_new0( irc_t, 1 );
@@ -36,13 +40,24 @@ irc_t *irc_new( int fd )
 	struct sockaddr_in6 sock6[1];
 #endif
 	struct hostent *peer;
-	int i, j;
+	unsigned int i, j;
 	
 	irc->fd = fd;
+	irc->io_channel = g_io_channel_unix_new( fd );
+#ifdef GLIB2
+	g_io_channel_set_encoding (irc->io_channel, NULL, NULL);
+	g_io_channel_set_buffered (irc->io_channel, FALSE);
+	g_io_channel_set_flags( irc->io_channel, G_IO_FLAG_NONBLOCK, NULL );
+#else
+	fcntl( irc->fd, F_SETFL, O_NONBLOCK);
+#endif
+	irc->r_watch_source_id = g_io_add_watch( irc->io_channel, G_IO_IN | G_IO_ERR | G_IO_HUP, bitlbee_io_current_client_read, irc );
+	
 	irc->status = USTATUS_OFFLINE;
 	irc->last_pong = gettime();
 	
 	irc->userhash = g_hash_table_new( g_str_hash, g_str_equal );
+	irc->watches = g_hash_table_new( g_str_hash, g_str_equal );
 	
 	strcpy( irc->umode, UMODE );
 	irc->mynick = g_strdup( ROOT_NICK );
@@ -86,8 +101,35 @@ irc_t *irc_new( int fd )
 	
 	if( !irc->host ) irc->host = g_strdup( "localhost." );
 	if( !irc->myhost ) irc->myhost = g_strdup( "localhost." );
+
+	if( global.conf->ping_interval > 0 && global.conf->ping_timeout > 0 )
+		irc->ping_source_id = g_timeout_add( global.conf->ping_interval * 1000, irc_userping, irc );
 	
 	irc_write( irc, ":%s NOTICE AUTH :%s", irc->myhost, "BitlBee-IRCd initialized, please go on" );
+
+	irc_connection_list = g_slist_append( irc_connection_list, irc );
+	
+	set_add( irc, "away_devoice", "true",  set_eval_away_devoice );
+	set_add( irc, "auto_connect", "true", set_eval_bool );
+	set_add( irc, "auto_reconnect", "false", set_eval_bool );
+	set_add( irc, "auto_reconnect_delay", "300", set_eval_int );
+	set_add( irc, "buddy_sendbuffer", "false", set_eval_bool );
+	set_add( irc, "buddy_sendbuffer_delay", "1", set_eval_int );
+	set_add( irc, "charset", "iso8859-1", set_eval_charset );
+	set_add( irc, "debug", "false", set_eval_bool );
+	set_add( irc, "default_target", "root", NULL );
+	set_add( irc, "display_namechanges", "false", set_eval_bool );
+	set_add( irc, "handle_unknown", "root", NULL );
+	set_add( irc, "html", "nostrip", NULL );
+	set_add( irc, "lcnicks", "true", set_eval_bool );
+	set_add( irc, "ops", "both", set_eval_ops );
+	set_add( irc, "private", "true", set_eval_bool );
+	set_add( irc, "query_order", "lifo", NULL );
+	set_add( irc, "save_on_quit", "1", set_eval_bool );
+	set_add( irc, "to_char", ": ", set_eval_to_char );
+	set_add( irc, "typing_notice", "false", set_eval_bool );
+	
+	conf_loaddefaults( irc );
 	
 	return( irc );
 }
@@ -95,6 +137,7 @@ irc_t *irc_new( int fd )
 static gboolean irc_free_userhash( gpointer key, gpointer value, gpointer data )
 {
 	g_free( key );
+	
 	return( TRUE );
 }
 
@@ -106,96 +149,115 @@ void irc_free(irc_t * irc)
 	nick_t *nick, *nicktmp;
 	help_t *helpnode, *helpnodetmp;
 	set_t *setnode, *setnodetmp;
-
-	if (irc != NULL) {
-		for (account = irc->accounts; account; account = account->next)
-			if (account->gc)
-				signoff(account->gc);
-		
-		g_free(irc->sendbuffer);
-		g_free(irc->readbuffer);
-
-		g_free(irc->nick);
-		g_free(irc->user);
-		g_free(irc->host);
-		g_free(irc->realname);
-		g_free(irc->password);
-
-		g_free(irc->myhost);
-		g_free(irc->mynick);
-
-		g_free(irc->channel);
-
-		while (irc->queries != NULL)
-			query_del(irc, irc->queries);
-
-		if (irc->accounts != NULL) {
-			account = irc->accounts;
-			while (account != NULL) {
-				g_free(account->user);
-				g_free(account->pass);
-				g_free(account->server);
-				accounttmp = account;
-				account = account->next;
-				g_free(accounttmp);
-			}
+	
+	log_message( LOGLVL_INFO, "Destroying connection with fd %d", irc->fd );
+	
+	if( irc->status >= USTATUS_IDENTIFIED && set_getint( irc, "save_on_quit" ) ) 
+		if( !bitlbee_save( irc ) )
+			irc_usermsg( irc, "Error while saving settings!" );
+	
+	if( irc->ping_source_id > 0 )
+		g_source_remove( irc->ping_source_id );
+	g_source_remove( irc->r_watch_source_id );
+	if( irc->w_watch_source_id > 0 )
+		g_source_remove( irc->w_watch_source_id );
+	g_io_channel_close( irc->io_channel );
+	g_io_channel_unref( irc->io_channel );
+	irc_connection_list = g_slist_remove( irc_connection_list, irc );
+	
+	for (account = irc->accounts; account; account = account->next)
+		if (account->gc)
+			signoff(account->gc);
+	
+	g_free(irc->sendbuffer);
+	g_free(irc->readbuffer);
+	
+	g_free(irc->nick);
+	g_free(irc->user);
+	g_free(irc->host);
+	g_free(irc->realname);
+	g_free(irc->password);
+	
+	g_free(irc->myhost);
+	g_free(irc->mynick);
+	
+	g_free(irc->channel);
+	
+	while (irc->queries != NULL)
+		query_del(irc, irc->queries);
+	
+	if (irc->accounts != NULL) {
+		account = irc->accounts;
+		while (account != NULL) {
+			g_free(account->user);
+			g_free(account->pass);
+			g_free(account->server);
+			accounttmp = account;
+			account = account->next;
+			g_free(accounttmp);
 		}
-
-		if (irc->users != NULL) {
-			user = irc->users;
-			while (user != NULL) {
-				g_free(user->nick);
-				g_free(user->away);
-				g_free(user->handle);
-				if(user->user!=user->nick) g_free(user->user);
-				if(user->host!=user->nick) g_free(user->host);
-				if(user->realname!=user->nick) g_free(user->realname);
-				gaim_input_remove(user->sendbuf_timer);
-				
-				usertmp = user;
-				user = user->next;
-				g_free(usertmp);
-			}
-		}
-
-		g_hash_table_foreach_remove(irc->userhash, irc_free_userhash, NULL);
-		g_hash_table_destroy(irc->userhash);
-
-		if (irc->nicks != NULL) {
-			nick = irc->nicks;
-			while (nick != NULL) {
-				g_free(nick->nick);
-				g_free(nick->handle);
-				
-				nicktmp = nick;
-				nick = nick->next;
-				g_free(nicktmp);
-			}
-		}
-		if (irc->help != NULL) {
-			helpnode = irc->help;
-			while (helpnode != NULL) {
-				g_free(helpnode->string);
-				
-				helpnodetmp = helpnode;
-				helpnode = helpnode->next;
-				g_free(helpnodetmp);
-			}
-		}
-		if (irc->set != NULL) {
-			setnode = irc->set;
-			while (setnode != NULL) {
-				g_free(setnode->key);
-				g_free(setnode->def);
-				g_free(setnode->value);
-				
-				setnodetmp = setnode;
-				setnode = setnode->next;
-				g_free(setnodetmp);
-			}
-		}
-		g_free(irc);
 	}
+	
+	if (irc->users != NULL) {
+		user = irc->users;
+		while (user != NULL) {
+			g_free(user->nick);
+			g_free(user->away);
+			g_free(user->handle);
+			if(user->user!=user->nick) g_free(user->user);
+			if(user->host!=user->nick) g_free(user->host);
+			if(user->realname!=user->nick) g_free(user->realname);
+			gaim_input_remove(user->sendbuf_timer);
+					
+			usertmp = user;
+			user = user->next;
+			g_free(usertmp);
+		}
+	}
+	
+	g_hash_table_foreach_remove(irc->userhash, irc_free_userhash, NULL);
+	g_hash_table_destroy(irc->userhash);
+	
+	g_hash_table_foreach_remove(irc->watches, irc_free_userhash, NULL);
+	g_hash_table_destroy(irc->watches);
+	
+	if (irc->nicks != NULL) {
+		nick = irc->nicks;
+		while (nick != NULL) {
+			g_free(nick->nick);
+			g_free(nick->handle);
+					
+			nicktmp = nick;
+			nick = nick->next;
+			g_free(nicktmp);
+		}
+	}
+	if (irc->help != NULL) {
+		helpnode = irc->help;
+		while (helpnode != NULL) {
+			g_free(helpnode->string);
+			
+			helpnodetmp = helpnode;
+			helpnode = helpnode->next;
+			g_free(helpnodetmp);
+		}
+	}
+	if (irc->set != NULL) {
+		setnode = irc->set;
+		while (setnode != NULL) {
+			g_free(setnode->key);
+			g_free(setnode->def);
+			g_free(setnode->value);
+			
+			setnodetmp = setnode;
+			setnode = setnode->next;
+			g_free(setnodetmp);
+		}
+	}
+	g_free(irc);
+	
+	if( global.conf->runmode == RUNMODE_INETD )
+		g_main_quit( global.loop );
 }
 
 int irc_process( irc_t *irc )
@@ -239,7 +301,7 @@ char **irc_tokenize( char *buffer ) {
 	}
 	
 	/* Allocate j+1 elements. */
-	lines=bitlbee_alloc((j+1)*sizeof(char *));
+	lines=g_new (char *, j+1);
 	
 	/* NULL terminate our list. */ 
 	lines[j]=NULL;
@@ -265,101 +327,6 @@ char **irc_tokenize( char *buffer ) {
 	}
 
 	return(lines);
-}
-
-int irc_fill_buffer( irc_t *irc ) 
-{
-	int st;
-	struct timeval tv[1];
-	fd_set readfds[1];
-	char line[256];	
-
-	FD_ZERO( readfds );
-	FD_SET( irc->fd, readfds );
-
-	tv->tv_sec = 0;
-	tv->tv_usec = 0;
-	
-	while( select( irc->fd + 1, readfds, NULL, NULL, tv ) > 0 )
-	{
-		st = read( irc->fd, line, 255 );
-		if( st <= 0 )
-			return( 0 );
-		line[st]='\0';
-		if( irc->readbuffer == NULL ) 
-			irc->readbuffer = g_strdup( line );
-		else 
-		{
-			irc->readbuffer = bitlbee_realloc(irc->readbuffer, strlen( irc->readbuffer ) + strlen ( line ) + 1 );
-			strcpy( ( irc->readbuffer+strlen( irc->readbuffer ) ), line ); 
-		}
-	}
-	return 1;
-}
-
-int irc_write_buffer( irc_t *irc ) 
-{
-	fd_set writefds[1];
-	struct timeval tv[1];
-	int st, size;
-	char *temp;
-#ifdef FLOOD_SEND
-	time_t newtime;
-#endif
-
-	tv->tv_sec=0;
-	tv->tv_usec=0;
-	
-	FD_ZERO( writefds );
-	FD_SET( irc->fd, writefds );
-	
-#ifdef FLOOD_SEND	
-	newtime=time(NULL);
-	if((newtime-irc->oldtime)>FLOOD_SEND_INTERVAL) {
-		irc->sentbytes=0;
-		irc->oldtime=newtime;
-	}
-#endif
-
-	while( select( irc->fd + 1, NULL, writefds, NULL, tv ) > 0 ) {
-		if( irc->sendbuffer == NULL)
-			break;
-		
-		size=strlen( irc->sendbuffer );
-		
-#ifdef FLOOD_SEND
-		if( ( FLOOD_SEND_BYTES - irc->sentbytes ) > size )
-			st = write( irc->fd, irc->sendbuffer, size );
-		else
-			st = write( irc->fd, irc->sendbuffer, (FLOOD_SEND_BYTES-irc->sentbytes) );
-#else
-		st = write( irc->fd, irc->sendbuffer, size );
-#endif
-		
-		if( st < 0 )
-			return 0;
-		else if( st == 0 )
-			return 1;
-#ifdef FLOOD_SEND
-		irc->sentbytes+=st;
-#endif		
-
-		if( st == size )
-		{
-			g_free( irc->sendbuffer );
-			irc->sendbuffer = NULL;
-			if( irc->quit )
-				return( 0 );
-		}
-		else
-		{
-			temp = bitlbee_alloc( size - st + 1 );
-			strcpy( temp, ( irc->sendbuffer + st ) );
-			g_free( irc->sendbuffer );
-			irc->sendbuffer = temp;
-		}
-	}
-	return(1);
 }
 
 int irc_process_line( irc_t *irc, char *line )
@@ -393,7 +360,7 @@ int irc_process_line( irc_t *irc, char *line )
 	}	
 
 	/* Allocate the space we need. */
-	cmd=bitlbee_alloc((j+1)*sizeof(char *));
+	cmd=g_new(char *, j+1);
 	cmd[j]=NULL;
 	
 	/* Do the actual line splitting, format is:
@@ -659,12 +626,7 @@ int irc_exec( irc_t *irc, char **cmd )
 	else if( g_strcasecmp( cmd[0], "QUIT" ) == 0 )
 	{
 		irc_write( irc, "ERROR :%s%s", cmd[1]?"Quit: ":"", cmd[1]?cmd[1]:"Client Quit" );
-#ifndef _WIN32
-		usleep( 100000 );	/* Give the message a bit time */
-#else
-		Sleep( 1000 );
-#endif
-		closesocket( irc->fd );
+		g_io_channel_close( irc->io_channel );
 		return( 0 );
 	}
 	else if( g_strcasecmp( cmd[0], "WHO" ) == 0 )
@@ -680,7 +642,7 @@ int irc_exec( irc_t *irc, char **cmd )
 		*/
 		user_t *u;
 		
-		for( i = 1; i < IRC_MAX_ARGS && cmd[i]; i ++ )
+		for( i = 1; cmd[i]; i ++ )
 			if( ( u = user_find( irc, cmd[i] ) ) )
 			{
 				if( u->online && u->away )
@@ -700,7 +662,7 @@ int irc_exec( irc_t *irc, char **cmd )
 		/* [SH] Leave room for : and \0 */
 		lenleft = IRC_MAX_LINE - 2;
 		
-		for( i = 1; i < IRC_MAX_ARGS && cmd[i]; i ++ )
+		for( i = 1; cmd[i]; i ++ )
 		{
 			if( ( u = user_find( irc, cmd[i] ) ) && u->online )
 			{
@@ -733,6 +695,48 @@ int irc_exec( irc_t *irc, char **cmd )
 		/* [WvG] *sigh* */
 		
 		irc_reply( irc, 303, ":%s", buff );
+	}
+	else if( g_strcasecmp( cmd[0], "WATCH" ) == 0 )
+	{
+		/* Obviously we could also mark a user structure as being
+		   watched, but what if the WATCH command is sent right
+		   after connecting? The user won't exist yet then... */
+		for( i = 1; cmd[i]; i ++ )
+		{
+			char *nick;
+			user_t *u;
+			
+			if( !cmd[i][0] || !cmd[i][1] )
+				break;
+			
+			nick = g_strdup( cmd[i] + 1 );
+			nick_lc( nick );
+			
+			u = user_find( irc, nick );
+			
+			if( cmd[i][0] == '+' )
+			{
+				if( !g_hash_table_lookup( irc->watches, nick ) )
+					g_hash_table_insert( irc->watches, nick, nick );
+				
+				if( u && u->online )
+					irc_reply( irc, 604, "%s %s %s %d :%s", u->nick, u->user, u->host, time( NULL ), "is online" );
+				else
+					irc_reply( irc, 605, "%s %s %s %d :%s", nick, "*", "*", time( NULL ), "is offline" );
+			}
+			else if( cmd[i][0] == '-' )
+			{
+				gpointer okey, ovalue;
+				
+				if( g_hash_table_lookup_extended( irc->watches, nick, &okey, &ovalue ) )
+				{
+					g_free( okey );
+					g_hash_table_remove( irc->watches, okey );
+					
+					irc_reply( irc, 602, "%s %s %s %d :%s", nick, "*", "*", 0, "Stopped watching" );
+				}
+			}
+		}
 	}
 	else if( g_strcasecmp( cmd[0], "TOPIC" ) == 0 )
 	{
@@ -815,7 +819,7 @@ int irc_exec( irc_t *irc, char **cmd )
 	else if( set_getint( irc, "debug" ) )
 	{
 		irc_usermsg( irc, "\002--- Unknown command:" );
-		for( i = 0; i < IRC_MAX_ARGS && cmd[i]; i ++ ) irc_usermsg( irc, "%s", cmd[i] );
+		for( i = 0; cmd[i]; i ++ ) irc_usermsg( irc, "%s", cmd[i] );
 		irc_usermsg( irc, "\002--------------------" );
 	}
 	
@@ -863,6 +867,7 @@ void irc_write( irc_t *irc, char *format, ... )
 	return;
 
 }
+
 void irc_vawrite( irc_t *irc, char *format, va_list params )
 {
 	int size;
@@ -873,10 +878,11 @@ void irc_vawrite( irc_t *irc, char *format, va_list params )
 
 	g_vsnprintf( line, IRC_MAX_LINE - 3, format, params );
 
+	strip_newlines( line );
 	strcat( line, "\r\n" );
 
 	if( irc->sendbuffer != NULL ) {
-		size=strlen( irc->sendbuffer ) + strlen( line );
+		size = strlen( irc->sendbuffer ) + strlen( line );
 #ifdef FLOOD_SEND
 		if( size > FLOOD_SEND_MAXBUFFER ) {
 			/* Die flooder, die! >:) */
@@ -886,29 +892,34 @@ void irc_vawrite( irc_t *irc, char *format, va_list params )
 			/* We need the \r\n at the start because else we might append our string to a half
 			 * sent line. A bit hackish, but it works.
 			 */
-			irc->sendbuffer=g_strdup("\r\nERROR :Sendq Exceeded\r\n");
-			irc->quit=1; 
-	
+			irc->sendbuffer = g_strdup( "\r\nERROR :Sendq Exceeded\r\n" );
+			irc->quit = 1;
+			
 			return;
 		}
 #endif
-		irc->sendbuffer=bitlbee_realloc( irc->sendbuffer, size + 1 );
+		irc->sendbuffer = g_renew ( char, irc->sendbuffer, size + 1 );
 		strcpy( ( irc->sendbuffer + strlen( irc->sendbuffer ) ), line );
 	}
 	else 
 		irc->sendbuffer = g_strdup(line);	
-
+	
+	if( irc->w_watch_source_id == 0 )
+	{
+		irc->w_watch_source_id = g_io_add_watch( irc->io_channel, G_IO_OUT, bitlbee_io_current_client_write, irc );
+	}
+	
 	return;
 }
 
 void irc_write_all( char *format, ... )
 {
 	va_list params;
-	GList *temp;	
+	GSList *temp;	
 
 	va_start( params, format );
 
-	temp = connection_list;
+	temp = irc_connection_list;
 	while( temp!=NULL ) {
 		irc_vawrite( temp->data, format, params );
 		temp = temp->next;
@@ -1021,6 +1032,7 @@ void irc_login( irc_t *irc )
 	u->realname = g_strdup( ROOT_FN );
 	u->online = 1;
 	u->send_handler = root_command_string;
+	u->is_private = 0; /* [SH] The channel is root's personal playground. */
 	irc_spawn( irc, u );
 	
 	u = user_add( irc, NS_NICK );
@@ -1028,6 +1040,7 @@ void irc_login( irc_t *irc )
 	u->realname = g_strdup( ROOT_FN );
 	u->online = 0;
 	u->send_handler = root_command_string;
+	u->is_private = 1; /* [SH] NickServ is not in the channel, so should always /query. */
 	
 	u = user_add( irc, irc->nick );
 	u->user = g_strdup( irc->user );
@@ -1214,6 +1227,8 @@ void irc_spawn( irc_t *irc, user_t *u )
 
 void irc_join( irc_t *irc, user_t *u, char *channel )
 {
+	char *nick;
+	
 	if( ( g_strcasecmp( channel, irc->channel ) != 0 ) || user_find( irc, irc->nick ) )
 		irc_write( irc, ":%s!%s@%s JOIN :%s", u->nick, u->user, u->host, channel );
 	
@@ -1223,6 +1238,14 @@ void irc_join( irc_t *irc, user_t *u, char *channel )
 		irc_names( irc, channel );
 		irc_topic( irc, channel );
 	}
+	
+	nick = g_strdup( u->nick );
+	nick_lc( nick );
+	if( g_hash_table_lookup( irc->watches, nick ) )
+	{
+		irc_reply( irc, 600, "%s %s %s %d :%s", u->nick, u->user, u->host, time( NULL ), "logged online" );
+	}
+	g_free( nick );
 }
 
 void irc_part( irc_t *irc, user_t *u, char *channel )
@@ -1237,7 +1260,17 @@ void irc_kick( irc_t *irc, user_t *u, char *channel, user_t *kicker )
 
 void irc_kill( irc_t *irc, user_t *u )
 {
+	char *nick;
+	
 	irc_write( irc, ":%s!%s@%s QUIT :%s", u->nick, u->user, u->host, "Leaving..." );
+	
+	nick = g_strdup( u->nick );
+	nick_lc( nick );
+	if( g_hash_table_lookup( irc->watches, nick ) )
+	{
+		irc_reply( irc, 601, "%s %s %s %d :%s", u->nick, u->user, u->host, time( NULL ), "logged offline" );
+	}
+	g_free( nick );
 }
 
 void irc_invite( irc_t *irc, char *nick, char *channel )
@@ -1281,11 +1314,6 @@ int irc_send( irc_t *irc, char *nick, char *s )
 				irc_usermsg( irc, "Nick `%s' does not exist!", nick );
 			return( 0 );
 		}
-		
-		u->is_private = irc->is_private;
-		
-		if( u->away )
-			irc_reply( irc, 301, "%s :%s", u->nick, u->away );
 	}
 	
 	if( *s == 1 && s[strlen(s)-1] == 1 )
@@ -1313,6 +1341,20 @@ int irc_send( irc_t *irc, char *nick, char *s )
 			irc_privmsg( irc, u, "NOTICE", irc->nick, "", s );
 			return( 1 );
 		}
+		else if( g_strncasecmp( s + 1, "TYPING", 6 ) == 0 )
+		{
+			if( u && u->gc && u->gc->prpl->send_typing && strlen( s ) >= 10 )
+			{
+				time_t current_typing_notice = time( NULL );
+				
+				if( current_typing_notice - u->last_typing_notice >= 5 )
+				{
+					u->gc->prpl->send_typing( u->gc, u->handle, s[8] == '1' );
+					u->last_typing_notice = current_typing_notice;
+				}
+			}
+			return( 1 );
+		}
 		else
 		{
 			irc_usermsg( irc, "Non-ACTION CTCP's aren't supported" );
@@ -1320,10 +1362,27 @@ int irc_send( irc_t *irc, char *nick, char *s )
 		}
 	}
 	
-	if( u && u->send_handler )
-		return( u->send_handler( irc, u, s ) );
+	if( u )
+	{
+		/* For the next message, we probably do have to send new notices... */
+		u->last_typing_notice = 0;
+		u->is_private = irc->is_private;
+		
+		if( u->is_private )
+		{
+			if( !u->online )
+				irc_reply( irc, 301, "%s :%s", u->nick, "User is offline" );
+			else if( u->away )
+				irc_reply( irc, 301, "%s :%s", u->nick, u->away );
+		}
+		
+		if( u->send_handler )
+			return( u->send_handler( irc, u, s ) );
+	}
 	else if( c && c->gc && c->gc->prpl )
+	{
 		return( serv_send_chat( irc, c->gc, c->id, s ) );
+	}
 	
 	return( 0 );
 }
@@ -1352,13 +1411,13 @@ int buddy_send_handler( irc_t *irc, user_t *u, char *msg )
 		if( u->sendbuf_len == 0 )
 		{
 			u->sendbuf_len = strlen( msg ) + 2;
-			u->sendbuf = bitlbee_alloc( u->sendbuf_len );
+			u->sendbuf = g_new (char, u->sendbuf_len );
 			u->sendbuf[0] = 0;
 		}
 		else
 		{
 			u->sendbuf_len += strlen( msg ) + 1;
-			u->sendbuf = bitlbee_realloc( u->sendbuf, u->sendbuf_len );
+			u->sendbuf = g_renew ( char, u->sendbuf, u->sendbuf_len );
 		}
 		
 		strcat( u->sendbuf, msg );
@@ -1427,7 +1486,7 @@ int irc_msgfrom( irc_t *irc, char *nick, char *msg )
 	if( !u->is_private && nick_cmp( u->nick, irc->mynick ) != 0 )
 	{
 		int len = strlen( irc->nick) + 3;
-		prefix = bitlbee_alloc( len );
+		prefix = g_new (char, len );
 		g_snprintf( prefix, len, "%s%s", irc->nick, set_getstr( irc, "to_char" ) );
 		prefix[len-1] = 0;
 	}
@@ -1453,8 +1512,9 @@ int irc_noticefrom( irc_t *irc, char *nick, char *msg )
    timeout. The number returned is the number of seconds we received no
    pongs from the user. When not connected yet, we don't ping but drop the
    connection when the user fails to connect in IRC_LOGIN_TIMEOUT secs. */
-int irc_userping( irc_t *irc )
+static gboolean irc_userping( gpointer _irc )
 {
+	irc_t *irc = _irc;
 	int rv = 0;
 	
 	if( irc->status < USTATUS_LOGGED_IN )
@@ -1464,11 +1524,7 @@ int irc_userping( irc_t *irc )
 	}
 	else
 	{
-		if( global.conf->ping_interval == 0 || global.conf->ping_timeout == 0 )
-		{
-			/* Do nothing, the user disabled client pinging. */
-		}
-		else if( ( gettime() > ( irc->last_pong + global.conf->ping_interval ) ) && !irc->pinging )
+		if( ( gettime() > ( irc->last_pong + global.conf->ping_interval ) ) && !irc->pinging )
 		{
 			irc_write( irc, "PING :%s", IRC_PING_STRING );
 			irc->pinging = 1;
@@ -1482,8 +1538,9 @@ int irc_userping( irc_t *irc )
 	if( rv > 0 )
 	{
 		irc_write( irc, "ERROR :Closing Link: Ping Timeout: %d seconds", rv );
-		closesocket( irc->fd );
+		irc_free( irc );
+		return FALSE;
 	}
 	
-	return( rv );
+	return TRUE;
 }

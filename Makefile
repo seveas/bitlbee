@@ -9,7 +9,7 @@
 -include Makefile.settings
 
 # Program variables
-objects = account.o bitlbee.o commands.o conf.o crypting.o help.o ini.o irc.o log.o nick.o query.o set.o unix.o url.o user.o
+objects = account.o bitlbee.o commands.o conf.o crypting.o help.o ini.o irc.o log.o nick.o query.o set.o unix.o url.o user.o debug.o
 subdirs = protocols
 
 # Expansion of variables
@@ -99,3 +99,6 @@ encode: crypting.c
 
 decode: encode
 	cp encode decode
+
+ctags: 
+	ctags `find -name "*.c"` `find -name "*.h"`

@@ -117,7 +117,7 @@ static int redirect(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, aim
 
 	redir.group = aim_gettlv16(tlvlist, 0x000d, 1);
 	redir.ip = aim_gettlv_str(tlvlist, 0x0005, 1);
-	redir.cookie = aim_gettlv_str(tlvlist, 0x0006, 1);
+	redir.cookie = (guint8 *)aim_gettlv_str(tlvlist, 0x0006, 1);
 
 	/* Fetch original SNAC so we can get csi if needed */
 	origsnac = aim_remsnac(sess, snac->id);

@@ -161,7 +161,7 @@ int aim_chat_send_im(aim_session_t *sess, aim_conn_t *conn, guint16 flags, const
 	/*
 	 * SubTLV: Type 1: Message
 	 */
-	aim_addtlvtochain_raw(&itl, 0x0001, strlen(msg), msg);
+	aim_addtlvtochain_raw(&itl, 0x0001, strlen(msg), (guint8 *)msg);
 
 	/*
 	 * Type 5: Message block.  Contains more TLVs.
@@ -197,7 +197,7 @@ static int aim_addtlvtochain_chatroom(aim_tlvlist_t **list, guint16 type, guint1
 
 	aimbs_put16(&bs, exchange);
 	aimbs_put8(&bs, strlen(roomname));
-	aimbs_putraw(&bs, roomname, strlen(roomname));
+	aimbs_putraw(&bs, (guint8 *)roomname, strlen(roomname));
 	aimbs_put16(&bs, instance);
 
 	aim_addtlvtochain_raw(list, type, aim_bstream_curpos(&bs), buf);
@@ -336,7 +336,7 @@ int aim_chat_invite(aim_session_t *sess, aim_conn_t *conn, const char *sn, const
 	 * Dest sn
 	 */
 	aimbs_put8(&fr->data, strlen(sn));
-	aimbs_putraw(&fr->data, sn, strlen(sn));
+	aimbs_putraw(&fr->data, (guint8 *)sn, strlen(sn));
 
 	/*
 	 * TLV t(0005)
@@ -358,7 +358,7 @@ int aim_chat_invite(aim_session_t *sess, aim_conn_t *conn, const char *sn, const
 
 	aim_addtlvtochain16(&itl, 0x000a, 0x0001);
 	aim_addtlvtochain_noval(&itl, 0x000f);
-	aim_addtlvtochain_raw(&itl, 0x000c, strlen(msg), msg);
+	aim_addtlvtochain_raw(&itl, 0x000c, strlen(msg), (guint8 *)msg);
 	aim_addtlvtochain_chatroom(&itl, 0x2711, exchange, roomname, instance);
 	aim_writetlvchain(&hdrbs, &itl);
 	

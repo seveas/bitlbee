@@ -589,8 +589,10 @@ static void gjab_start(gjconn gjc)
 	XML_SetCharacterDataHandler(gjc->parser, charData);
 	
 	if (ssl) {
-		gjc->ssl = ssl_connect(gjc->user->server, port, gjab_connected_ssl, GJ_GC(gjc));
-		gjc->fd = ssl_getfd(gjc->ssl);
+		if ((gjc->ssl = ssl_connect(gjc->user->server, port, gjab_connected_ssl, GJ_GC(gjc))))
+			gjc->fd = ssl_getfd(gjc->ssl);
+		else
+			gjc->fd = -1;
 	} else {
 		gjc->fd = proxy_connect(gjc->user->server, port, gjab_connected, GJ_GC(gjc));
 	}

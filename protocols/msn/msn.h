@@ -23,6 +23,11 @@
   Suite 330, Boston, MA  02111-1307  USA
 */
 
+/* Some hackish magicstrings to make special-purpose messages/switchboards.
+ */
+#define TYPING_NOTIFICATION_MESSAGE "\r\r\rBEWARE, ME R TYPINK MESSAGE!!!!\r\r\r"
+#define GROUPCHAT_SWITCHBOARD_MESSAGE "\r\r\rME WANT TALK TO MANY PEOPLE\r\r\r"
+
 #ifdef _WIN32
 #define debug 
 #else
@@ -41,6 +46,12 @@
                             "User-Agent: BitlBee " BITLBEE_VERSION "\r\n" \
                             "X-MMS-IM-Format: FN=MS%20Shell%20Dlg; EF=; CO=0; CS=0; PF=0\r\n" \
                             "\r\n"
+
+#define MSN_TYPING_HEADERS "MIME-Version: 1.0\r\n" \
+                           "Content-Type: text/x-msmsgscontrol\r\n" \
+                           "User-Agent: BitlBee " BITLBEE_VERSION "\r\n" \
+                           "TypingUser: %s\r\n" \
+                           "\r\n\r\n"
 
 #define PROFILE_URL "http://members.msn.com/"
 
@@ -116,7 +127,6 @@ struct msn_handler_data
 /* Bitfield values for msn_status_code.flags */
 #define STATUS_FATAL            1
 #define STATUS_SB_FATAL         2
-#define STATUS_BLAH             4
 
 int msn_chat_id;
 extern struct msn_away_state msn_away_state_list[];

@@ -29,7 +29,7 @@
 #define _GNU_SOURCE /* Stupid GNU :-P */
 
 #define PACKAGE "BitlBee"
-#define BITLBEE_VERSION "0.91"
+#define BITLBEE_VERSION "0.92"
 #define VERSION BITLBEE_VERSION
 
 #define MAX_STRING 128
@@ -87,7 +87,7 @@
 
 #define MAX_NICK_LENGTH 24
 
-#define HELP_FILE DATADIR "help.txt"
+#define HELP_FILE VARDIR "help.txt"
 #define CONF_FILE_DEF ETCDIR "bitlbee.conf"
 
 extern char *CONF_FILE;
@@ -102,38 +102,33 @@ extern char *CONF_FILE;
 #include "ini.h"
 #include "help.h"
 #include "query.h"
-
+#include "debug.h"
 #include "sock.h"
 
 typedef struct global_t {
-	fd_set readfds[1];
-	fd_set writefds[1];
 	int listen_socket;
 	help_t *help;
 	conf_t *conf;
 	char *helpfile;
+	GMainLoop *loop;
 } global_t;
 
-int bitlbee_daemon_main_loop( void );
-int bitlbee_inetd_main_loop( void );
 int bitlbee_daemon_init( void );
 int bitlbee_inetd_init( void );
 
-int bitlbee_connection_create( int fd ); 
-GList *bitlbee_connection_destroy( GList *connection );
+gboolean bitlbee_io_current_client_read( GIOChannel *source, GIOCondition condition, gpointer data );
+gboolean bitlbee_io_current_client_write( GIOChannel *source, GIOCondition condition, gpointer data );
 
 int root_command_string( irc_t *irc, user_t *u, char *command );
 int root_command( irc_t *irc, char *command[] );
 int bitlbee_load( irc_t *irc, char *password );
 int bitlbee_save( irc_t *irc );
+void bitlbee_shutdown( gpointer data );
 double gettime( void );
 G_MODULE_EXPORT void http_encode( char *s );
 G_MODULE_EXPORT void http_decode( char *s );
-
-void *bitlbee_alloc(size_t size);
-void *bitlbee_realloc(void *oldmem, size_t newsize);
+G_MODULE_EXPORT char *strip_newlines(char *source);
 
 extern global_t global;
-extern GList *connection_list;
 
 #endif

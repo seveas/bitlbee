@@ -4,7 +4,7 @@
   * Copyright 2002-2004 Wilmer van der Gaast and others                *
   \********************************************************************/
 
-/* Stuff to handle, save and search buddies                             */
+/* Random debug stuff                                                  */
 
 /*
   This program is free software; you can redistribute it and/or modify
@@ -23,33 +23,37 @@
   Suite 330, Boston, MA  02111-1307  USA
 */
 
-typedef struct __USER
-{
-	char *nick;
-	char *user;
-	char *host;
-	char *realname;
-	
-	char *away;
-	
-	char is_private;
-	char online;
-	
-	char *handle;
-	struct gaim_connection *gc;
+#include "bitlbee.h"
 
- 	char *sendbuf;
- 	time_t last_typing_notice;
- 	int sendbuf_len;
- 	guint sendbuf_timer;
-	
-	int (*send_handler) ( irc_t *irc, struct __USER *u, char *msg );
-	
-	struct __USER *next;
-} user_t;
+GHashTable *iocounter=NULL;
+FILE *activity_output;
 
-user_t *user_add( struct irc *irc, char *nick );
-int user_del( irc_t *irc, char *nick );
-G_MODULE_EXPORT user_t *user_find( irc_t *irc, char *nick );
-G_MODULE_EXPORT user_t *user_findhandle( struct gaim_connection *gc, char *handle );
-void user_rename( irc_t *irc, char *oldnick, char *newnick );
+static void for_each_node(gpointer key, gpointer value, gpointer user_data);
+
+void count_io_event(GIOChannel *source, char *section) {
+	long int *newcounter;
+
+	if(iocounter==NULL) {
+		iocounter=g_hash_table_new(NULL, NULL);
+	}
+
+	if(g_hash_table_lookup(iocounter, section)==NULL) {
+		newcounter=g_new0(long int, 1);
+		g_hash_table_insert(iocounter, section, newcounter);
+	} else {
+		newcounter=g_hash_table_lookup(iocounter, section);
+		(*newcounter)++;	
+	}	 	
+}
+
+void write_io_activity(void) {
+	activity_output=fopen("ioactivity.log", "a");
+	fprintf(activity_output, "Amount of GIO events raised for each section of the code:\n");
+	g_hash_table_foreach(iocounter, &for_each_node, NULL);
+	fprintf(activity_output, "End of list\n");
+	fclose(activity_output);
+}
+
+static void for_each_node(gpointer key, gpointer value, gpointer user_data) {
+	fprintf(activity_output, "%s %ld\n", (char *)key, (*(long int *)value));
+}

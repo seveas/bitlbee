@@ -4,7 +4,7 @@
   * Copyright 2002-2004 Wilmer van der Gaast and others                *
   \********************************************************************/
 
-/* Stuff to handle, save and search buddies                             */
+/* Random debug stuff                                                 */
 
 /*
   This program is free software; you can redistribute it and/or modify
@@ -23,33 +23,11 @@
   Suite 330, Boston, MA  02111-1307  USA
 */
 
-typedef struct __USER
-{
-	char *nick;
-	char *user;
-	char *host;
-	char *realname;
-	
-	char *away;
-	
-	char is_private;
-	char online;
-	
-	char *handle;
-	struct gaim_connection *gc;
+#ifndef _DEBUG_H
 
- 	char *sendbuf;
- 	time_t last_typing_notice;
- 	int sendbuf_len;
- 	guint sendbuf_timer;
-	
-	int (*send_handler) ( irc_t *irc, struct __USER *u, char *msg );
-	
-	struct __USER *next;
-} user_t;
+void count_io_event(GIOChannel *source, char *section);
+void write_io_activity(void);
 
-user_t *user_add( struct irc *irc, char *nick );
-int user_del( irc_t *irc, char *nick );
-G_MODULE_EXPORT user_t *user_find( irc_t *irc, char *nick );
-G_MODULE_EXPORT user_t *user_findhandle( struct gaim_connection *gc, char *handle );
-void user_rename( irc_t *irc, char *oldnick, char *newnick );
+#define _DEBUG_H
+#endif
+

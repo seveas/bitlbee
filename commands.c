@@ -51,6 +51,7 @@ command_t commands[] = {
 	{ "nick",           1, cmd_nick },
 	{ "import_buddies", 1, cmd_import_buddies },
 	{ "qlist",          0, cmd_qlist },
+	{ "dump",	    0, cmd_dump },
 	{ NULL }
 };
 
@@ -351,7 +352,7 @@ int cmd_add( irc_t *irc, char **cmd )
 		irc_usermsg( irc, "Invalid account" );
 		return( 1 );
 	}
-	else if( !a->gc )
+	else if( !( a->gc && ( a->gc->flags & OPT_LOGGED_IN ) ) )
 	{
 		irc_usermsg( irc, "That account is not on-line" );
 		return( 1 );
@@ -403,7 +404,7 @@ int cmd_info( irc_t *irc, char **cmd )
 		irc_usermsg( irc, "Invalid account" );
 		return( 1 );
 	}
-	else if( !( gc = a->gc ) )
+	else if( !( ( gc = a->gc ) && ( a->gc->flags & OPT_LOGGED_IN ) ) )
 	{
 		irc_usermsg( irc, "That account is not on-line" );
 		return( 1 );
@@ -450,7 +451,7 @@ int cmd_rename( irc_t *irc, char **cmd )
 		g_free( irc->mynick );
 		irc->mynick = g_strdup( cmd[2] );
 	}
-	else
+	else if( u->send_handler == buddy_send_handler )
 	{
 		nick_set( irc, u->handle, u->gc->protocol, cmd[2] );
 	}
@@ -503,7 +504,7 @@ int cmd_block( irc_t *irc, char **cmd )
 		irc_usermsg( irc, "Invalid account" );
 		return( 1 );
 	}
-	else if( !( gc = a->gc ) )
+	else if( !( ( gc = a->gc ) && ( a->gc->flags & OPT_LOGGED_IN ) ) )
 	{
 		irc_usermsg( irc, "That account is not on-line" );
 		return( 1 );
@@ -544,7 +545,7 @@ int cmd_allow( irc_t *irc, char **cmd )
 		irc_usermsg( irc, "Invalid account" );
 		return( 1 );
 	}
-	else if( !( gc = a->gc ) )
+	else if( !( ( gc = a->gc ) && ( a->gc->flags & OPT_LOGGED_IN ) ) )
 	{
 		irc_usermsg( irc, "That account is not on-line" );
 		return( 1 );
@@ -695,7 +696,7 @@ int cmd_nick( irc_t *irc, char **cmd )
 	{
 		irc_usermsg( irc, "Invalid account");
 	}
-	else if( !a->gc )
+	else if( !( a->gc && ( a->gc->flags & OPT_LOGGED_IN ) ) )
 	{
 		irc_usermsg( irc, "That account is not on-line" );
 	}
@@ -753,7 +754,7 @@ int cmd_import_buddies( irc_t *irc, char **cmd )
 		irc_usermsg( irc, "Invalid account" );
 		return( 0 );
 	}
-	else if( !( gc = a->gc ) )
+	else if( !( ( gc = a->gc ) && ( a->gc->flags & OPT_LOGGED_IN ) ) )
 	{
 		irc_usermsg( irc, "That account is not on-line" );
 		return( 0 );
@@ -791,6 +792,13 @@ int cmd_import_buddies( irc_t *irc, char **cmd )
 	}
 	
 	irc_usermsg( irc, "Sent all add requests. Please wait for a while, the server needs some time to handle all the adds." );
+	
+	return( 0 );
+}
+
+int cmd_dump( irc_t *irc, char **cmd ) {
+	write_io_activity();
+	irc_usermsg(irc, "Wrote GIO activity log to disk.");	
 	
 	return( 0 );
 }

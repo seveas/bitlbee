@@ -52,7 +52,7 @@ int aim_bos_setbuddylist(aim_session_t *sess, aim_conn_t *conn, const char *budd
 	for (tmpptr = strtok(localcpy, "&"); tmpptr; ) {
 
 		aimbs_put8(&fr->data, strlen(tmpptr));
-		aimbs_putraw(&fr->data, tmpptr, strlen(tmpptr));
+		aimbs_putraw(&fr->data, (guint8 *)tmpptr, strlen(tmpptr));
 		tmpptr = strtok(NULL, "&");
 	}
 
@@ -78,8 +78,8 @@ int aim_bos_setprofile(aim_session_t *sess, aim_conn_t *conn, const char *profil
 
 	/* Build to packet first to get real length */
 	if (profile) {
-		aim_addtlvtochain_raw(&tl, 0x0001, strlen(defencoding), defencoding);
-		aim_addtlvtochain_raw(&tl, 0x0002, strlen(profile), profile);
+		aim_addtlvtochain_raw(&tl, 0x0001, strlen(defencoding), (guint8 *)defencoding);
+		aim_addtlvtochain_raw(&tl, 0x0002, strlen(profile), (guint8 *)profile);
 	}
 
 	/*
@@ -92,8 +92,8 @@ int aim_bos_setprofile(aim_session_t *sess, aim_conn_t *conn, const char *profil
 	 */
 	if (awaymsg) {
 		if (strlen(awaymsg)) {
-			aim_addtlvtochain_raw(&tl, 0x0003, strlen(defencoding), defencoding);
-			aim_addtlvtochain_raw(&tl, 0x0004, strlen(awaymsg), awaymsg);
+			aim_addtlvtochain_raw(&tl, 0x0003, strlen(defencoding), (guint8 *)defencoding);
+			aim_addtlvtochain_raw(&tl, 0x0004, strlen(awaymsg), (guint8 *)awaymsg);
 		} else
 			aim_addtlvtochain_noval(&tl, 0x0004);
 	}
@@ -152,7 +152,7 @@ int aim_send_warning(aim_session_t *sess, aim_conn_t *conn, const char *destsn, 
 
 	aimbs_put16(&fr->data, outflags); 
 	aimbs_put8(&fr->data, strlen(destsn));
-	aimbs_putraw(&fr->data, destsn, strlen(destsn));
+	aimbs_putraw(&fr->data, (guint8 *)destsn, strlen(destsn));
 
 	aim_tx_enqueue(sess, fr);
 
@@ -270,26 +270,26 @@ int aim_setdirectoryinfo(aim_session_t *sess, aim_conn_t *conn, const char *firs
 	aim_addtlvtochain16(&tl, 0x000a, privacy);
 
 	if (first)
-		aim_addtlvtochain_raw(&tl, 0x0001, strlen(first), first);
+		aim_addtlvtochain_raw(&tl, 0x0001, strlen(first), (guint8 *)first);
 	if (last)
-		aim_addtlvtochain_raw(&tl, 0x0002, strlen(last), last);
+		aim_addtlvtochain_raw(&tl, 0x0002, strlen(last), (guint8 *)last);
 	if (middle)
-		aim_addtlvtochain_raw(&tl, 0x0003, strlen(middle), middle);
+		aim_addtlvtochain_raw(&tl, 0x0003, strlen(middle), (guint8 *)middle);
 	if (maiden)
-		aim_addtlvtochain_raw(&tl, 0x0004, strlen(maiden), maiden);
+		aim_addtlvtochain_raw(&tl, 0x0004, strlen(maiden), (guint8 *)maiden);
 
 	if (state)
-		aim_addtlvtochain_raw(&tl, 0x0007, strlen(state), state);
+		aim_addtlvtochain_raw(&tl, 0x0007, strlen(state), (guint8 *)state);
 	if (city)
-		aim_addtlvtochain_raw(&tl, 0x0008, strlen(city), city);
+		aim_addtlvtochain_raw(&tl, 0x0008, strlen(city), (guint8 *)city);
 
 	if (nickname)
-		aim_addtlvtochain_raw(&tl, 0x000c, strlen(nickname), nickname);
+		aim_addtlvtochain_raw(&tl, 0x000c, strlen(nickname), (guint8 *)nickname);
 	if (zip)
-		aim_addtlvtochain_raw(&tl, 0x000d, strlen(zip), zip);
+		aim_addtlvtochain_raw(&tl, 0x000d, strlen(zip), (guint8 *)zip);
 
 	if (street)
-		aim_addtlvtochain_raw(&tl, 0x0021, strlen(street), street);
+		aim_addtlvtochain_raw(&tl, 0x0021, strlen(street), (guint8 *)street);
 
 	if (!(fr = aim_tx_new(sess, conn, AIM_FRAMETYPE_FLAP, 0x02, 10+aim_sizetlvchain(&tl))))
 		return -ENOMEM;
@@ -316,15 +316,15 @@ int aim_setuserinterests(aim_session_t *sess, aim_conn_t *conn, const char *inte
 	aim_addtlvtochain16(&tl, 0x000a, privacy);
 
 	if (interest1)
-		aim_addtlvtochain_raw(&tl, 0x0000b, strlen(interest1), interest1);
+		aim_addtlvtochain_raw(&tl, 0x0000b, strlen(interest1), (guint8 *)interest1);
 	if (interest2)
-		aim_addtlvtochain_raw(&tl, 0x0000b, strlen(interest2), interest2);
+		aim_addtlvtochain_raw(&tl, 0x0000b, strlen(interest2), (guint8 *)interest2);
 	if (interest3)
-		aim_addtlvtochain_raw(&tl, 0x0000b, strlen(interest3), interest3);
+		aim_addtlvtochain_raw(&tl, 0x0000b, strlen(interest3), (guint8 *)interest3);
 	if (interest4)
-		aim_addtlvtochain_raw(&tl, 0x0000b, strlen(interest4), interest4);
+		aim_addtlvtochain_raw(&tl, 0x0000b, strlen(interest4), (guint8 *)interest4);
 	if (interest5)
-		aim_addtlvtochain_raw(&tl, 0x0000b, strlen(interest5), interest5);
+		aim_addtlvtochain_raw(&tl, 0x0000b, strlen(interest5), (guint8 *)interest5);
 
 	if (!(fr = aim_tx_new(sess, conn, AIM_FRAMETYPE_FLAP, 0x02, 10+aim_sizetlvchain(&tl))))
 		return -ENOMEM;

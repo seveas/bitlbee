@@ -44,10 +44,9 @@ void nick_set( irc_t *irc, char *handle, int proto, char *nick )
 	}
 	
 	if( m )
-		n = m->next = bitlbee_alloc( sizeof( nick_t ) );
+		n = m->next = g_new0( nick_t, 1 );
 	else
-		n = irc->nicks = bitlbee_alloc( sizeof( nick_t ) );
-	memset( n, 0, sizeof( nick_t ) );
+		n = irc->nicks = g_new0( nick_t, 1 );
 	
 	n->handle = g_strdup( handle );
 	n->proto = proto;
@@ -153,14 +152,11 @@ void nick_del( irc_t *irc, char *nick )
 }
 
 
-/* Character maps, _lc_[x] == _uc_[x] (but uppercase), according to the RFC's
+/* Character maps, _lc_[x] == _uc_[x] (but uppercase), according to the RFC's.
+   With one difference, we allow dashes. */
 
-   Actually, the RFC forbids -, but I think - being an lowercase _ looks better...
-   And, every IRCd allows dashes in nicks, people once flamed us when BitlBee didn't.
-   So we were forced to be naughty and ignore RFC here. Sorry. ;-) */
-
-static char *nick_lc_chars = "0123456789abcdefghijklmnopqrstuvwxyz{}^-|";
-static char *nick_uc_chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ[]~_\\";
+static char *nick_lc_chars = "0123456789abcdefghijklmnopqrstuvwxyz{}^-_|";
+static char *nick_uc_chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ[]~-_\\";
 
 void nick_strip( char * nick )
 {
@@ -194,9 +190,9 @@ int nick_ok( char *nick )
 	return( 1 );
 }
 
-int nick_lc( char *nick )
+int nick_lc( unsigned char *nick )
 {
-	static char tab[128] = { 0 };
+	static char tab[256] = { 0 };
 	int i;
 	
 	if( tab['A'] == 0 )
@@ -217,7 +213,7 @@ int nick_lc( char *nick )
 	return( 1 );
 }
 
-int nick_uc( char *nick )
+int nick_uc( unsigned char *nick )
 {
 	static char tab[128] = { 0 };
 	int i;
@@ -260,8 +256,7 @@ char *nick_dup( char *nick )
 {
 	char *cp;
 	
-	cp = bitlbee_alloc( MAX_NICK_LENGTH + 1 );
-	memset( cp, 0, MAX_NICK_LENGTH + 1 );
+	cp = g_new0 ( char, MAX_NICK_LENGTH + 1 );
 	strncpy( cp, nick, MAX_NICK_LENGTH );
 	
 	return( cp );

@@ -88,7 +88,7 @@ char *strchr (), *strrchr ();
 
 #include "yahoo2_callbacks.h"
 #include "yahoo_debug.h"
-#ifdef __MINGW32__
+#if defined(__MINGW32__) && !defined(HAVE_GLIB)
 #define snprintf _snprintf
 #define vsnprintf _vsnprintf
 #endif

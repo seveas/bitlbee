@@ -1,11 +1,7 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
-<!DOCTYPE book PUBLIC "-//OASIS//DTD DocBook V4.2//EN" "http://www.oasis-open.org/docbook/xml/4.2/docbookx.dtd" [
-<!ENTITY quickstart SYSTEM "quickstart.xml">
-<!ENTITY commands SYSTEM "commands.xml">
-<!ENTITY misc SYSTEM "misc.xml">
-]>
+<!DOCTYPE book PUBLIC "-//OASIS//DTD DocBook V4.2//EN" "http://www.oasis-open.org/docbook/xml/4.2/docbookx.dtd">
 
-<book id="BitlBee-Help">
+<book id="BitlBee-Help" xmlns:xi="http://www.w3.org/2003/XInclude">
 
 <preface id="">
 <title>BitlBee help system</title>
@@ -57,8 +53,8 @@ You can read more about them with <emphasis>help &lt;</emphasis>subject<emphasis
 
 </chapter>
 
-&commands;
-&quickstart;
-&misc;
+<xi:include href="quickstart.xml"/>
+<xi:include href="commands.xml"/>
+<xi:include href="misc.xml"/>
 
 </book>

@@ -30,7 +30,7 @@ static int infochange(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, a
 				str = 1;
 
 			if (str)
-				val = aimbs_getstr(bs, len);
+				val = (guint8 *)aimbs_getstr(bs, len);
 			else
 				val = aimbs_getraw(bs, len);
 
@@ -98,10 +98,10 @@ int aim_admin_changepasswd(aim_session_t *sess, aim_conn_t *conn, const char *ne
 	aim_putsnac(&tx->data, 0x0007, 0x0004, 0x0000, snacid);
 
 	/* new password TLV t(0002) */
-	aim_addtlvtochain_raw(&tl, 0x0002, strlen(newpw), newpw);
+	aim_addtlvtochain_raw(&tl, 0x0002, strlen(newpw), (guint8 *)newpw);
 
 	/* current password TLV t(0012) */
-	aim_addtlvtochain_raw(&tl, 0x0012, strlen(curpw), curpw);
+	aim_addtlvtochain_raw(&tl, 0x0012, strlen(curpw), (guint8 *)curpw);
 
 	aim_writetlvchain(&tx->data, &tl);
 	aim_freetlvchain(&tl);
@@ -161,7 +161,7 @@ int aim_admin_setemail(aim_session_t *sess, aim_conn_t *conn, const char *newema
 	snacid = aim_cachesnac(sess, 0x0007, 0x0004, 0x0000, NULL, 0);
 	aim_putsnac(&tx->data, 0x0007, 0x0004, 0x0000, snacid);
 
-	aim_addtlvtochain_raw(&tl, 0x0011, strlen(newemail), newemail);
+	aim_addtlvtochain_raw(&tl, 0x0011, strlen(newemail), (guint8 *)newemail);
 	
 	aim_writetlvchain(&tx->data, &tl);
 	aim_freetlvchain(&tl);
@@ -183,7 +183,7 @@ int aim_admin_setnick(aim_session_t *sess, aim_conn_t *conn, const char *newnick
 	snacid = aim_cachesnac(sess, 0x0007, 0x0004, 0x0000, NULL, 0);
 	aim_putsnac(&tx->data, 0x0007, 0x0004, 0x0000, snacid);
 
-	aim_addtlvtochain_raw(&tl, 0x0001, strlen(newnick), newnick);
+	aim_addtlvtochain_raw(&tl, 0x0001, strlen(newnick), (guint8 *)newnick);
 	
 	aim_writetlvchain(&tx->data, &tl);
 	aim_freetlvchain(&tl);

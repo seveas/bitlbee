@@ -148,14 +148,14 @@ static void log_irc(int level, char *message) {
 
 static void log_syslog(int level, char *message) {
 	if(level==LOGLVL_ERROR)
-		syslog(LOG_ERR, message);
+		syslog(LOG_ERR, "%s", message);
 	if(level==LOGLVL_WARNING)
-		syslog(LOG_WARNING, message);
+		syslog(LOG_WARNING, "%s", message);
 	if(level==LOGLVL_INFO)
-		syslog(LOG_INFO, message);
+		syslog(LOG_INFO, "%s", message);
 #ifdef DEBUG
 	if(level==LOGLVL_DEBUG)
-		syslog(LOG_DEBUG, message);
+		syslog(LOG_DEBUG, "%s", message);
 #endif
 	return;
 }
@@ -181,7 +181,7 @@ char *my_vasprintf(const char *fmt, va_list ap) {
 	/* Guess we need no more than 100 bytes. */
 	int n, size = 100;
 	char *p;
-	p = bitlbee_alloc (size);
+	p = g_new(char, size);
 	while (1) {
 		/* Try to print in the allocated space. */
 		n = vsnprintf (p, size, fmt, ap);
@@ -193,7 +193,7 @@ char *my_vasprintf(const char *fmt, va_list ap) {
 			size = n+1; /* precisely what is needed */
 		else           /* glibc 2.0 */
 			size *= 2;  /* twice the old size */
-		p=bitlbee_realloc(p, size);
+		p=g_renew (char, p, size);
 	}
 }
 

@@ -33,266 +33,206 @@
 #include <stdio.h>
 #include <errno.h>
 
-GList *connection_list = NULL;
+gboolean bitlbee_io_new_client( GIOChannel *source, GIOCondition condition, gpointer data )
+{
+	size_t size = sizeof( struct sockaddr_in );
+	struct sockaddr_in conn_info;
+	int new_socket = accept( global.listen_socket, (struct sockaddr *) &conn_info, 
+		                     &size );
+	
+	count_io_event(source, "main");
+	
+	log_message( LOGLVL_INFO, "Creating new connection with fd %d.", new_socket );
+	irc_new( new_socket );
+
+	return TRUE;
+}
+ 
+
 
 int bitlbee_daemon_init()
 {
 	struct sockaddr_in listen_addr;
 	int i;
+	GIOChannel *ch;
 	
 	log_link( LOGLVL_ERROR, LOGOUTPUT_SYSLOG );
 	log_link( LOGLVL_WARNING, LOGOUTPUT_SYSLOG );
 	
 	global.listen_socket = socket( AF_INET, SOCK_STREAM, 0 );
-	if( global.listen_socket == -1 ) {
-		log_error("socket");
+	if( global.listen_socket == -1 )
+	{
+		log_error( "socket" );
 		return( -1 );
 	}
 	listen_addr.sin_family = AF_INET;
 	listen_addr.sin_port = htons( global.conf->port );
 	listen_addr.sin_addr.s_addr = inet_addr( global.conf->iface );
 
-	i=bind( global.listen_socket, ( struct sockaddr * )&listen_addr, sizeof( struct sockaddr ) );
-	if( i == -1 ) {
+	i = bind( global.listen_socket, (struct sockaddr *) &listen_addr, sizeof( struct sockaddr ) );
+	if( i == -1 )
+	{
 		log_error( "bind" );
 		return( -1 );
 	}
 
 	i = listen( global.listen_socket, 10 );
-	if( i == -1 ) {
+	if( i == -1 )
+	{
 		log_error( "listen" );
 		return( -1 );
 	}
+
+	ch = g_io_channel_unix_new( global.listen_socket );
+	g_io_add_watch( ch, G_IO_IN, bitlbee_io_new_client, NULL );
 
 #ifndef _WIN32
 	if( !global.conf->nofork )
 	{
 		i = fork();
-		if( i == -1 ) {
+		if( i == -1 )
+		{
 			log_error( "fork" );
 			return( -1 );
 		}
-		else if( i!=0 ) 
+		else if( i != 0 ) 
 			exit( 0 );
-		close(0); close(1); close(2);
-		chdir("/");
+		close( 0 );
+		close( 1 );
+		close( 2 );
+		chdir( "/" );
 	}
 #endif
+	
 	return( 0 );
-}
- 
-int bitlbee_daemon_main_loop()
-{
-	GList *temp;
-	struct timeval tv;
-	int i, highest, size, new_socket;
-	struct sockaddr_in conn_info;
- 
-	FD_ZERO( global.readfds );
-	FD_ZERO( global.writefds );
-	FD_SET( global.listen_socket, global.readfds );
-	FD_SET( global.listen_socket, global.writefds );
-		
-	temp = connection_list;
-	highest = global.listen_socket;
-	
-	while( temp != NULL ) 
-	{
-		FD_SET( ((irc_t *) temp->data)->fd, global.readfds );
-		FD_SET( ((irc_t *) temp->data)->fd, global.writefds );
-		if( ((irc_t *) temp->data)->fd > highest )
-			highest = ((irc_t *) temp->data)->fd;		
-		temp = temp->next;
-	} 
-
-	tv.tv_sec = 0;
-	tv.tv_usec = 200000;
-
-	if( ( i = select( highest + 1, global.readfds, NULL, NULL, &tv ) ) > 0 )
-	{
-		if( FD_ISSET( global.listen_socket, global.readfds ) ) 
-		{
-			size = sizeof( struct sockaddr_in );
-			new_socket = accept( global.listen_socket, (struct sockaddr *) &conn_info, 
-			                     &size );
-			log_message( LOGLVL_INFO, "Creating new connection with fd %d.", new_socket );
-			i = bitlbee_connection_create( new_socket );
-			if( i != 1 )
-				return( -1 );
-		}
-		temp = connection_list;
-		while( temp != NULL ) 
-		{
-			if( FD_ISSET( ((irc_t *) temp->data)->fd, global.readfds ) )
-			{
-				irc_t *irc = temp->data;
-				if( !irc_fill_buffer( irc ) )
-				{
-					log_message( LOGLVL_INFO, "Destroying connection with fd %d.", irc->fd );
-					temp = bitlbee_connection_destroy( temp );
-				}
-				else
-				{
-					if( !irc_process( irc ) )
-						temp = bitlbee_connection_destroy( temp );
-					if( irc_userping( irc ) > 0 )
-						temp = bitlbee_connection_destroy( temp );
-				}
-			}
-			if( temp != NULL )
-				temp = temp->next;
-		}
-	}
-
-	temp = connection_list;
-
-	tv.tv_sec = 0;
-	tv.tv_usec = 0;
-
-	if( ( i = select( highest + 1, NULL, global.writefds, NULL, &tv ) ) > 0 ) {
-		while( temp != NULL ) 
-		{
-			if( FD_ISSET( ( ( irc_t *)( temp->data ) )->fd, global.writefds ) )
-				if( !irc_write_buffer(temp->data) )
-					temp = bitlbee_connection_destroy( temp );
-			if( temp != NULL )
-				temp = temp->next;	
-		}
-	}
-	 
-	else if( i == -1 )
-	{
-		log_error( "select" );
-		return -1;
-	}
-	g_main_iteration( FALSE );
-	
-	return 0;	
 }
  
 int bitlbee_inetd_init()
 {
-	if( !bitlbee_connection_create( 0 ) )
+	if( !irc_new( 0 ) )
 		return( 1 );
-
+	
 	log_link( LOGLVL_ERROR, LOGOUTPUT_IRC );
 	log_link( LOGLVL_WARNING, LOGOUTPUT_IRC );
-
-	return( 0 );
-}
- 
-int bitlbee_inetd_main_loop()
-{
-	struct timeval tv[1];
-	int i;
-	irc_t *irc;
-	GList *temp;
-	
-	temp = connection_list;
-	irc = temp->data;
-	
-	FD_ZERO( global.readfds );
-	FD_ZERO( global.writefds );
-	FD_SET( irc->fd, global.readfds );
-	FD_SET( irc->fd, global.writefds );
-	tv->tv_sec = 0;
-	tv->tv_usec = 200000;
-	
-	if( ( i = select( ((irc_t *) temp->data)->fd + 1, global.readfds, NULL, NULL, tv ) ) > 0 )
-	{
-		if( !irc_fill_buffer( (irc_t *) temp->data ) )
-		{
-			temp = bitlbee_connection_destroy( temp );
-			return( 1 );
-		}
-		else if( !irc_process( (irc_t *) temp->data ) )
-		{
-			temp = bitlbee_connection_destroy( temp );
-			return( 1 );
-		}
-	}
-
-	tv->tv_sec = 0;
-	tv->tv_usec = 0;
-
-	if( ( i = select( ((irc_t *) temp->data)->fd + 1, NULL, global.writefds, NULL, tv ) ) > 0 )
-	{
-		if( !irc_write_buffer( (irc_t *) temp->data ) )
-		{ 
-			if( ( ( irc_t * )( temp->data ) )->status && set_getint( ( (irc_t * )( temp->data ) ), "save_on_quit" ) ) 
-				if( !bitlbee_save( ( (irc_t * )( temp->data ) ) ) )
-					irc_usermsg( ( (irc_t * )( temp->data ) ), "Error while saving settings!" );
-			return 1;
-		}
-	}
-	else if( i == -1 ) return( -1 );
-	if( irc_userping( temp->data ) > 0 )
-		return( 1 );
-
-	g_main_iteration( FALSE );
 	
 	return( 0 );
 }
 
-int bitlbee_connection_create( int fd )
+gboolean bitlbee_io_current_client_read( GIOChannel *source, GIOCondition condition, gpointer data )
 {
-	irc_t *newconn;
-
-	newconn = irc_new( fd );
-	if( newconn == NULL )
-		return( 0 );
+	irc_t *irc = data;
+	char line[513];
+	int st;
 	
-	connection_list = g_list_append( connection_list, newconn );
+	count_io_event(source, "main");
+
+	if (condition & G_IO_ERR || condition & G_IO_HUP ) {
+		irc_free( irc );
+		return FALSE;
+	}
+
+	st = read( irc->fd, line, sizeof( line ) - 1 );
+	if( st <= 0 )
+	{
+		if( sockerr_again() )
+		{
+			return TRUE;
+		}
+		else
+		{
+			irc_free( irc );
+			return FALSE;
+		}
+	}
+	line[st] = '\0';
+	if( irc->readbuffer == NULL ) 
+	{
+		irc->readbuffer = g_strdup( line );
+	}
+	else 
+	{
+		irc->readbuffer = g_renew( char, irc->readbuffer, strlen( irc->readbuffer ) + strlen ( line ) + 1 );
+		strcpy( ( irc->readbuffer + strlen( irc->readbuffer ) ), line );
+	}
 	
-	set_add( newconn, "away_devoice", "true",  set_eval_away_devoice );
-	set_add( newconn, "auto_connect", "true", set_eval_bool );
-	set_add( newconn, "auto_reconnect", "false", set_eval_bool );
-	set_add( newconn, "auto_reconnect_delay", "300", set_eval_int );
-	set_add( newconn, "buddy_sendbuffer", "false", set_eval_bool );
-	set_add( newconn, "buddy_sendbuffer_delay", "1", set_eval_int );
-	set_add( newconn, "charset", "iso8859-15", set_eval_charset );
-	set_add( newconn, "debug", "false", set_eval_bool );
-	set_add( newconn, "default_target", "root", NULL );
-	set_add( newconn, "display_namechanges", "false", set_eval_bool );
-	set_add( newconn, "handle_unknown", "root", NULL );
-	set_add( newconn, "html", "nostrip", NULL );
-	set_add( newconn, "lcnicks", "true", set_eval_bool );
-	set_add( newconn, "ops", "both", set_eval_ops );
-	set_add( newconn, "private", "false", set_eval_bool );
-	set_add( newconn, "query_order", "lifo", NULL );
-	set_add( newconn, "save_on_quit", "1", set_eval_bool );
-	set_add( newconn, "to_char", ": ", set_eval_to_char );
-	set_add( newconn, "typing_notice", "false", set_eval_bool );
-	
-	conf_loaddefaults( newconn );
-	
-	return( 1 );	
-} 
-
-GList *bitlbee_connection_destroy( GList *node )
-{
-	GList *returnval;
-
-	log_message(LOGLVL_INFO, "Destroying connection with fd %d", ( (irc_t * )( node->data ) )->fd); 
-	
-	if( ( (irc_t * )( node->data ) )->status && set_getint( (irc_t *)( node->data ), "save_on_quit" ) ) 
-		if( !bitlbee_save( node->data ) )
-			irc_usermsg( node->data, "Error while saving settings!" );
-
-	FD_CLR( ( (irc_t * )( node->data ) )->fd, global.readfds ); 
-	FD_CLR( ( (irc_t * )( node->data ) )->fd, global.writefds ); 
-	
-	closesocket( ( (irc_t * )( node->data ) )->fd );
-
-	returnval=node->next;
-
-	connection_list=g_list_remove_link(connection_list, node);
-	irc_free(node->data);
-	g_list_free(node);
-
-	return returnval;
+	if( !irc_process( irc ) )
+	{
+		log_message( LOGLVL_INFO, "Destroying connection with fd %d.", irc->fd );
+		irc_free( irc );
+		return FALSE;
+	} 
+		
+	return TRUE;
 }
 
+gboolean bitlbee_io_current_client_write( GIOChannel *source, GIOCondition condition, gpointer data )
+{
+	irc_t *irc = data;
+	int st, size;
+	char *temp;
+#ifdef FLOOD_SEND
+	time_t newtime;
+#endif
+
+	count_io_event(source, "main");
+
+#ifdef FLOOD_SEND	
+	newtime = time( NULL );
+	if( ( newtime - irc->oldtime ) > FLOOD_SEND_INTERVAL )
+	{
+		irc->sentbytes = 0;
+		irc->oldtime = newtime;
+	}
+#endif
+	
+	if( irc->sendbuffer == NULL )
+		return( FALSE );
+	
+	size = strlen( irc->sendbuffer );
+	
+#ifdef FLOOD_SEND
+	if( ( FLOOD_SEND_BYTES - irc->sentbytes ) > size )
+		st = write( irc->fd, irc->sendbuffer, size );
+	else
+		st = write( irc->fd, irc->sendbuffer, ( FLOOD_SEND_BYTES - irc->sentbytes ) );
+#else
+	st = write( irc->fd, irc->sendbuffer, size );
+#endif
+	
+	if( st <= 0 )
+	{
+		if( sockerr_again() )
+		{
+			return TRUE;
+		}
+		else
+		{
+			irc_free( irc );
+			return FALSE;
+		}
+	}
+	
+#ifdef FLOOD_SEND
+	irc->sentbytes += st;
+#endif		
+	
+	if( st == size )
+	{
+		g_free( irc->sendbuffer );
+		irc->sendbuffer = NULL;
+		
+		irc->w_watch_source_id = 0;
+		return( FALSE );
+	}
+	else
+	{
+		temp = g_strdup( irc->sendbuffer + st );
+		g_free( irc->sendbuffer );
+		irc->sendbuffer = temp;
+		
+		return( TRUE );
+	}
+}
 
 int bitlbee_load( irc_t *irc, char* password )
 {
@@ -501,6 +441,16 @@ int bitlbee_save( irc_t *irc )
 	return( 1 );
 }
 
+void bitlbee_shutdown( gpointer data )
+{
+	/* Try to save data for all active connections (if desired). */
+	while( irc_connection_list != NULL )
+		irc_free( irc_connection_list->data );
+	
+	/* We'll only reach this point when not running in inetd mode: */
+	g_main_quit( global.loop );
+}
+
 int root_command_string( irc_t *irc, user_t *u, char *command )
 {
 	char *cmd[IRC_MAX_ARGS];
@@ -566,7 +516,7 @@ void http_decode( char *s )
 	char *t;
 	int i, j, k;
 	
-	t = bitlbee_alloc( strlen( s ) + 1 );
+	t = g_new( char, strlen( s ) + 1 );
 	
 	for( i = j = 0; s[i]; i ++, j ++ )
 	{
@@ -607,7 +557,7 @@ void http_encode( char *s )
 	{
 		if( t[i] <= ' ' || ((unsigned char *)t)[i] >= 128 || t[i] == '%' )
 		{
-			sprintf( s + j, "%%%02X", t[i] );
+			sprintf( s + j, "%%%02X", ((unsigned char*)t)[i] );
 			j += 2;
 		}
 		else
@@ -620,29 +570,14 @@ void http_encode( char *s )
 	g_free( t );
 }
 
-
-void *bitlbee_alloc( size_t size )
+/* Strip newlines from a string. Modifies the string passed to it. */ 
+char *strip_newlines( char *source )
 {
-	void *mem;
+	int i;	
 
-	mem=g_malloc(size);
-	if(mem==NULL) {
-		log_error("g_malloc");
-		exit(1);
-	}
+	for( i = 0; source[i] != '\0'; i ++ )
+		if( source[i] == '\n' || source[i] == '\r' )
+			source[i] = 32;
 	
-	return(mem);
-}
-
-void *bitlbee_realloc( void *oldmem, size_t newsize )
-{
-	void *newmem;
-
-	newmem=g_realloc(oldmem, newsize);
-	if(newmem==NULL) {
-		log_error("realloc");
-		exit(1);
-	}
-	
-	return(newmem);
+	return source;
 }

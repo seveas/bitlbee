@@ -276,7 +276,7 @@ guint8 *aimbs_getraw(aim_bstream_t *bs, int len)
 
 char *aimbs_getstr(aim_bstream_t *bs, int len)
 {
-	char *ob;
+	guint8 *ob;
 
 	if (!(ob = g_malloc(len+1)))
 		return NULL;
@@ -288,7 +288,7 @@ char *aimbs_getstr(aim_bstream_t *bs, int len)
 	
 	ob[len] = '\0';
 
-	return ob;
+	return (char *)ob;
 }
 
 int aimbs_putraw(aim_bstream_t *bs, const guint8 *v, int len)

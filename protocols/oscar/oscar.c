@@ -20,15 +20,7 @@
  *
  */
 
-#ifndef _WIN32
-#include <netdb.h>
-#include <unistd.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <sys/socket.h>
-#else
-#include <winsock.h>
-#endif
+#include "sock.h"
 #include <errno.h>
 #include <ctype.h>
 #include <string.h>
@@ -1728,15 +1720,12 @@ static int gaim_bosrights(aim_session_t *sess, aim_frame_t *fr, ...) {
 	odata->rights.maxpermits = (guint)maxpermits;
 	odata->rights.maxdenies = (guint)maxdenies;
 
-	account_online(gc);
 //	serv_finish_login(gc);
 
 	if (bud_list_cache_exists(gc))
 		do_import(gc, NULL);
 
 	aim_clientready(sess, fr->conn);
-
-	aim_icq_reqofflinemsgs(sess);
 
 	aim_reqservice(sess, fr->conn, AIM_CONN_TYPE_CHATNAV);
 
@@ -2065,7 +2054,13 @@ static int gaim_ssi_parselist(aim_session_t *sess, aim_frame_t *fr, ...) {
 	if (tmp)
 		do_export(gc);
 	aim_ssi_enable(sess, fr->conn);
-
+	
+	/* Request offline messages, now that the buddy list is complete. */
+	aim_icq_reqofflinemsgs(sess);
+	
+	/* Now that we have a buddy list, we can tell BitlBee that we're online. */
+	account_online(gc);
+	
 	return 1;
 }
 

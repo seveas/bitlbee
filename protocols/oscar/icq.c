@@ -100,7 +100,7 @@ int aim_icq_sendxmlreq(aim_session_t *sess, const char *xml)
 	aimbs_putle16(&fr->data, snacid); /* eh. */
 	aimbs_putle16(&fr->data, 0x0998); /* shrug. */
 	aimbs_putle16(&fr->data, strlen(xml) + 1);
-	aimbs_putraw(&fr->data, xml, strlen(xml) + 1);
+	aimbs_putraw(&fr->data, (guint8 *)xml, strlen(xml) + 1);
 
 	aim_tx_enqueue(sess, fr);
 

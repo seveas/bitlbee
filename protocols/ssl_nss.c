@@ -25,6 +25,10 @@
   Suite 330, Boston, MA  02111-1307  USA
 */
 
+#include "bitlbee.h"
+#include "proxy.h"
+#include "ssl_client.h"
+#include "sock.h"
 #include <nspr.h>
 #include <prio.h>
 #include <sslproto.h>
@@ -33,9 +37,6 @@
 #include <ssl.h>
 #include <secerr.h>
 #include <sslerr.h>
-#include "proxy.h"
-#include "ssl_client.h"
-#include "sock.h"
 
 static gboolean initialized = FALSE;
 

@@ -621,7 +621,7 @@ struct aim_fileheader_t {
 
 struct aim_filetransfer_priv {
 	char sn[MAXSNLEN];
-	char cookie[8];
+	guint8 cookie[8];
 	char ip[30];
 	int state;
 	struct aim_fileheader_t fh;
@@ -881,7 +881,7 @@ int aim_handlerendconnect(aim_session_t *sess, aim_conn_t *cur);
 #define AIM_TRANSFER_DENY_NOTSUPPORTED 0x0000
 #define AIM_TRANSFER_DENY_DECLINE 0x0001
 #define AIM_TRANSFER_DENY_NOTACCEPTING 0x0002
-int aim_denytransfer(aim_session_t *sess, const char *sender, const char *cookie, unsigned short code);
+int aim_denytransfer(aim_session_t *sess, const char *sender, const guint8 *cookie, unsigned short code);
 aim_conn_t *aim_accepttransfer(aim_session_t *sess, aim_conn_t *conn, const char *sn, const guint8 *cookie, const guint8 *ip, guint16 listingfiles, guint16 listingtotsize, guint16 listingsize, guint32 listingchecksum, guint16 rendid);
 
 int aim_getinfo(aim_session_t *, aim_conn_t *, const char *, unsigned short);

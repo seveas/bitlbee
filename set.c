@@ -34,12 +34,12 @@ set_t *set_add( irc_t *irc, char *key, char *def, void *eval )
 		if( ( s = irc->set ) )
 		{
 			while( s->next ) s = s->next;
-			s->next = bitlbee_alloc( sizeof( set_t ) );
+			s->next = g_new ( set_t, 1 );
 			s = s->next;
 		}
 		else
 		{
-			s = irc->set = bitlbee_alloc( sizeof( set_t ) );
+			s = irc->set = g_new( set_t, 1 );
 		}
 		memset( s, 0, sizeof( set_t ) );
 		s->key = g_strdup( key );
@@ -179,7 +179,7 @@ char *set_eval_bool( irc_t *irc, set_t *set, char *value )
 
 char *set_eval_to_char( irc_t *irc, set_t *set, char *value )
 {
-	char *s = bitlbee_alloc( 3 );
+	char *s = g_new( char, 3 );
 	
 	if( *value == ' ' )
 		strcpy( s, " " );

@@ -35,6 +35,7 @@
 global_t global;	/* Against global namespace pollution */
 
 static void sighandler( int signal );
+gboolean bitlbee_dirty_workaround( gpointer data );
 
 int main( int argc, char *argv[] )
 {
@@ -42,6 +43,8 @@ int main( int argc, char *argv[] )
 	struct sigaction sig, old;
 	
 	memset( &global, 0, sizeof( global_t ) );
+	
+	global.loop = g_main_new( FALSE );
 	
 	log_init( );
 	nogaim_init( );
@@ -57,7 +60,7 @@ int main( int argc, char *argv[] )
 	if( global.conf->runmode == RUNMODE_INETD )
 	{
 		i = bitlbee_inetd_init();
-		log_message(LOGLVL_INFO, "Bitlbee %s starting in inetd mode.", BITLBEE_VERSION );
+		log_message( LOGLVL_INFO, "Bitlbee %s starting in inetd mode.", BITLBEE_VERSION );
 
 	}
 	else if( global.conf->runmode == RUNMODE_DAEMON )
@@ -87,28 +90,66 @@ int main( int argc, char *argv[] )
 	if( access( global.conf->configdir, F_OK ) != 0 )
 		log_message( LOGLVL_WARNING, "The configuration directory %s does not exist. Configuration won't be saved.", CONFIG );
 	else if( access( global.conf->configdir, R_OK ) != 0 || access( global.conf->configdir, W_OK ) != 0 )
-		log_message( LOGLVL_WARNING, "Permission problem: Can't read/write from/to %s.", CONFIG );
+		log_message( LOGLVL_WARNING, "Permission problem: Can't read/write from/to %s.", global.conf->configdir );
 	if( help_init( &(global.help) ) == NULL )
 		log_message( LOGLVL_WARNING, "Error opening helpfile %s.", HELP_FILE );
 	
-	while( 1 )
-	{
-		if( global.conf->runmode == RUNMODE_INETD )
-			i = bitlbee_inetd_main_loop();
-		else if( global.conf->runmode == RUNMODE_DAEMON )
-			i = bitlbee_daemon_main_loop();
-		if( i == -1 )
-			return( 1 );
-		else if( i != 0 )
-			break;
-	}
+	/* Workaround against runaway problems. Bah, this is really dirty,
+	   but in the end not really different from the <=0.91 situation,
+	   which makes it an acceptable temporary "solution". */
+	g_timeout_add( 0, bitlbee_dirty_workaround, NULL );
+	
+	g_main_run( global.loop );
 	
 	return( 0 );
 }
 
+gboolean bitlbee_dirty_workaround( gpointer data )
+{
+	usleep( 50000 );
+	return( TRUE );
+}
+
+void proxyprofiler_dump();
+
 static void sighandler( int signal )
 {
-	if( signal != SIGPIPE )
+	/* FIXME: In fact, calling log_message() here can be dangerous. But well, let's take the risk for now. */
+	
+	if( signal == SIGTERM )
+	{
+		static int first = 1;
+		
+		if( first )
+		{
+			/* We don't know what we were doing when this signal came in. It's not safe to touch
+			   the user data now (not to mention writing them to disk), so add a timer. */
+			
+			log_message( LOGLVL_ERROR, "SIGTERM received, cleaning up process." );
+			g_timeout_add_full( G_PRIORITY_LOW, 1, (GSourceFunc) bitlbee_shutdown, NULL, NULL );
+			
+			first = 0;
+		}
+		else
+		{
+			/* Well, actually, for now we'll never need this part because this signal handler
+			   will never be called more than once in a session for a non-SIGPIPE signal...
+			   But just in case we decide to change that: */
+			
+			log_message( LOGLVL_ERROR, "SIGTERM received twice, so long for a clean shutdown." );
+			raise( signal );
+		}
+	}
+#ifdef PROXYPROFILER
+	else if( signal == SIGXCPU )
+	{
+		write_io_activity();
+		proxyprofiler_dump();
+		log_message( LOGLVL_ERROR, "Received SIGXCPU, dumping some debugging info." );
+		exit( 1 );
+	}
+#endif
+	else if( signal != SIGPIPE )
 	{
 		log_message( LOGLVL_ERROR, "Fatal signal received: %d. That's probably a bug.", signal );
 		raise( signal );

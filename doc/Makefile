@@ -1,24 +1,34 @@
 -include ../Makefile.settings
+EXTRAPARANEWLINE = 1
+# EXTRAPARANEWLINE = 0
 
 all: user-guide.txt user-guide.html help.txt # user-guide.pdf user-guide.ps user-guide.rtf
 
-user-guide.txt: user-guide.xml
-	xmlto txt $<
+%.tex: %.db.xml
+	xsltproc --stringparam l10n.gentext.default.language "en" --stringparam latex.documentclass.common "" --stringparam latex.babel.language "" --output $@ http://db2latex.sourceforge.net/xsl/docbook.xsl $<
 
-user-guide.html: user-guide.xml
+%.txt: %.db.xml
+	xmlto --skip-validation txt $<
+
+%.html: %.db.xml
 	xsltproc --output $@ http://docbook.sourceforge.net/release/xsl/current/html/docbook.xsl $<
 
-user-guide.pdf: user-guide.xml
-	xmlto pdf $<
+%.pdf: %.db.xml
+	xmlto --skip-validation pdf $<
 
-user-guide.ps: user-guide.xml
-	xmlto ps $<
+%.ps: %.db.xml
+	xmlto --skip-validation ps $<
+
+help.xml: commands.xml
+
+%.db.xml: %.xml docbook.xsl
+	xsltproc --xinclude --output $@ docbook.xsl $< 
 
 help.txt: help.xml help.xsl
-	xsltproc help.xsl $< | sed -e 's/_b_//g' > $@
+	xsltproc --stringparam extraparanewline "$(EXTRAPARANEWLINE)" --xinclude help.xsl $< | sed -e 's/_b_//g' > $@
 
 clean: 
-	rm -f *.html *.pdf *.ps *.rtf *.txt
+	rm -f *.html *.pdf *.ps *.rtf *.txt *.db.xml
 
 install:
 	mkdir -p $(DESTDIR)$(MANDIR)/man8/ $(DESTDIR)$(MANDIR)/man5/

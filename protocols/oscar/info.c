@@ -32,7 +32,7 @@ int aim_getinfo(aim_session_t *sess, aim_conn_t *conn, const char *sn, guint16 i
 	aim_putsnac(&fr->data, 0x0002, 0x0005, 0x0000, snacid);
 	aimbs_put16(&fr->data, infotype);
 	aimbs_put8(&fr->data, strlen(sn));
-	aimbs_putraw(&fr->data, sn, strlen(sn));
+	aimbs_putraw(&fr->data, (guint8 *)sn, strlen(sn));
 
 	aim_tx_enqueue(sess, fr);
 
@@ -308,7 +308,7 @@ int aim_extractuserinfo(aim_session_t *sess, aim_bstream_t *bs, aim_userinfo_t *
 	 * byte containing its length.
 	 */
 	snlen = aimbs_get8(bs);
-	aimbs_getrawbuf(bs, outinfo->sn, snlen);
+	aimbs_getrawbuf(bs, (guint8 *)outinfo->sn, snlen);
 
 	/*
 	 * Warning Level.  Stored as an unsigned short.
@@ -487,7 +487,7 @@ int aim_putuserinfo(aim_bstream_t *bs, aim_userinfo_t *info)
 		return -EINVAL;
 
 	aimbs_put8(bs, strlen(info->sn));
-	aimbs_putraw(bs, info->sn, strlen(info->sn));
+	aimbs_putraw(bs, (guint8 *)info->sn, strlen(info->sn));
 
 	aimbs_put16(bs, info->warnlevel);
 
@@ -551,7 +551,7 @@ int aim_sendbuddyoffgoing(aim_session_t *sess, aim_conn_t *conn, const char *sn)
 	
 	aim_putsnac(&fr->data, 0x0003, 0x000c, 0x0000, snacid);
 	aimbs_put8(&fr->data, strlen(sn));
-	aimbs_putraw(&fr->data, sn, strlen(sn));
+	aimbs_putraw(&fr->data, (guint8 *)sn, strlen(sn));
 
 	aim_tx_enqueue(sess, fr);
 
@@ -576,7 +576,7 @@ int aim_0002_000b(aim_session_t *sess, aim_conn_t *conn, const char *sn)
 	
 	aim_putsnac(&fr->data, 0x0002, 0x000b, 0x0000, snacid);
 	aimbs_put8(&fr->data, strlen(sn));
-	aimbs_putraw(&fr->data, sn, strlen(sn));
+	aimbs_putraw(&fr->data, (guint8 *)sn, strlen(sn));
 
 	aim_tx_enqueue(sess, fr);
 

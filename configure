@@ -97,7 +97,7 @@ cat<<EOF>config.h
 
 #define CONFIG "$config"
 #define ETCDIR "$etcdir"
-#define DATADIR "$datadir"
+#define VARDIR "$datadir"
 #define ARCH "$arch"
 #define CPU "$cpu"
 #define IPV6
@@ -124,7 +124,9 @@ else
 	exit 1;
 fi
 
-if type ld > /dev/null 2> /dev/null; then
+if [ -n "$LD" ]; then
+	echo "LD=$LD" >> Makefile.settings;
+elif type ld > /dev/null 2> /dev/null; then
 	echo "LD=ld" >> Makefile.settings;
 else
 	echo 'Cannot find ld, aborting.'
@@ -136,11 +138,13 @@ if type pkg-config > /dev/null 2>/dev/null && pkg-config glib-2.0; then
 EFLAGS+=`pkg-config --libs glib-2.0`
 CFLAGS+=`pkg-config --cflags glib-2.0`
 EOF
+	echo '#define GLIB2' >> config.h
 elif type glib-config > /dev/null 2> /dev/null; then
 	cat<<EOF>>Makefile.settings
 EFLAGS+=`glib-config --libs`
 CFLAGS+=`glib-config --cflags`
 EOF
+	echo '#define GLIB1' >> config.h
 else
 	echo 'Cannot find glib development libraries, aborting. (Install libglib-dev?)'
 	exit 1;
@@ -255,6 +259,8 @@ else
 		echo 'Stripping binaries does not make sense when debugging. Stripping disabled.'
 		echo 'STRIP=\# skip strip' >> Makefile.settings
 		strip=0;
+	elif [ -n "$STRIP" ]; then
+		echo "STRIP=$STRIP" >> Makefile.settings;
 	elif type strip > /dev/null 2> /dev/null; then
 		echo "STRIP=strip" >> Makefile.settings;
 	elif /bin/test -x /usr/ccs/bin/strip; then

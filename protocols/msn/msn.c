@@ -322,7 +322,7 @@ static int msn_chat_open( struct gaim_connection *gc, char *who )
 		/* Create a magic message. This is quite hackish, but who cares? :-P */
 		m = g_new0( struct msn_message, 1 );
 		m->who = g_strdup( who );
-		m->text = g_strdup( "MSN_SB_GROUPCHAT" );
+		m->text = g_strdup( GROUPCHAT_SWITCHBOARD_MESSAGE );
 		
 		/* Queue the magic message and cross your fingers. */
 		md->msgq = g_slist_append( md->msgq, m );
@@ -350,12 +350,25 @@ static void msn_rem_permit( struct gaim_connection *gc, char *who )
 
 static void msn_add_deny( struct gaim_connection *gc, char *who )
 {
+	struct msn_switchboard *sb;
+	
 	msn_buddy_list_add( gc, "BL", who, who );
+	
+	/* If there's still a conversation with this person, close it. */
+	if( ( sb = msn_sb_by_handle( gc, who ) ) )
+	{
+		msn_sb_destroy( sb );
+	}
 }
 
 static void msn_rem_deny( struct gaim_connection *gc, char *who )
 {
 	msn_buddy_list_remove( gc, "BL", who );
+}
+
+static int msn_send_typing( struct gaim_connection *gc, char *who, int typing )
+{
+	return( msn_send_im( gc, who, TYPING_NOTIFICATION_MESSAGE, strlen( TYPING_NOTIFICATION_MESSAGE ), 0 ) );
 }
 
 void msn_init(struct prpl *ret)
@@ -380,6 +393,7 @@ void msn_init(struct prpl *ret)
 	ret->rem_permit = msn_rem_permit;
 	ret->add_deny = msn_add_deny;
 	ret->rem_deny = msn_rem_deny;
+	ret->send_typing = msn_send_typing;
 
 	my_protocol = ret;
 }

@@ -185,6 +185,7 @@ struct prpl {
 	void (* login)		(struct aim_user *);
 	void (* close)		(struct gaim_connection *);
 	int  (* send_im)	(struct gaim_connection *, char *who, char *message, int len, int away);
+	int  (* send_typing)	(struct gaim_connection *, char *who, int typing);
 	void (* set_info)	(struct gaim_connection *, char *info);
 	void (* get_info)	(struct gaim_connection *, char *who);
 	void (* set_away)	(struct gaim_connection *, char *state, char *message);
@@ -305,8 +306,8 @@ G_MODULE_EXPORT void serv_got_chat_left( struct gaim_connection *gc, int id );
 // void serv_finish_login( struct gaim_connection *gc );
 
 /* util.c */
-G_MODULE_EXPORT unsigned char *utf8_to_str( unsigned char *in );
-G_MODULE_EXPORT char *str_to_utf8( unsigned char *in );
+G_MODULE_EXPORT char *utf8_to_str( const char *in );
+G_MODULE_EXPORT char *str_to_utf8( const char *in );
 G_MODULE_EXPORT void strip_linefeed( gchar *text );
 G_MODULE_EXPORT char *add_cr( char *text );
 G_MODULE_EXPORT char *tobase64( const char *text );

@@ -40,11 +40,11 @@
 #include <glib.h>
 #include <time.h>
 
-unsigned char *utf8_to_str(unsigned char *in)
+char *utf8_to_str(const char *in)
 {
 	int n = 0, i = 0;
 	int inlen;
-	unsigned char *result;
+	char *result;
 
 	if (!in)
 		return NULL;
@@ -85,7 +85,7 @@ unsigned char *utf8_to_str(unsigned char *in)
 	return result;
 }
 
-char *str_to_utf8(unsigned char *in)
+char *str_to_utf8(const char *in)
 {
 	int n = 0, i = 0;
 	int inlen;

@@ -88,7 +88,7 @@ int setpass (irc_t *irc, char *pass, char* md5sum) {
 	char digits[3];
 	
 	md5_init (&md5state);
-	md5_append (&md5state, pass, strlen (pass));
+	md5_append (&md5state, (unsigned char *)pass, strlen (pass));
 	md5_finish (&md5state, digest);
 	
 	for (i = 0, j = 0; i < 16; i++, j += 2) {
@@ -118,7 +118,7 @@ char *hashpass (irc_t *irc) {
 	memset (rv, 0, 33);
 	
 	md5_init (&md5state);
-	md5_append (&md5state, irc->password, strlen (irc->password));
+	md5_append (&md5state, (unsigned char *)irc->password, strlen (irc->password));
 	md5_finish (&md5state, digest);
 	
 	for (i = 0; i < 16; i++) {

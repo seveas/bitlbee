@@ -22,7 +22,7 @@ int aim_usersearch_address(aim_session_t *sess, aim_conn_t *conn, const char *ad
 	snacid = aim_cachesnac(sess, 0x000a, 0x0002, 0x0000, g_strdup(address), strlen(address)+1);
 	aim_putsnac(&fr->data, 0x000a, 0x0002, 0x0000, snacid);
 	
-	aimbs_putraw(&fr->data, address, strlen(address)); 
+	aimbs_putraw(&fr->data, (guint8 *)address, strlen(address)); 
 
 	aim_tx_enqueue(sess, fr);
 

@@ -51,7 +51,7 @@ void shaUpdate(SHA_CTX *ctx, unsigned char *dataIn, int len) {
    */
   for (i = 0; i < len; i++) {
     ctx->W[ctx->lenW / 4] <<= 8;
-    ctx->W[ctx->lenW / 4] |= (uint32)dataIn[i];
+    ctx->W[ctx->lenW / 4] |= (guint32)dataIn[i];
     if ((++ctx->lenW) % 64 == 0) {
       shaHashBlock(ctx);
       ctx->lenW = 0;
@@ -110,7 +110,7 @@ void shaBlock(unsigned char *dataIn, int len, unsigned char hashout[20]) {
 
 static void shaHashBlock(SHA_CTX *ctx) {
   int t;
-  uint32 A,B,C,D,E,TEMP;
+  guint32 A,B,C,D,E,TEMP;
 
   for (t = 16; t <= 79; t++)
     ctx->W[t] =

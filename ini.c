@@ -27,9 +27,8 @@
 
 ini_t *ini_open( char *file )
 {
-	ini_t *ini = (ini_t *) bitlbee_alloc( sizeof( ini_t ) );
+	ini_t *ini = g_new0( ini_t, 1 );
 	
-	memset( ini, 0, sizeof( ini_t ) );
 	if( ( ini->fp = fopen( file, "r" ) ) == NULL )
 	{
 		g_free( ini );

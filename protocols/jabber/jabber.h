@@ -31,7 +31,7 @@
 #include <ctype.h>
 #ifdef _WIN32
 #undef DATADIR
-#include <winsock.h>
+#include "sock.h"
 #endif
 
 #include "lib.h"

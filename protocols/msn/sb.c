@@ -121,17 +121,28 @@ int msn_sb_sendmessage( struct msn_switchboard *sb, char *text )
 {
 	if( sb->ready )
 	{
-		char cmd[1024];
-		char *buf = g_new0( char, sizeof( MSN_MESSAGE_HEADERS ) + strlen( text ) * 2 );
-		int i = strlen( MSN_MESSAGE_HEADERS ), j;
+		char cmd[1024], *buf;
+		int i, j;
 		
-		strcpy( buf, MSN_MESSAGE_HEADERS );
-		for( j = 0; text[j]; j ++ )
+		if( strcmp( text, TYPING_NOTIFICATION_MESSAGE ) != 0 )
 		{
-			if( text[j] == '\n' )
-				buf[i++] = '\r';
+			buf = g_new0( char, sizeof( MSN_MESSAGE_HEADERS ) + strlen( text ) * 2 );
+			i = strlen( MSN_MESSAGE_HEADERS );
 			
-			buf[i++] = text[j];
+			strcpy( buf, MSN_MESSAGE_HEADERS );
+			for( j = 0; text[j]; j ++ )
+			{
+				if( text[j] == '\n' )
+					buf[i++] = '\r';
+				
+				buf[i++] = text[j];
+			}
+		}
+		else
+		{
+			i = strlen( MSN_TYPING_HEADERS ) + strlen( sb->gc->username );
+			buf = g_new0( char, strlen( MSN_TYPING_HEADERS ) + strlen( sb->gc->username ) );
+			i = g_snprintf( buf, i, MSN_TYPING_HEADERS, sb->gc->username );
 		}
 		
 		g_snprintf( cmd, sizeof( cmd ), "MSG %d N %d\r\n", ++sb->trId, i );
@@ -409,13 +420,13 @@ static int msn_sb_command( gpointer data, char **cmd, int num_parts )
 			/* Without this, sendmessage() will put everything back on the queue... */
 			sb->ready = 1;
 			
-			for( l = sb->msgq; l; l = l->next )
+			while( ( l = sb->msgq ) )
 			{
 				m = l->data;
 				if( st )
 				{
 					/* This hack is meant to convert a regular new chat into a groupchat */
-					if( strcmp( m->text, "MSN_SB_GROUPCHAT" ) == 0 )
+					if( strcmp( m->text, GROUPCHAT_SWITCHBOARD_MESSAGE ) == 0 )
 						msn_sb_to_chat( sb );
 					else
 						st = msn_sb_sendmessage( sb, m->text );
@@ -423,9 +434,9 @@ static int msn_sb_command( gpointer data, char **cmd, int num_parts )
 				g_free( m->text );
 				g_free( m->who );
 				g_free( m );
+				
+				sb->msgq = g_slist_remove( sb->msgq, m );
 			}
-			g_slist_free( sb->msgq );
-			sb->msgq = NULL;
 			
 			return( st );
 		}

@@ -3,21 +3,13 @@
 
 #include <gmodule.h>
 
-#if (SIZEOF_INT == 4)
-typedef unsigned int uint32;
-#elif (SIZEOF_SHORT == 4)
-typedef unsigned short uint32;
-#else
-typedef unsigned int uint32;
-#endif /* HAVEUINT32 */
- 
 G_MODULE_EXPORT int strprintsha(char *dest, int *hashval);
  
 typedef struct {
-  uint32 H[5];
-  uint32 W[80];
+  guint32 H[5];
+  guint32 W[80];
   int lenW;
-  uint32 sizeHi,sizeLo;
+  guint32 sizeHi,sizeLo;
 } SHA_CTX;
  
 G_MODULE_EXPORT void shaInit(SHA_CTX *ctx);

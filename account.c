@@ -34,14 +34,12 @@ account_t *account_add( irc_t *irc, int protocol, char *user, char *pass )
 	if( irc->accounts )
 	{
 		for( a = irc->accounts; a->next; a = a->next );
-		a = a->next = bitlbee_alloc( sizeof( account_t ) );
+		a = a->next = g_new0 ( account_t, 1 );
 	}
 	else
 	{
-		irc->accounts = a = bitlbee_alloc( sizeof( account_t ) );
+		irc->accounts = a = g_new0 ( account_t, 1 );
 	}
-	
-	memset( a, 0, sizeof( account_t ) );
 	
 	a->protocol = protocol;
 	a->user = g_strdup( user );
@@ -133,8 +131,7 @@ void account_on( irc_t *irc, account_t *a )
 	
 	cancel_auto_reconnect( a );
 	
-	u = bitlbee_alloc( sizeof( struct aim_user ) );
-	memset( u, 0, sizeof( *u ) );
+	u = g_new0 ( struct aim_user, 1 );
 	u->irc = irc;
 	u->protocol = a->protocol;
 	strncpy( u->username, a->user, sizeof( u->username ) - 1 );

@@ -28,23 +28,37 @@
 
 user_t *user_add( irc_t *irc, char *nick )
 {
-	user_t *u;
+	user_t *u, *lu = NULL;
 	char *key;
 	
-	u = irc->users;
-	if( u )
+	if( !nick_ok( nick ) )
+		return( NULL );
+	
+	if( user_find( irc, nick ) != NULL )
+		return( NULL );
+	
+	if( ( u = irc->users ) )
 	{
-		while( 1 )
+		while( u )
 		{
-			if( nick_cmp( u->nick, nick ) == 0 )
-				return( NULL );
-			if( u->next )
-				u = u->next;
-			else
+			if( nick_cmp( nick, u->nick ) < 0 )
 				break;
+			
+			lu = u;
+			u = u->next;
 		}
-		u->next = g_new0( user_t, 1 );
-		u = u->next;
+		
+		u = g_new0( user_t, 1 );
+		if( lu )
+		{
+			u->next = lu->next;
+			lu->next = u;
+		}
+		else
+		{
+			u->next = irc->users;
+			irc->users = u;
+		}
 	}
 	else
 	{
@@ -66,6 +80,9 @@ int user_del( irc_t *irc, char *nick )
 	user_t *u, *t;
 	char *key;
 	gpointer okey, ovalue;
+	
+	if( !nick_ok( nick ) )
+		return( 0 );
 	
 	u = irc->users;
 	t = NULL;
@@ -116,9 +133,10 @@ user_t *user_find( irc_t *irc, char *nick )
 	char key[512] = "";
 	
 	strncpy( key, nick, sizeof( key ) - 1 );
-	nick_lc( key );
-	
-	return( g_hash_table_lookup( irc->userhash, key ) );
+	if( nick_lc( key ) )
+		return( g_hash_table_lookup( irc->userhash, key ) );
+	else
+		return( NULL );
 }
 
 user_t *user_findhandle( struct gaim_connection *gc, char *handle )
@@ -168,4 +186,38 @@ void user_rename( irc_t *irc, char *oldnick, char *newnick )
 	key = g_strdup( newnick );
 	nick_lc( key );
 	g_hash_table_insert( irc->userhash, key, u );
+	
+	/* Also, let's try to keep the linked list nicely sorted. Fear this
+	   code. If my teacher would see this, she would cry. ;-) */
+	{
+		user_t *u1, *lu1;
+		
+		/* Remove the user from the old position in the chain. */
+		if( u == irc->users )
+		{
+			irc->users = u->next;
+		}
+		else
+		{
+			u1 = u;
+			for( lu1 = irc->users; lu1->next != u1; lu1 = lu1->next );
+			lu1->next = u1->next;
+		}
+		
+		/* Search for the new position. */
+		for( lu1 = NULL, u1 = irc->users; u1; u1 = u1->next )
+		{
+			if( nick_cmp( newnick, u1->nick ) < 0 )
+				break;
+			
+			lu1 = u1;
+		}
+		
+		/* Insert it at this new position. */
+		u->next = u1;
+		if( lu1 )
+			lu1->next = u;
+		else
+			irc->users = u;
+	}
 }

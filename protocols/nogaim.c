@@ -62,26 +62,22 @@ GSList *connections;
 
 void nogaim_init()
 {
-	proto_prpl[PROTO_MSN] = bitlbee_alloc( sizeof( struct prpl ) );
-	memset( proto_prpl[PROTO_MSN], 0, sizeof( struct prpl ) );
+	proto_prpl[PROTO_MSN] = g_new0 ( struct prpl, 1 );
 #ifdef WITH_MSN
 	msn_init( proto_prpl[PROTO_MSN] );
 #endif
 
-	proto_prpl[PROTO_OSCAR] = bitlbee_alloc( sizeof( struct prpl ) );
-	memset( proto_prpl[PROTO_OSCAR], 0, sizeof( struct prpl ) );
+	proto_prpl[PROTO_OSCAR] = g_new0( struct prpl, 1 );
 #ifdef WITH_OSCAR
 	oscar_init( proto_prpl[PROTO_OSCAR] );
 #endif
 	
-	proto_prpl[PROTO_YAHOO] = bitlbee_alloc( sizeof( struct prpl ) );
-	memset( proto_prpl[PROTO_YAHOO], 0, sizeof( struct prpl ) );
+	proto_prpl[PROTO_YAHOO] = g_new0( struct prpl, 1 );
 #ifdef WITH_YAHOO
 	byahoo_init( proto_prpl[PROTO_YAHOO] );
 #endif
 	
-	proto_prpl[PROTO_JABBER] = bitlbee_alloc( sizeof( struct prpl ) );
-	memset( proto_prpl[PROTO_JABBER], 0, sizeof( struct prpl ) );
+	proto_prpl[PROTO_JABBER] = g_new0( struct prpl, 1 );
 #ifdef WITH_JABBER
 	jabber_init( proto_prpl[PROTO_JABBER] );
 #endif
@@ -173,7 +169,7 @@ static char *proto_away_alias_find( GList *gcm, char *away )
    it's not going to be here for too long anymore. */
 int handle_cmp( char *a, char *b, int protocol )
 {
-	if( protocol == PROTO_TOC )
+	if( protocol == PROTO_TOC || protocol == PROTO_ICQ )
 	{
 		/* AIM, being teh evil, thinks it's cool that users can put
 		   random spaces in screennames. But "A B" and "AB" are
@@ -322,8 +318,13 @@ void account_online( struct gaim_connection *gc )
 	
 	if( gc->protocol == PROTO_ICQ )
 	{
-		irc_usermsg( gc->irc, "\x02""***\x02"" BitlBee now supports ICQ server-side contact lists. "
-		                      "See \x02""help import_buddies\x02"" for more information." );
+		for( u = gc->irc->users; u; u = u->next )
+			if( u->gc == gc )
+				break;
+		
+		if( u == NULL )
+			irc_usermsg( gc->irc, "\x02""***\x02"" BitlBee now supports ICQ server-side contact lists. "
+			                      "See \x02""help import_buddies\x02"" for more information." );
 	}
 }
 
@@ -474,6 +475,7 @@ void add_buddy( struct gaim_connection *gc, char *group, char *handle, char *rea
 	u->gc = gc;
 	u->handle = g_strdup( handle );
 	u->send_handler = buddy_send_handler;
+	u->last_typing_notice = 0;
 }
 
 struct buddy *find_buddy( struct gaim_connection *gc, char *handle )
@@ -513,21 +515,21 @@ void serv_buddy_rename( struct gaim_connection *gc, char *handle, char *realname
 	
 	if( !u ) return;
 	
-	if( g_strcasecmp( u->realname, realname ) != 0 )
+	/* Convert all UTF-8 */
+	if( g_strncasecmp( set_getstr( gc->irc, "charset" ), "none", 4 ) != 0 &&
+	    do_iconv( "UTF-8", set_getstr( gc->irc, "charset" ), realname, buf, 0, sizeof( buf ) ) != -1 )
+		name = buf;
+	else
+		name = realname;
+	
+	if( g_strcasecmp( u->realname, name ) != 0 )
 	{
 		if( u->realname != u->nick ) g_free( u->realname );
-
-		/* Convert all UTF-8 */
-		if( g_strncasecmp( set_getstr( gc->irc, "charset" ), "none", 4 ) != 0 &&
-		    do_iconv( "UTF-8", set_getstr( gc->irc, "charset" ), realname, buf, 0, 1024 ) != -1 )
-			name = buf;
-		else
-			name = realname;
-
+		
 		u->realname = g_strdup( name );
 		
 		if( ( gc->flags & OPT_LOGGED_IN ) && set_getint( gc->irc, "display_namechanges" ) )
-			irc_usermsg( gc->irc, "User `%s' changed friendly name to `%s'", u->nick, u->realname );
+			irc_usermsg( gc->irc, "User `%s' changed name to `%s'", u->nick, u->realname );
 	}
 }
 
@@ -790,17 +792,16 @@ struct conversation *serv_got_joined_chat( struct gaim_connection *gc, int id, c
 	if( gc->conversations )
 	{
 		for( c = gc->conversations; c->next; c = c->next );
-		c = c->next = bitlbee_alloc( sizeof( struct conversation ) );
+		c = c->next = g_new0( struct conversation, 1 );
 	}
 	else
-		gc->conversations = c = bitlbee_alloc( sizeof( struct conversation ) );
+		gc->conversations = c = g_new0( struct conversation, 1);
 	
-	memset( c, 0, sizeof( struct conversation ) );
 	c->id = id;
 	c->gc = gc;
 	c->title = g_strdup( handle );
 	
-	s = bitlbee_alloc( 16 );
+	s = g_new( char, 16 );
 	sprintf( s, "#chat_%03d", gc->irc->c_id++ );
 	c->channel = g_strdup( s );
 	g_free( s );

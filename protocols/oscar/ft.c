@@ -45,7 +45,7 @@ int aim_handlerendconnect(aim_session_t *sess, aim_conn_t *cur)
 { 
 	int acceptfd = 0;
 	struct sockaddr cliaddr;
-	int clilen = sizeof(cliaddr);
+	unsigned int clilen = sizeof(cliaddr);
 	int ret = 0;
 	aim_conn_t *newconn;
 
@@ -155,7 +155,7 @@ struct aim_directim_intdata *intdata = (struct aim_directim_intdata *)conn->inte
 
 	aimbs_put16(&hdrbs, 0x0000);
 	aimbs_put16(&hdrbs, 0x0000);
-	aimbs_putraw(&hdrbs, sess->sn, strlen(sess->sn));
+	aimbs_putraw(&hdrbs, (guint8 *)sess->sn, strlen(sess->sn));
 	
 	aim_bstream_setpos(&hdrbs, 52); /* bleeehh */
 
@@ -226,7 +226,7 @@ int aim_send_im_direct(aim_session_t *sess, aim_conn_t *conn, const char *msg, i
 	
 	aimbs_put16(&hdrbs, 0x0000);
 	aimbs_put16(&hdrbs, 0x0000);
-	aimbs_putraw(&hdrbs, sess->sn, strlen(sess->sn));
+	aimbs_putraw(&hdrbs, (guint8 *)sess->sn, strlen(sess->sn));
 	
 	aim_bstream_setpos(&hdrbs, 52); /* bleeehh */
 	
@@ -251,7 +251,7 @@ int aim_send_im_direct(aim_session_t *sess, aim_conn_t *conn, const char *msg, i
 	i += aimutil_put16(newpacket->hdr.oft.hdr2+i, 0x393e);
 	i += aimutil_put16(newpacket->hdr.oft.hdr2+i, 0xcac8);
 #endif
-	aimbs_putraw(&fr->data, msg, len);
+	aimbs_putraw(&fr->data, (guint8 *)msg, len);
 	
 	aim_tx_enqueue(sess, fr);
 	
@@ -980,7 +980,7 @@ static void connclose_sendfile(aim_session_t *sess, aim_conn_t *conn)
 	aim_msgcookie_t *cook;
 	struct aim_filetransfer_priv *priv = (struct aim_filetransfer_priv *)conn->priv;
 
-	cook = aim_uncachecookie(sess, priv->cookie, AIM_COOKIETYPE_OFTSEND);
+	cook = aim_uncachecookie(sess, (guint8 *)priv->cookie, AIM_COOKIETYPE_OFTSEND);
 	aim_cookie_free(sess, cook);
 
 	return;
@@ -999,7 +999,7 @@ static void connclose_getfile(aim_session_t *sess, aim_conn_t *conn)
 	aim_msgcookie_t *cook;
 	struct aim_filetransfer_priv *priv = (struct aim_filetransfer_priv *)conn->priv;
 
-	cook = aim_uncachecookie(sess, priv->cookie, AIM_COOKIETYPE_OFTGET);
+	cook = aim_uncachecookie(sess, (guint8 *)priv->cookie, AIM_COOKIETYPE_OFTGET);
 	aim_cookie_free(sess, cook);
 
 	return;

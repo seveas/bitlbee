@@ -844,7 +844,12 @@ void irc_join( irc_t *irc, user_t *u, char *channel )
 
 void irc_part( irc_t *irc, user_t *u, char *channel )
 {
-	irc_write( irc, ":%s!%s@%s PART %s", u->nick, u->user, u->host, channel );
+	irc_write( irc, ":%s!%s@%s PART %s :%s", u->nick, u->user, u->host, channel, "" );
+}
+
+void irc_kick( irc_t *irc, user_t *u, char *channel, user_t *kicker )
+{
+	irc_write( irc, ":%s!%s@%s KICK %s %s :%s", kicker->nick, kicker->user, kicker->host, channel, u->nick, "" );
 }
 
 void irc_kill( irc_t *irc, user_t *u )

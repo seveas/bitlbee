@@ -58,7 +58,7 @@ Your turn now. Try to add accounts. Other available IM names are jabber, msn, an
 See help account add for more information about the syntax. When finished, use the account on command to enable all your accounts and type help quickstart3 to continue.
 %
 ?quickstart3
-So you're logged in to your favourite IM-server now. If the server supports on-server contact lists the Bee should download the contact list automatically and all the on-line users should appear in the control channel. Suppose there's some funny person in the list with the ID itsme@therealme.homelinux.org. BitlBee give him/her the nickname itsme_ (after all you're itsme already!).
+So you're logged in to your favourite IM-server now. For most protocols (currently MSN, Jabber, Yahoo and AIM) the Bee can download the contact list automatically from the server and all the on-line users should appear in the control channel. Suppose there's some funny person in the list with the ID itsme@therealme.homelinux.org. BitlBee give him/her the nickname itsme_ (after all you're itsme already!).
 
 Such a nick doesn't really look nice, does it? Try the rename command. A name like you might be better for persons like this. Try it:
 
@@ -191,6 +191,13 @@ To get more help information about a setting, try:
 
 This command saves all your nicks and accounts immediately. Handy if you have the autosave functionality disabled, or if you don't trust the program's stability... ;-)
 %
+?set charset
+Type: string
+Default: none
+Possible values: you can get a list of all possible values by doing 'iconv -l' in a shell
+
+The charset setting enables you to use different character sets in BitlBee. These get converted to UTF-8 before sending and from UTF-8 when receiving. For now, this only works for Jabber and MSN.
+%
 ?set private
 Type: boolean
 Default: False
@@ -248,14 +255,14 @@ With this option enabled, the root user devoices people when they go away (just 
 ?set handle_unknown
 Type: string
 Default: root
-Possible values: root, add, ignore
+Possible values: root, add, add_private, add_channel, ignore
 
 Messages from unknown users are echoed like this by default:
 
 <root> Unknown message from handle 3137137:
 <root> j0000! 1 4m l33t h4x0r! kill me!
 
-If you want this lame user to be added automatically, you can set this setting to "add". If you prefer to ignore messages from people you don't know, you can set this one to "ignore".
+If you want this lame user to be added automatically, you can set this setting to "add". If you prefer to ignore messages from people you don't know, you can set this one to "ignore". "add_private" and "add_channel" are like add, but you can use them to make messages from unknown buddies appear in the channel instead of a query window.
 %
 ?set auto_connect
 Type: boolean
@@ -279,6 +286,11 @@ Tell BitlBee after how many seconds it should attempt to bring an IM-connection 
 
 See also the auto_reconnect setting.
 %
+?set password
+Type: string
+
+Use this setting to change your nickserv password.
+%
 ?rename
 Syntax: rename <oldnick> <newnick>
 
@@ -288,14 +300,23 @@ Renick a user in your buddy list. Very useful, in fact just very important, if y
 * itsme_ is now known as you
 %
 ?yes
-Syntax: yes
+Syntax: yes [<number>]
 
 Sometimes an IM-module might want to ask you a question. (Accept this user as your buddy or not?) To accept a question, use the yes command.
+
+By default, this answers the first unanswered question. You can also specify a different question as an argument. You can use the qlist command for a list of questions.
 %
 ?no
-Syntax: no
+Syntax: no [<number>]
 
 Sometimes an IM-module might want to ask you a question. (Accept this user as your buddy or not?) To reject a question, use the no command.
+
+By default, this answers the first unanswered question. You can also specify a different question as an argument. You can use the qlist command for a list of questions.
+%
+?qlist
+Syntax: qlist
+
+This gives you a list of all the unanswered questions from root.
 %
 ?register
 Syntax: register <password>

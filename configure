@@ -14,7 +14,7 @@ mandir='$prefix/share/man/'
 datadir='$prefix/share/bitlbee/'
 config='/var/lib/bitlbee/'
 
-msn=0
+msn=1
 jabber=1
 oscar=1
 yahoo=1
@@ -105,7 +105,9 @@ fi
 
 echo CFLAGS+=-I`pwd` -I`pwd`/protocols -I. >> Makefile.settings
 
-if type gcc > /dev/null 2> /dev/null; then
+if [ -n "$CC" ]; then
+	echo "CC=$CC" >> Makefile.settings;
+elif type gcc > /dev/null 2> /dev/null; then
 	echo "CC=gcc" >> Makefile.settings;
 elif type cc > /dev/null 2> /dev/null; then
 	echo "CC=cc" >> Makefile.settings;
@@ -121,15 +123,20 @@ else
 	exit 1;
 fi
 
-if type glib-config > /dev/null 2> /dev/null; then
+if type pkg-config > /dev/null 2>/dev/null && pkg-config glib-2.0; then
 	cat<<EOF>>Makefile.settings
-LFLAGS+=`glib-config --libs`
-CFLAGS+=`glib-config --cflags`
-EOF
-elif type pkg-config > /dev/null 2>/dev/null && pkg-config glib-2.0; then
-	cat<<EOF>>Makefile.settings
-LFLAGS+=`pkg-config --libs glib-2.0`
+EFLAGS+=`pkg-config --libs glib-2.0`
 CFLAGS+=`pkg-config --cflags glib-2.0`
+EOF
+elif type glib-config > /dev/null 2> /dev/null; then
+	if [ "$msn" = 1 ]; then
+		echo
+		echo 'WARNING: GLIB <2.0 found, this is probably not going to work with the MSN'
+		echo 'module. We strongly suggest you to upgrade glib.';
+	fi
+	cat<<EOF>>Makefile.settings
+EFLAGS+=`glib-config --libs`
+CFLAGS+=`glib-config --cflags`
 EOF
 else
 	echo 'Cannot find glib development libraries, aborting. (Install libglib-dev?)'
@@ -138,11 +145,11 @@ fi
 
 if [ -e /usr/include/tcpd.h -a "$tcpd" = "1" ]; then
 	cat<<EOF>>Makefile.settings
-LFLAGS+=-lwrap
+EFLAGS+=-lwrap
 EOF
 elif [ -e /usr/local/include/tcpd.h -a "$tcpd" = "1" ]; then
 	cat<<EOF>>Makefile.settings
-LFLAGS+=-L/usr/local/lib -lwrap
+EFLAGS+=-L/usr/local/lib -lwrap
 CFLAGS+=-I/usr/local/include
 EOF
 else
@@ -160,7 +167,7 @@ if [ -e /usr/include/iconv.h -a "$iconv" = "1" ]; then
 	## no-op
 elif [ -e /usr/local/include/iconv.h -a "$iconv" = "1" ]; then
 	cat<<EOF>>Makefile.settings
-LFLAGS+=-L/usr/local/lib
+EFLAGS+=-L/usr/local/lib
 CFLAGS+=-I/usr/local/include
 EOF
 else
@@ -170,6 +177,19 @@ else
 		echo 'Compiling without iconv support, could not find include file.';
 	fi
 	echo '#undef ICONV' >> config.h
+fi
+
+if [ "$msn" = 1 ]; then
+	if pkg-config --exists soup-2.0 2> /dev/null; then
+		cat<<EOF>>Makefile.settings
+EFLAGS+=`pkg-config soup-2.0 --libs`
+CFLAGS+=`pkg-config soup-2.0 --cflags`
+EOF
+	else
+		echo
+		echo 'Could not find libsoup, we need that for MSN. MSN disabled.'
+		msn=0;
+	fi;
 fi
 
 if [ "$strip" = 0 ]; then
@@ -192,11 +212,11 @@ else
 	fi;
 fi
 
-if [ "$strip" = 1 ]; then
-	echo
-	echo 'The strip option is enabled. This should not be a problem usually, but on some'
-	echo 'systems it breaks stuff.';
-fi
+#if [ "$strip" = 1 ]; then
+#	echo
+#	echo 'The strip option is enabled. This should not be a problem usually, but on some'
+#	echo 'systems it breaks stuff.';
+#fi
 
 if [ -n "$BITLBEE_VERSION" ]; then
 	echo
@@ -249,12 +269,6 @@ fi
 echo "PROTOCOLS = $protocols" >> Makefile.settings
 echo "PROTOOBJS = $protoobjs" >> Makefile.settings
 
-## Yes, I know these are a bit bogus. If necessary, flags can be added
-## for specific architectures. That's what these lines are for...
-
-## For Solaris we'll need some extra thingies here, for now we don't
-## know what so it's not supported...
-
 echo
 echo Architecture: $arch
 case "$arch" in
@@ -264,7 +278,7 @@ Linux )
 *BSD )
 	echo 'Although our primary development system is Linux, BitlBee should run quite well on most BSD systems.'
 	if [ "$iconv" = 1 ]; then
-		echo 'LFLAGS+=-liconv' >> Makefile.settings;
+		echo 'EFLAGS+=-liconv' >> Makefile.settings;
 	fi
 ;;
 SunOS )
@@ -330,5 +344,5 @@ fi
 if [ -n "$protocols" ]; then
 	echo '  Building with these protocols:' $protocols;
 else
-	echo '  Building without IM-protocol support.';
+	echo '  Building without IM-protocol support. We wish you a lot of fun...';
 fi

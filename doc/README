@@ -24,6 +24,23 @@ directory is read-/writable by this user only.
 (For xinetd users a xinetd configuration file is included: doc/bitlbee.xinetd)
 
 
+DEPENDENCIES
+============
+
+Since version 0.82, BitlBee requires libsoup (a fixed version of 1.99.26 or
+a later version) with SSL support for the MSN module. Since libsoup requires
+glib 2.0, so does BitlBee. When compiling without MSN support, an older
+version of glib will work as well.
+
+Because of this libsoup dependency, an Amiga/Win32/OS X version of BitlBee
+is probably a bit harder to create. If you can't get it working, we suggest
+you to use a public BitlBee server instead.
+
+If you want MSN support, please apply the libsoup patch from utils/ to your
+libsoup source and install it. If you run Debian and feel lazy, you can get
+a (Woody) .deb of a fixed libsoup from http://get.bitlbee.org/libsoup/
+
+
 PORTABILITY ISSUES
 ==================
 
@@ -34,8 +51,7 @@ add a line for your chosen port number to /etc/services.
 
 Darwin/Mac OS X is even more strict; you should add a bitlbee service to
 /etc/services and use that name in inetd.conf. Not really a problem, since
-that's the cleanest way of doing this on any operating system anyway. On
-my Jaguar machine the OSCAR module usually fails to connect, YMMV.
+that's the cleanest way of doing this on any operating system anyway.
 
 Cygwin NOTE: You'll need a glib installation to run BitlBee. However, Cygwin
 doesn't provide a glib package. You can download a binary tar.gz from:
@@ -110,9 +126,11 @@ such.
 The MPL is provided in the file MPL-1.1.txt. This license is not GPL
 compatible. It is however a free software license.
 
-Another parts (the md5 algorithm) is licensed under the Aladdin license.
+Another part (the md5 algorithm) is licensed under the Aladdin license.
 This license can be found in the files, to which this applies.
 
-	BitlBee - An IRC to other chat networks gateway
+
+	BitlBee - An IRC to other chat networks gateway 
+	          <http://www.bitlbee.org/>
 	Copyright (C) 2002-2003  Wilmer van der Gaast <wilmer@gaast.net>
 	                         and others

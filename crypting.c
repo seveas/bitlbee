@@ -25,6 +25,13 @@
   Suite 330, Boston, MA  02111-1307  USA
 */
 
+/* [WvG] This file can also be compiled into a stand-alone program
+   which can encode/decode BitlBee account files. The main() will be
+   included if CRYPTING_MAIN is defined. Or just do "make decode" and
+   the programs will be built. */
+
+#ifndef CRYPTING_MAIN
+
 #include "bitlbee.h"
 #include "irc.h"
 #include "md5.h"
@@ -32,6 +39,24 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
+
+#else
+
+typedef struct irc
+{
+	char *password;
+} irc_t;
+
+#define set_add( a, b, c, d )
+#define set_find( a, b ) NULL
+
+#include "md5.h"
+#include "crypting.h"
+#include <string.h>
+#include <stdio.h>
+#include <stdlib.h>
+
+#endif
 
 /*\
  * [SH] Do _not_ call this if it's not entirely sure that it will not cause
@@ -149,3 +174,67 @@ char *deobfucrypt (irc_t *irc, char *line) {
 	
 	return (rv);
 }
+
+#ifdef CRYPTING_MAIN
+
+/* A little main() function for people who want a stand-alone program to
+   encode/decode BitlCrypted files. */
+
+int main( int argc, char *argv[] )
+{
+	irc_t *irc = malloc( sizeof( irc_t ) );
+	char *hash, *action, line[256];
+	char* (*func)( irc_t *, char * );
+	
+	if( argc < 2 )
+	{
+		fprintf( stderr, "Usage: %s <password>\n\n"
+		                 "Reads from stdin, writes to stdout.\n"
+		                 "Call as \"encode\" to encode, \"decode\" to decode.\n", argv[0] );
+		return( 1 );
+	}
+	
+	memset( irc, 0, sizeof( irc_t ) );
+	irc->password = strdup( argv[1] );
+	
+	hash = hashpass( irc );
+	action = argv[0] + strlen( argv[0] ) - strlen( "encode" );
+	
+	if( strcmp( action, "encode" ) == 0 )
+	{
+		fwrite( hash, 32, 1, stdout );
+		func = obfucrypt;
+	}
+	else if( strcmp( action, "decode" ) == 0 )
+	{
+		char hash2[32];
+		
+		fread( hash2, 32, 1, stdin );
+		if( memcmp( hash, hash2, 32 ) != 0 )
+		{
+			fprintf( stderr, "Passwords don't match. Can't decode.\n" );
+			return( 1 );
+		}
+		func = deobfucrypt;
+	}
+	else
+	{
+		return( main( 0, NULL ) );
+	}
+	
+	while( fscanf( stdin, "%[^\n]255s", line ) > 0 )
+	{
+		char *out;
+		
+		/* Flush the newline */
+		fgetc( stdin );
+		
+		out = func( irc, line );
+		printf( "%s\n", out );
+		free( out );
+	}
+	
+	return( 0 );
+}
+
+#endif

@@ -110,6 +110,7 @@ struct gaim_connection {
 	
 	/* BitlBee */
 	irc_t *irc;
+	int lstitems;  /* added for msnP8 */
 	
 	struct conversation *conversations;
 };

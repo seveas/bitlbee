@@ -60,25 +60,3 @@ A: Please do consult doc/TODO before asking. You're not going to be the
    
    If your fabulous feature seems not to be requested before, just join
    #bitlbee on irc.oftc.net and tell us the news.
-
-Q: Will MSN ever work again?
-A: In theory: Yes. Gaim still works, so with some efforts those fixes should
-   be portable to BitlBee. That's going to be quite a lot of work though.
-   
-   Unfortunately Microsoft is threatening with the DMCA to anyone who
-   touches "their protocol". Probably not a big issue, but certainly not
-   something we want to have trouble with. Even though the local
-   European/Dutch law allows reverse-engineering for interoperability, we
-   don't feel like being banned from the USA, especially not by Microsoft.
-   </paranoid>
-   
-   Anyway, ATM backporting changes from Gaim would be a waste because the
-   current IM-system used by BitlBee is about to be ditched in favour of
-   something new/better, which means all the efforts put into a fix would
-   be wasted. We know we've been saying this for ages, but this time we
-   really mean it! ;-)
-   
-   And as always, if you do feel like spending your time on this, go ahead
-   and write a patch. We'll see what we can do. Let's hope DMCA doesn't
-   prohibit our site to link to your patch. Oh, sorry, I promised to stop
-   being paranoid eh?

@@ -528,7 +528,7 @@ void serv_got_update( struct gaim_connection *gc, char *handle, int loggedin, in
 			add_buddy( gc, NULL, handle, NULL );
 			u = user_findhandle( gc, handle );
 		}
-		else if( strcasecmp( set_getstr( gc->irc, "handle_unknown" ), "ignore" ) == 0 )
+		else
 		{
 			if( set_getint( gc->irc, "debug" ) || strcasecmp( set_getstr( gc->irc, "handle_unknown" ), "ignore" ) != 0 )
 			{
@@ -622,17 +622,30 @@ void serv_got_im( struct gaim_connection *gc, char *handle, char *msg, guint32 f
 	
 	if( !u )
 	{
-		if( strcasecmp( set_getstr( irc, "handle_unknown" ), "ignore" ) == 0 )
+		char *h = set_getstr( irc, "handle_unknown" );
+		
+		if( strcasecmp( h, "ignore" ) == 0 )
 		{
 			if( set_getint( irc, "debug" ) )
 				irc_usermsg( irc, "Ignoring message from unknown %s handle %s", proto_name[gc->protocol], handle );
 			
 			return;
 		}
-		else if( strcasecmp( set_getstr( irc, "handle_unknown" ), "add" ) == 0 )
+		else if( strncasecmp( h, "add", 3 ) == 0 )
 		{
+			int private = set_getint( irc, "private" );
+			
+			if( h[3] )
+			{
+				if( strcasecmp( h + 3, "_private" ) == 0 )
+					private = 1;
+				else if( strcasecmp( h + 3, "_channel" ) == 0 )
+					private = 0;
+			}
+			
 			add_buddy( gc, NULL, handle, NULL );
 			u = user_findhandle( gc, handle );
+			u->private = private;
 		}
 		else
 		{
@@ -677,13 +690,14 @@ void serv_got_chat_left( struct gaim_connection *gc, int id )
 	{
 		if( c->joined )
 		{
-			user_t *u;
+			user_t *u, *r;
 			
-			u = user_find( gc->irc, gc->irc->mynick );
-			irc_privmsg( gc->irc, u, "PRIVMSG", c->channel, "", "Cleaning up channel, bye!" );
+			r = user_find( gc->irc, gc->irc->mynick );
+			irc_privmsg( gc->irc, r, "PRIVMSG", c->channel, "", "Cleaning up channel, bye!" );
 			
 			u = user_find( gc->irc, gc->irc->nick );
-			irc_part( gc->irc, u, c->channel );
+			irc_kick( gc->irc, u, c->channel, r );
+			/* irc_part( gc->irc, u, c->channel ); */
 		}
 		
 		if( l )

@@ -26,7 +26,7 @@
 #ifndef _BITLBEE_H
 #define _BITLBEE_H
 
-#define BITLBEE_VERSION "0.81a"
+#define BITLBEE_VERSION "0.82"
 
 #include "config.h"
 
@@ -66,11 +66,6 @@
 #define HELP_FILE DATADIR "/help.txt"
 #define CONF_FILE ETCDIR "/bitlbee.conf"
 #define MOTD_FILE ETCDIR "/motd.txt"
-
-#define NO_MSN		"This Bitlbee is compiled without MSN support, sorry."
-#define NO_OSCAR	"This Bitlbee is compiled without Oscar support, sorry."
-#define NO_JABBER	"This Bitlbee is compiled without Jabber support, sorry."
-#define NO_YAHOO	"This Bitlbee is compiled without Yahoo support, sorry."
 
 #include "irc.h"
 #include "set.h"

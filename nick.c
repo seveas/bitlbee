@@ -73,7 +73,9 @@ char *nick_get( irc_t *irc, char *handle, int proto )
 		char *s;
 		
 		snprintf( nick, MAX_NICK_LENGTH, "%s", handle );
-		if( ( s = strchr( nick, '@' ) ) ) *s = 0;
+		if( ( s = strchr( nick, '@' ) ) )
+			while( *s )
+				*(s++) = 0;
 		nick_strip( nick );
 	}
 	
@@ -119,8 +121,9 @@ static char *nick_uc_chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ[]~_\\";
 
 void nick_strip( char * nick )
 {
-	int i,j = 0;
-	for(i = 0; nick[i]; i++)
+	int i, j;
+	
+	for( i = j = 0; nick[i] && i < MAX_NICK_LENGTH; i++ )
 	{
 		if(strchr(nick_lc_chars,nick[i]) || 
 		   strchr(nick_uc_chars,nick[i]))
@@ -136,8 +139,8 @@ int nick_ok( char *nick )
 {
 	char *s;
 	
-	/* Empty nicks are not allowed */
-	if( !*nick )
+	/* Empty/long nicks are not allowed */
+	if( !*nick || strlen( nick ) > MAX_NICK_LENGTH )
 		return( 0 );
 	
 	for( s = nick; *s; s ++ )

@@ -1,6 +1,6 @@
-diff -Naur bitlbee-20031015/Makefile bitlbee-20031015-daemon/Makefile
---- bitlbee-20031015/Makefile	2003-06-27 19:37:25.000000000 +0200
-+++ bitlbee-20031015-daemon/Makefile	2003-10-12 16:23:19.000000000 +0200
+diff -Naur bitlbee-20031031/Makefile bitlbee-20031031-daemon/Makefile
+--- bitlbee-20031031/Makefile	2003-10-25 00:33:13.000000000 +0200
++++ bitlbee-20031031-daemon/Makefile	2003-10-31 22:13:12.000000000 +0100
 @@ -9,7 +9,7 @@
  -include Makefile.settings
  
@@ -10,9 +10,9 @@ diff -Naur bitlbee-20031015/Makefile bitlbee-20031015-daemon/Makefile
  subdirs = protocols
  
  # Expansion of variables
-diff -Naur bitlbee-20031015/account.c bitlbee-20031015-daemon/account.c
---- bitlbee-20031015/account.c	2003-10-15 14:30:22.000000000 +0200
-+++ bitlbee-20031015-daemon/account.c	2003-10-15 14:12:22.000000000 +0200
+diff -Naur bitlbee-20031031/account.c bitlbee-20031031-daemon/account.c
+--- bitlbee-20031031/account.c	2003-10-26 02:57:41.000000000 +0200
++++ bitlbee-20031031-daemon/account.c	2003-10-31 22:13:12.000000000 +0100
 @@ -33,11 +33,11 @@
  	if( irc->accounts )
  	{
@@ -27,18 +27,18 @@ diff -Naur bitlbee-20031015/account.c bitlbee-20031015-daemon/account.c
  	}
  	
  	memset( a, 0, sizeof( account_t ) );
-@@ -105,7 +105,7 @@
- 		return;
- 	}
+@@ -114,7 +114,7 @@
+ 	
+ 	cancel_auto_reconnect( a );
  	
 -	u = malloc( sizeof( struct aim_user ) );
 +	u = bitlbee_alloc( sizeof( struct aim_user ) );
  	memset( u, 0, sizeof( *u ) );
  	u->protocol = a->protocol;
  	strcpy( u->username, a->user );
-diff -Naur bitlbee-20031015/bitlbee.c bitlbee-20031015-daemon/bitlbee.c
---- bitlbee-20031015/bitlbee.c	2003-06-28 15:07:44.000000000 +0200
-+++ bitlbee-20031015-daemon/bitlbee.c	2003-10-15 15:01:48.000000000 +0200
+diff -Naur bitlbee-20031031/bitlbee.c bitlbee-20031031-daemon/bitlbee.c
+--- bitlbee-20031031/bitlbee.c	2003-06-28 15:07:44.000000000 +0200
++++ bitlbee-20031031-daemon/bitlbee.c	2003-10-31 22:13:12.000000000 +0100
 @@ -32,78 +32,312 @@
  #include <signal.h>
  
@@ -72,6 +72,7 @@ diff -Naur bitlbee-20031015/bitlbee.c bitlbee-20031015-daemon/bitlbee.c
 -	}
 -	
 -	if( !( IRC = irc = irc_new( 0 ) ) )
++	struct sigaction sig, old;
 +
 +	memset( &global, 9, sizeof( global_t ) );
 +
@@ -121,7 +122,6 @@ diff -Naur bitlbee-20031015/bitlbee.c bitlbee-20031015-daemon/bitlbee.c
 +		return( i );
 + 
 +	/* Catch some signals to tell the user what's happening before quitting */
-+	struct sigaction sig, old;
 +	memset( &sig, 0, sizeof( sig ) );
 +	sig.sa_handler = sighandler;
 +	sigaction( SIGINT,  &sig, &old );
@@ -475,9 +475,9 @@ diff -Naur bitlbee-20031015/bitlbee.c bitlbee-20031015-daemon/bitlbee.c
  	}
  }
 +
-diff -Naur bitlbee-20031015/bitlbee.h bitlbee-20031015-daemon/bitlbee.h
---- bitlbee-20031015/bitlbee.h	2003-06-28 10:54:33.000000000 +0200
-+++ bitlbee-20031015-daemon/bitlbee.h	2003-10-12 16:23:19.000000000 +0200
+diff -Naur bitlbee-20031031/bitlbee.h bitlbee-20031031-daemon/bitlbee.h
+--- bitlbee-20031031/bitlbee.h	2003-10-26 02:57:41.000000000 +0200
++++ bitlbee-20031031-daemon/bitlbee.h	2003-10-31 22:13:12.000000000 +0100
 @@ -32,6 +32,7 @@
  
  #include <fcntl.h>
@@ -544,10 +544,10 @@ diff -Naur bitlbee-20031015/bitlbee.h bitlbee-20031015-daemon/bitlbee.h
 +extern GList *connection_list;
  
  #endif
-diff -Naur bitlbee-20031015/commands.c bitlbee-20031015-daemon/commands.c
---- bitlbee-20031015/commands.c	2003-10-15 14:30:22.000000000 +0200
-+++ bitlbee-20031015-daemon/commands.c	2003-10-15 14:12:22.000000000 +0200
-@@ -66,8 +66,8 @@
+diff -Naur bitlbee-20031031/commands.c bitlbee-20031031-daemon/commands.c
+--- bitlbee-20031031/commands.c	2003-10-30 18:19:00.000000000 +0100
++++ bitlbee-20031031-daemon/commands.c	2003-10-31 22:13:12.000000000 +0100
+@@ -65,8 +65,8 @@
  		strncat( param, cmd[i], sizeof(param) - strlen(param) - 1 );
  	}
  
@@ -558,7 +558,7 @@ diff -Naur bitlbee-20031015/commands.c bitlbee-20031015-daemon/commands.c
  	
  	if( s )
  	{
-@@ -111,13 +111,13 @@
+@@ -110,13 +110,13 @@
  	int checkie;
  	char *str;
  	
@@ -574,7 +574,7 @@ diff -Naur bitlbee-20031015/commands.c bitlbee-20031015-daemon/commands.c
  	      strlen( CONFIG ) +
  	      strlen( ".accounts" ) + 1 );
  	
-@@ -151,7 +151,7 @@
+@@ -150,7 +150,7 @@
  	account_t *a;
  	int i;
  	
@@ -583,9 +583,9 @@ diff -Naur bitlbee-20031015/commands.c bitlbee-20031015-daemon/commands.c
  	{
  		irc_usermsg( irc, "This server only accepts registered users" );
  		return( 0 );
-diff -Naur bitlbee-20031015/conf.c bitlbee-20031015-daemon/conf.c
---- bitlbee-20031015/conf.c	2003-08-17 16:33:46.000000000 +0200
-+++ bitlbee-20031015-daemon/conf.c	2003-10-12 16:23:19.000000000 +0200
+diff -Naur bitlbee-20031031/conf.c bitlbee-20031031-daemon/conf.c
+--- bitlbee-20031031/conf.c	2003-08-17 16:33:46.000000000 +0200
++++ bitlbee-20031031-daemon/conf.c	2003-10-31 22:13:12.000000000 +0100
 @@ -39,15 +39,14 @@
  	conf_t *conf;
  	int opt, i;
@@ -628,9 +628,9 @@ diff -Naur bitlbee-20031015/conf.c bitlbee-20031015-daemon/conf.c
  			}
  			else if( strcasecmp( ini->key, "daemoninterface" ) == 0 )
  			{
-diff -Naur bitlbee-20031015/conf.h bitlbee-20031015-daemon/conf.h
---- bitlbee-20031015/conf.h	2003-08-13 22:49:30.000000000 +0200
-+++ bitlbee-20031015-daemon/conf.h	2003-10-12 16:23:19.000000000 +0200
+diff -Naur bitlbee-20031031/conf.h bitlbee-20031031-daemon/conf.h
+--- bitlbee-20031031/conf.h	2003-08-13 22:49:30.000000000 +0200
++++ bitlbee-20031031-daemon/conf.h	2003-10-31 22:13:12.000000000 +0100
 @@ -26,7 +26,7 @@
  #ifndef __CONF_H
  #define __CONF_H
@@ -648,10 +648,10 @@ diff -Naur bitlbee-20031015/conf.h bitlbee-20031015-daemon/conf.h
  	runmode_t runmode;
  	authmode_t authmode;
  	char *password;
-diff -Naur bitlbee-20031015/crypting.c bitlbee-20031015-daemon/crypting.c
---- bitlbee-20031015/crypting.c	2003-04-28 19:18:55.000000000 +0200
-+++ bitlbee-20031015-daemon/crypting.c	2003-10-12 16:23:19.000000000 +0200
-@@ -87,7 +87,7 @@
+diff -Naur bitlbee-20031031/crypting.c bitlbee-20031031-daemon/crypting.c
+--- bitlbee-20031031/crypting.c	2003-10-25 00:32:50.000000000 +0200
++++ bitlbee-20031031-daemon/crypting.c	2003-10-31 22:13:12.000000000 +0100
+@@ -112,7 +112,7 @@
  	
  	if (irc->password == NULL) return (NULL);
  	
@@ -660,15 +660,6 @@ diff -Naur bitlbee-20031015/crypting.c bitlbee-20031015-daemon/crypting.c
  	memset (rv, 0, 33);
  	
  	md5_init (&md5state);
-@@ -109,7 +109,7 @@
- 	
- 	if (irc->password == NULL) return (NULL);
- 	
--	rv = (char *)malloc (strlen (line) + 1);
-+	rv = (char *)bitlbee_alloc (strlen (line) + 1);
- 	memset (rv, '\0', strlen (line) + 1);
- 	
- 	i = j = 0;
 @@ -134,7 +134,7 @@
  	
  	if (irc->password == NULL) return (NULL);
@@ -678,9 +669,18 @@ diff -Naur bitlbee-20031015/crypting.c bitlbee-20031015-daemon/crypting.c
  	memset (rv, '\0', strlen (line) + 1);
  	
  	i = j = 0;
-diff -Naur bitlbee-20031015/help.c bitlbee-20031015-daemon/help.c
---- bitlbee-20031015/help.c	2003-10-15 14:30:22.000000000 +0200
-+++ bitlbee-20031015-daemon/help.c	2003-10-15 14:12:22.000000000 +0200
+@@ -159,7 +159,7 @@
+ 	
+ 	if (irc->password == NULL) return (NULL);
+ 	
+-	rv = (char *)malloc (strlen (line) + 1);
++	rv = (char *)bitlbee_alloc (strlen (line) + 1);
+ 	memset (rv, '\0', strlen (line) + 1);
+ 	
+ 	i = j = 0;
+diff -Naur bitlbee-20031031/help.c bitlbee-20031031-daemon/help.c
+--- bitlbee-20031031/help.c	2003-10-15 02:13:38.000000000 +0200
++++ bitlbee-20031031-daemon/help.c	2003-10-31 22:13:12.000000000 +0100
 @@ -24,36 +24,35 @@
  */
  
@@ -809,9 +809,9 @@ diff -Naur bitlbee-20031015/help.c bitlbee-20031015-daemon/help.c
  		s[h->length] = 0;
  		if( h->fd > 0 )
  		{
-diff -Naur bitlbee-20031015/help.h bitlbee-20031015-daemon/help.h
---- bitlbee-20031015/help.h	2003-04-28 19:18:55.000000000 +0200
-+++ bitlbee-20031015-daemon/help.h	2003-10-12 16:23:19.000000000 +0200
+diff -Naur bitlbee-20031031/help.h bitlbee-20031031-daemon/help.h
+--- bitlbee-20031031/help.h	2003-04-28 19:18:55.000000000 +0200
++++ bitlbee-20031031-daemon/help.h	2003-10-31 22:13:12.000000000 +0100
 @@ -23,13 +23,16 @@
    Suite 330, Boston, MA  02111-1307  USA
  */
@@ -840,9 +840,9 @@ diff -Naur bitlbee-20031015/help.h bitlbee-20031015-daemon/help.h
 +char *help_get( help_t **help, char *string );
  
 +#endif
-diff -Naur bitlbee-20031015/ini.c bitlbee-20031015-daemon/ini.c
---- bitlbee-20031015/ini.c	2003-06-27 14:25:03.000000000 +0200
-+++ bitlbee-20031015-daemon/ini.c	2003-10-12 16:23:19.000000000 +0200
+diff -Naur bitlbee-20031031/ini.c bitlbee-20031031-daemon/ini.c
+--- bitlbee-20031031/ini.c	2003-06-27 14:25:03.000000000 +0200
++++ bitlbee-20031031-daemon/ini.c	2003-10-31 22:13:12.000000000 +0100
 @@ -23,15 +23,11 @@
    Suite 330, Boston, MA  02111-1307  USA
  */
@@ -861,9 +861,9 @@ diff -Naur bitlbee-20031015/ini.c bitlbee-20031015-daemon/ini.c
  	
  	memset( ini, 0, sizeof( ini_t ) );
  	if( ( ini->fp = fopen( file, "r" ) ) == NULL )
-diff -Naur bitlbee-20031015/ini.h bitlbee-20031015-daemon/ini.h
---- bitlbee-20031015/ini.h	2003-06-27 14:29:18.000000000 +0200
-+++ bitlbee-20031015-daemon/ini.h	2003-10-12 16:23:19.000000000 +0200
+diff -Naur bitlbee-20031031/ini.h bitlbee-20031031-daemon/ini.h
+--- bitlbee-20031031/ini.h	2003-06-27 14:29:18.000000000 +0200
++++ bitlbee-20031031-daemon/ini.h	2003-10-31 22:13:12.000000000 +0100
 @@ -23,6 +23,9 @@
    Suite 330, Boston, MA  02111-1307  USA
  */
@@ -880,9 +880,9 @@ diff -Naur bitlbee-20031015/ini.h bitlbee-20031015-daemon/ini.h
  void ini_close( ini_t *file );
 +
 +#endif
-diff -Naur bitlbee-20031015/irc.c bitlbee-20031015-daemon/irc.c
---- bitlbee-20031015/irc.c	2003-10-15 14:30:22.000000000 +0200
-+++ bitlbee-20031015-daemon/irc.c	2003-10-15 15:10:35.000000000 +0200
+diff -Naur bitlbee-20031031/irc.c bitlbee-20031031-daemon/irc.c
+--- bitlbee-20031031/irc.c	2003-10-26 02:57:41.000000000 +0200
++++ bitlbee-20031031-daemon/irc.c	2003-10-31 22:13:12.000000000 +0100
 @@ -26,12 +26,10 @@
  #include "bitlbee.h"
  #include "crypting.h"
@@ -1447,7 +1447,7 @@ diff -Naur bitlbee-20031015/irc.c bitlbee-20031015-daemon/irc.c
  	irc_usermsg( irc, "Welcome to the BitlBee gateway!\n\nIf you've never used BitlBee before, please do read the help information using the help command. Lots of FAQ's are answered there." );
  	
  	irc->status = USTATUS_LOGGED_IN;
-@@ -989,7 +1258,7 @@
+@@ -994,7 +1263,7 @@
  	if( !u->private && nick_cmp( u->nick, irc->mynick ) != 0 )
  	{
  		int len = strlen( irc->nick) + 3;
@@ -1456,7 +1456,7 @@ diff -Naur bitlbee-20031015/irc.c bitlbee-20031015-daemon/irc.c
  		snprintf( prefix, len, "%s%s", irc->nick, set_getstr( irc, "to_char" ) );
  		prefix[len-1] = 0;
  	}
-@@ -1011,44 +1280,3 @@
+@@ -1016,44 +1285,3 @@
  		return( 0 );
  }
  
@@ -1501,9 +1501,9 @@ diff -Naur bitlbee-20031015/irc.c bitlbee-20031015-daemon/irc.c
 -	
 -	return( NULL );
 -}
-diff -Naur bitlbee-20031015/irc.h bitlbee-20031015-daemon/irc.h
---- bitlbee-20031015/irc.h	2003-06-27 17:52:48.000000000 +0200
-+++ bitlbee-20031015-daemon/irc.h	2003-10-12 16:23:19.000000000 +0200
+diff -Naur bitlbee-20031031/irc.h bitlbee-20031031-daemon/irc.h
+--- bitlbee-20031031/irc.h	2003-10-26 02:57:41.000000000 +0200
++++ bitlbee-20031031-daemon/irc.h	2003-10-31 22:13:12.000000000 +0100
 @@ -29,6 +29,10 @@
  #define IRC_MAX_LINE 512
  #define IRC_MAX_ARGS 8
@@ -1564,9 +1564,9 @@ diff -Naur bitlbee-20031015/irc.h bitlbee-20031015-daemon/irc.h
  
  void irc_login( irc_t *irc );
  void irc_motd( irc_t *irc );
-diff -Naur bitlbee-20031015/log.c bitlbee-20031015-daemon/log.c
---- bitlbee-20031015/log.c	1970-01-01 01:00:00.000000000 +0100
-+++ bitlbee-20031015-daemon/log.c	2003-10-12 16:23:19.000000000 +0200
+diff -Naur bitlbee-20031031/log.c bitlbee-20031031-daemon/log.c
+--- bitlbee-20031031/log.c	1970-01-01 01:00:00.000000000 +0100
++++ bitlbee-20031031-daemon/log.c	2003-10-31 22:13:12.000000000 +0100
 @@ -0,0 +1,197 @@
 +  /********************************************************************\
 +  * BitlBee -- An IRC to other IM-networks gateway                     *
@@ -1765,9 +1765,9 @@ diff -Naur bitlbee-20031015/log.c bitlbee-20031015-daemon/log.c
 +	}
 +}
 +
-diff -Naur bitlbee-20031015/log.h bitlbee-20031015-daemon/log.h
---- bitlbee-20031015/log.h	1970-01-01 01:00:00.000000000 +0100
-+++ bitlbee-20031015-daemon/log.h	2003-10-12 16:23:19.000000000 +0200
+diff -Naur bitlbee-20031031/log.h bitlbee-20031031-daemon/log.h
+--- bitlbee-20031031/log.h	1970-01-01 01:00:00.000000000 +0100
++++ bitlbee-20031031-daemon/log.h	2003-10-31 22:13:12.000000000 +0100
 @@ -0,0 +1,61 @@
 +  /********************************************************************\
 +  * BitlBee -- An IRC to other IM-networks gateway                     *
@@ -1830,9 +1830,9 @@ diff -Naur bitlbee-20031015/log.h bitlbee-20031015-daemon/log.h
 +char *my_vasprintf(const char *fmt, va_list ap);
 +
 +#endif
-diff -Naur bitlbee-20031015/nick.c bitlbee-20031015-daemon/nick.c
---- bitlbee-20031015/nick.c	2003-06-28 17:37:26.000000000 +0200
-+++ bitlbee-20031015-daemon/nick.c	2003-10-12 16:23:19.000000000 +0200
+diff -Naur bitlbee-20031031/nick.c bitlbee-20031031-daemon/nick.c
+--- bitlbee-20031031/nick.c	2003-10-17 14:43:38.000000000 +0200
++++ bitlbee-20031031-daemon/nick.c	2003-10-31 22:13:12.000000000 +0100
 @@ -43,9 +43,9 @@
  	}
  	
@@ -1845,9 +1845,9 @@ diff -Naur bitlbee-20031015/nick.c bitlbee-20031015-daemon/nick.c
  	memset( n, 0, sizeof( nick_t ) );
  	
  	n->handle = strdup( handle );
-diff -Naur bitlbee-20031015/protocols/nogaim.c bitlbee-20031015-daemon/protocols/nogaim.c
---- bitlbee-20031015/protocols/nogaim.c	2003-10-15 14:30:22.000000000 +0200
-+++ bitlbee-20031015-daemon/protocols/nogaim.c	2003-10-15 14:12:23.000000000 +0200
+diff -Naur bitlbee-20031031/protocols/nogaim.c bitlbee-20031031-daemon/protocols/nogaim.c
+--- bitlbee-20031031/protocols/nogaim.c	2003-10-26 10:29:41.000000000 +0100
++++ bitlbee-20031031-daemon/protocols/nogaim.c	2003-10-31 22:13:12.000000000 +0100
 @@ -50,8 +50,6 @@
  };
  static char *proto_away_alias_find( GList *gcm, char *away );
@@ -1857,29 +1857,39 @@ diff -Naur bitlbee-20031015/protocols/nogaim.c bitlbee-20031015-daemon/protocols
  static int remove_chat_buddy_silent( struct conversation *b, char *handle );
  
  GSList *connections;
-@@ -61,31 +59,21 @@
+@@ -61,39 +59,26 @@
  
  void nogaim_init()
  {
 -	proto_prpl[PROTO_MSN] = malloc( sizeof( struct prpl ) );
 +	proto_prpl[PROTO_MSN] = bitlbee_alloc( sizeof( struct prpl ) );
  	memset( proto_prpl[PROTO_MSN], 0, sizeof( struct prpl ) );
+ #ifdef WITH_MSN
  	msn_init( proto_prpl[PROTO_MSN] );
- 
+ #endif
+-
 -	proto_prpl[PROTO_OSCAR] = malloc( sizeof( struct prpl ) );
 +	proto_prpl[PROTO_OSCAR] = bitlbee_alloc( sizeof( struct prpl ) );
  	memset( proto_prpl[PROTO_OSCAR], 0, sizeof( struct prpl ) );
+ #ifdef WITH_OSCAR
  	oscar_init( proto_prpl[PROTO_OSCAR] );
- 	
+-#endif
+-	
 -	proto_prpl[PROTO_YAHOO] = malloc( sizeof( struct prpl ) );
++#endif	
 +	proto_prpl[PROTO_YAHOO] = bitlbee_alloc( sizeof( struct prpl ) );
  	memset( proto_prpl[PROTO_YAHOO], 0, sizeof( struct prpl ) );
+ #ifdef WITH_YAHOO
  	yahoo_init( proto_prpl[PROTO_YAHOO] );
- 	
+-#endif
+-	
 -	proto_prpl[PROTO_JABBER] = malloc( sizeof( struct prpl ) );
++#endif 	
 +	proto_prpl[PROTO_JABBER] = bitlbee_alloc( sizeof( struct prpl ) );
  	memset( proto_prpl[PROTO_JABBER], 0, sizeof( struct prpl ) );
+ #ifdef WITH_JABBER
  	jabber_init( proto_prpl[PROTO_JABBER] );
+ #endif
 -	
 -	set_add( IRC, "html", "nostrip", NULL );
 -	set_add( IRC, "typing_notice", "false", set_eval_bool );
@@ -1893,7 +1903,7 @@ diff -Naur bitlbee-20031015/protocols/nogaim.c bitlbee-20031015-daemon/protocols
  }
  
  struct gaim_connection *gc_nr( int i )
-@@ -184,7 +172,7 @@
+@@ -192,7 +177,7 @@
  	struct gaim_connection *gc;
  	account_t *a;
  	
@@ -1902,7 +1912,7 @@ diff -Naur bitlbee-20031015/protocols/nogaim.c bitlbee-20031015-daemon/protocols
  	memset( gc, 0, sizeof( struct gaim_connection ) );
  	
  	gc->protocol = user->protocol;
-@@ -365,11 +353,11 @@
+@@ -370,11 +355,11 @@
  	if( q )
  	{
  		while( q->next ) q = q->next;
@@ -1916,7 +1926,7 @@ diff -Naur bitlbee-20031015/protocols/nogaim.c bitlbee-20031015-daemon/protocols
  	}
  	memset( q, 0, sizeof( query_t ) );
  	
-@@ -730,17 +718,17 @@
+@@ -749,17 +734,17 @@
  	if( gc->conversations )
  	{
  		for( c = gc->conversations; c->next; c = c->next );
@@ -1937,7 +1947,7 @@ diff -Naur bitlbee-20031015/protocols/nogaim.c bitlbee-20031015-daemon/protocols
  	sprintf( s, "#chat_%03d", gc->irc->c_id++ );
  	c->channel = strdup( s );
  	free( s );
-@@ -871,7 +859,7 @@
+@@ -890,7 +875,7 @@
  	return( NULL );
  }
  
@@ -1946,20 +1956,20 @@ diff -Naur bitlbee-20031015/protocols/nogaim.c bitlbee-20031015-daemon/protocols
  {
  	int st;
  	
-diff -Naur bitlbee-20031015/protocols/nogaim.h bitlbee-20031015-daemon/protocols/nogaim.h
---- bitlbee-20031015/protocols/nogaim.h	2003-10-15 14:30:22.000000000 +0200
-+++ bitlbee-20031015-daemon/protocols/nogaim.h	2003-10-15 14:12:23.000000000 +0200
-@@ -272,6 +272,7 @@
+diff -Naur bitlbee-20031031/protocols/nogaim.h bitlbee-20031031-daemon/protocols/nogaim.h
+--- bitlbee-20031031/protocols/nogaim.h	2003-10-22 01:46:29.000000000 +0200
++++ bitlbee-20031031-daemon/protocols/nogaim.h	2003-10-31 22:13:12.000000000 +0100
+@@ -273,6 +273,7 @@
  void nogaim_init();
  struct gaim_connection *gc_nr( int i );
  int proto_away( struct gaim_connection *gc, char *away );
 +char *set_eval_away_devoice( irc_t *irc, set_t *set, char *value );
  
- /* multi.c */
- struct gaim_connection *new_gaim_conn( struct aim_user *user );
-diff -Naur bitlbee-20031015/set.c bitlbee-20031015-daemon/set.c
---- bitlbee-20031015/set.c	2003-04-28 19:18:55.000000000 +0200
-+++ bitlbee-20031015-daemon/set.c	2003-10-12 16:23:19.000000000 +0200
+ gboolean auto_reconnect( gpointer data );
+ void cancel_auto_reconnect( struct account *a );
+diff -Naur bitlbee-20031031/set.c bitlbee-20031031-daemon/set.c
+--- bitlbee-20031031/set.c	2003-04-28 19:18:55.000000000 +0200
++++ bitlbee-20031031-daemon/set.c	2003-10-31 22:13:12.000000000 +0100
 @@ -176,3 +176,46 @@
  		return( value );
  	return( set_eval_int( irc, set, value ) );
@@ -2007,9 +2017,9 @@ diff -Naur bitlbee-20031015/set.c bitlbee-20031015-daemon/set.c
 +	return( NULL );
 +}
 +
-diff -Naur bitlbee-20031015/set.h bitlbee-20031015-daemon/set.h
---- bitlbee-20031015/set.h	2003-06-28 15:08:15.000000000 +0200
-+++ bitlbee-20031015-daemon/set.h	2003-10-12 16:23:19.000000000 +0200
+diff -Naur bitlbee-20031031/set.h bitlbee-20031031-daemon/set.h
+--- bitlbee-20031031/set.h	2003-06-28 15:08:15.000000000 +0200
++++ bitlbee-20031031-daemon/set.h	2003-10-31 22:13:12.000000000 +0100
 @@ -43,5 +43,10 @@
  int set_setstr( irc_t *irc, char *key, char *value );
  int set_setint( irc_t *irc, char *key, int value );
@@ -2021,9 +2031,9 @@ diff -Naur bitlbee-20031015/set.h bitlbee-20031015-daemon/set.h
 +char *set_eval_ops( irc_t *irc, set_t *set, char *value );
 +
 +
-diff -Naur bitlbee-20031015/user.c bitlbee-20031015-daemon/user.c
---- bitlbee-20031015/user.c	2003-08-13 23:36:49.000000000 +0200
-+++ bitlbee-20031015-daemon/user.c	2003-10-12 16:23:19.000000000 +0200
+diff -Naur bitlbee-20031031/user.c bitlbee-20031031-daemon/user.c
+--- bitlbee-20031031/user.c	2003-08-13 23:36:49.000000000 +0200
++++ bitlbee-20031031-daemon/user.c	2003-10-31 22:13:12.000000000 +0100
 @@ -41,12 +41,12 @@
  			else
  				break;

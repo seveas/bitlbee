@@ -36,8 +36,6 @@ command_t commands[] = {
 	{ "identify",   1, cmd_identify },
 	{ "register",   1, cmd_register },
 	{ "account",    1, cmd_account },
-	{ "login",      3, cmd_login },
-	{ "logout",     1, cmd_logout }, 
 	{ "add",        2, cmd_add },
 	{ "info",       1, cmd_info },
 	{ "rename",     2, cmd_rename },
@@ -50,6 +48,7 @@ command_t commands[] = {
 	{ "no",         0, cmd_yesno },
 	{ "blist",      0, cmd_blist },
 	{ "nick",       1, cmd_nick },
+	{ "qlist",	0, cmd_qlist },
 	{ NULL }
 };
 
@@ -92,7 +91,7 @@ int cmd_identify( irc_t *irc, char **cmd )
 	}
 	else if( checkie == 0 )
 	{
-		irc_usermsg( irc, "The nickname is (probably) not registered" );
+		irc_usermsg( irc, "The nick is (probably) not registered" );
 	}
 	else if( checkie == 1 )
 	{
@@ -176,38 +175,6 @@ int cmd_account( irc_t *irc, char **cmd )
 			irc_usermsg( irc, "Unknown protocol" );
 			return( 0 );
 		}
-		
-#ifndef WITH_MSN
-		if( prot == PROTO_MSN )
-		{
-			irc_usermsg( irc, NO_MSN );
-			return( 0 );
-		}
-#endif
-
-#ifndef WITH_OSCAR
-		if( prot == PROTO_OSCAR )
-		{
-			irc_usermsg( irc, NO_OSCAR );
-			return( 0 );
-		}
-#endif
-
-#ifndef WITH_JABBER
-		if( prot == PROTO_JABBER )
-		{
-			irc_usermsg( irc, NO_JABBER );
-			return( 0 );
-		}
-#endif
-
-#ifndef WITH_YAHOO
-		if( prot == PROTO_YAHOO )
-		{
-			irc_usermsg( irc, NO_YAHOO );
-			return( 0 );
-		}
-#endif
 
 		if( prot == PROTO_OSCAR && cmd[5] == NULL )
 		{
@@ -272,38 +239,6 @@ int cmd_account( irc_t *irc, char **cmd )
 		{
 			if( ( sscanf( cmd[2], "%d", &i ) == 1 ) && ( a = account_get( irc, i ) ) )
 			{
-#ifndef WITH_MSN
-				if( a->protocol == PROTO_MSN )
-				{
-					irc_usermsg( irc, NO_MSN );
-					return( 0 );
-				}
-#endif
-
-#ifndef WITH_OSCAR
-				if( a->protocol == PROTO_OSCAR )
-				{
-					irc_usermsg( irc, NO_OSCAR );
-					return( 0 );
-				}
-#endif
-
-#ifndef WITH_JABBER
-				if( a->protocol == PROTO_JABBER )
-				{
-					irc_usermsg( irc, NO_JABBER );
-					return( 0 );
-				}
-#endif
-
-#ifndef WITH_YAHOO
-				if( a->protocol == PROTO_YAHOO )
-				{
-					irc_usermsg( irc, NO_YAHOO );
-					return( 0 );
-				}
-#endif
-
 				if( a->gc )
 				{
 					irc_usermsg( irc, "Account already online" );
@@ -339,37 +274,6 @@ int cmd_account( irc_t *irc, char **cmd )
 		
 		if( ( sscanf( cmd[2], "%d", &i ) == 1 ) && ( a = account_get( irc, i ) ) )
 		{
-#ifndef WITH_MSN
-			if( a->protocol == PROTO_MSN )
-			{
-				irc_usermsg( irc, NO_MSN );
-				return( 0 );
-			}
-#endif
-
-#ifndef WITH_OSCAR
-			if( a->protocol == PROTO_OSCAR )
-			{
-				irc_usermsg( irc, NO_OSCAR );
-				return( 0 );
-			}
-#endif
-
-#ifndef WITH_JABBER
-			if( a->protocol == PROTO_JABBER )
-			{
-				irc_usermsg( irc, NO_JABBER );
-				return( 0 );
-			}
-#endif
-
-#ifndef WITH_YAHOO
-			if( a->protocol == PROTO_YAHOO )
-			{
-				irc_usermsg( irc, NO_YAHOO );
-				return( 0 );
-			}
-#endif
 			if( a->gc )
 			{
 				account_off( irc, a );
@@ -395,33 +299,6 @@ int cmd_account( irc_t *irc, char **cmd )
 	return( 1 );
 }
 
-/* For transition purposes we'll keep this command here for a while. The code sucks, but we can flush it soon. */
-int cmd_login( irc_t *irc, char **cmd )
-{
-	char *ncmd[7];
-	
-	if( irc->accounts == NULL ) /* Only warn the user once. While adding the first account.. */
-	{
-		irc_usermsg( irc, "Warning: The login command is now obsolete, "
-		                  "please use account on and/or account add instead. "
-		                  "This command will stop working in future versions." );
-	}
-	
-	ncmd[1] = "add";
-	memcpy( ncmd + 2, cmd + 1, 4 * sizeof( char* ) );
-	ncmd[6] = NULL;
-	cmd_account( irc, ncmd );
-	
-	return( 1 );
-}
-
-int cmd_logout( irc_t *irc, char **cmd )
-{
-	irc_usermsg( irc, "The logout command is now obsolete, please use account off and/or account del instead." );
-	
-	return( 0 );
-}
-
 int cmd_add( irc_t *irc, char **cmd )
 {
 	int i;
@@ -436,12 +313,12 @@ int cmd_add( irc_t *irc, char **cmd )
 	{
 		if( !nick_ok( cmd[3] ) )
 		{
-			irc_usermsg( irc, "The requested nickname '%s' is invalid", cmd[3] );
+			irc_usermsg( irc, "The requested nick `%s' is invalid", cmd[3] );
 			return( 0 );
 		}
 		else if( user_find( irc, cmd[3] ) )
 		{
-			irc_usermsg( irc, "The requested nickname '%s' already exists", cmd[3] );
+			irc_usermsg( irc, "The requested nick `%s' already exists", cmd[3] );
 			return( 0 );
 		}
 		else
@@ -452,7 +329,7 @@ int cmd_add( irc_t *irc, char **cmd )
 	gc->prpl->add_buddy( gc, cmd[2] );
 	add_buddy( gc, NULL, cmd[2], cmd[2] );
 	
-	irc_usermsg( irc, "User '%s' added to your contact list as %s", cmd[2], user_findhandle( gc, cmd[2] )->nick );
+	irc_usermsg( irc, "User `%s' added to your contact list as `%s'", cmd[2], user_findhandle( gc, cmd[2] )->nick );
 	
 	return( 0 );
 }
@@ -467,7 +344,7 @@ int cmd_info( irc_t *irc, char **cmd )
 		user_t *u = user_find( irc, cmd[1] );
 		if( !u || !u->gc )
 		{
-			irc_usermsg( irc, "Nick '%s' does not exist", cmd[1] );
+			irc_usermsg( irc, "Nick `%s' does not exist", cmd[1] );
 			return( 1 );
 		}
 		gc = u->gc;
@@ -495,22 +372,22 @@ int cmd_rename( irc_t *irc, char **cmd)
 	
 	if( strcasecmp( cmd[1], irc->nick ) == 0 )
 	{
-		irc_usermsg( irc, "Nick '%s' can't be changed", cmd[1] );
+		irc_usermsg( irc, "Nick `%s' can't be changed", cmd[1] );
 		return( 1 );
 	}
 	if( user_find( irc, cmd[2] ) )
 	{
-		irc_usermsg( irc, "Nick '%s' already exists", cmd[2] );
+		irc_usermsg( irc, "Nick `%s' already exists", cmd[2] );
 		return( 1 );
 	}
 	if( !nick_ok( cmd[2] ) )
 	{
-		irc_usermsg( irc, "Nick '%s' contains invalid characters", cmd[2] );
+		irc_usermsg( irc, "Nick `%s' is invalid", cmd[2] );
 		return( 1 );
 	}
 	if( !( u = user_find( irc, cmd[1] ) ) )
 	{
-		irc_usermsg( irc, "Nick '%s' does not exist", cmd[1] );
+		irc_usermsg( irc, "Nick `%s' does not exist", cmd[1] );
 		return( 1 );
 	}
 	free( u->nick );
@@ -528,7 +405,7 @@ int cmd_rename( irc_t *irc, char **cmd)
 		nick_set( irc, u->handle, ((struct gaim_connection *)u->gc)->protocol, cmd[2] );
 	}
 	
-	irc_usermsg( irc, "Nickname successfully changed" );
+	irc_usermsg( irc, "Nick successfully changed" );
 	
 	return( 0 );
 }
@@ -540,7 +417,7 @@ int cmd_remove( irc_t *irc, char **cmd )
 	
 	if( !( u = user_find( irc, cmd[1] ) ) || !u->gc )
 	{
-		irc_usermsg( irc, "Buddy '%s' not found", cmd[1] );
+		irc_usermsg( irc, "Buddy `%s' not found", cmd[1] );
 		return( 1 );
 	}
 	s = strdup( u->handle );
@@ -549,7 +426,7 @@ int cmd_remove( irc_t *irc, char **cmd )
 	user_del( irc, cmd[1] );
 	nick_del( irc, cmd[1] );
 	
-	irc_usermsg( irc, "Buddy '%s' (nick %s) removed from contact list", s, cmd[1] );
+	irc_usermsg( irc, "Buddy `%s' (nick %s) removed from contact list", s, cmd[1] );
 	free( s );
 	
 	return( 0 );
@@ -565,7 +442,7 @@ int cmd_block( irc_t *irc, char **cmd )
 		user_t *u = user_find( irc, cmd[1] );
 		if( !u || !u->gc )
 		{
-			irc_usermsg( irc, "Nick '%s' does not exist", cmd[1] );
+			irc_usermsg( irc, "Nick `%s' does not exist", cmd[1] );
 			return( 1 );
 		}
 		gc = u->gc;
@@ -586,7 +463,7 @@ int cmd_block( irc_t *irc, char **cmd )
 		gc->prpl->rem_permit( gc, cmd[2] );
 		gc->prpl->add_deny( gc, cmd[2] );
 		
-		irc_usermsg( irc, "Buddy '%s' moved from your permit- to your deny-list", cmd[2] );
+		irc_usermsg( irc, "Buddy `%s' moved from your permit- to your deny-list", cmd[2] );
 	}
 	
 	return( 0 );
@@ -602,7 +479,7 @@ int cmd_allow( irc_t *irc, char **cmd )
 		user_t *u = user_find( irc, cmd[1] );
 		if( !u || !u->gc )
 		{
-			irc_usermsg( irc, "Nick '%s' does not exist", cmd[1] );
+			irc_usermsg( irc, "Nick `%s' does not exist", cmd[1] );
 			return( 1 );
 		}
 		gc = u->gc;
@@ -623,7 +500,7 @@ int cmd_allow( irc_t *irc, char **cmd )
 		gc->prpl->rem_deny( gc, cmd[2] );
 		gc->prpl->add_permit( gc, cmd[2] );
 		
-		irc_usermsg( irc, "Buddy '%s' moved from your deny- to your permit-list", cmd[2] );
+		irc_usermsg( irc, "Buddy `%s' moved from your deny- to your permit-list", cmd[2] );
 	}
 	
 	return( 0 );
@@ -631,31 +508,51 @@ int cmd_allow( irc_t *irc, char **cmd )
 
 int cmd_yesno( irc_t *irc, char **cmd )
 {
-	query_t *q = irc->queries;
-	
-	if( !q )
+	query_t *q = irc->queries, *prevq = q;
+	int numq = 0;
+
+	if( irc->queries == NULL )
 	{
 		irc_usermsg( irc, "Did I ask you something?" );
-		return( 1 );
+		return( 0 );
 	}
-	if( !strcasecmp( cmd[0], "yes" ) )
+	
+	/* If no argument was given, leave numq at 0, otherwise read and check for validity */
+	if( cmd[1] != NULL && sscanf( cmd[1], "%d", &numq ) != 1 )
 	{
-		irc_usermsg( irc, "Accepting: %s", q->question );
-		q->yes( NULL, q->data );
+		irc_usermsg( irc, "Invalid query number" );
+		return( 0 );
 	}
-	else
+
+	for( ; q != NULL; q = q->next, numq -- )
 	{
-		irc_usermsg( irc, "Rejecting: %s", q->question );
-		q->no( NULL, q->data );
+		if( numq == 0)
+		{
+			if( strcasecmp( cmd[0], "yes" ) == 0 )
+			{
+				irc_usermsg( irc, "Accepting: %s", q->question );
+				q->yes( NULL, q->data );
+			}
+			else if( strcasecmp( cmd[0], "no" ) == 0 )
+			{
+				irc_usermsg( irc, "Rejecting: %s", q->question );
+				q->no( NULL, q->data );
+			}
+			
+			/* If our question is first in the list, move the irc->queries pointer */
+			if( q == irc->queries )
+				irc->queries = q->next;
+
+			prevq->next = q->next;
+
+			free( q->question );
+			free( q );
+			return( 0 );
+		}
+		prevq = q;
 	}
-	irc->queries = irc->queries->next;
-	free( q->question );
-	free( q );
-	if( irc->queries )
-	{
-		irc_usermsg( irc, "%s", irc->queries->question );
-		irc_usermsg( irc, "Type yes to accept or no to reject" );
-	}
+	
+	irc_usermsg( irc, "Uhm, I never asked you something like that" );
 	
 	return( 0 );
 }
@@ -714,7 +611,7 @@ int cmd_blist( irc_t *irc, char **cmd )
 	else
 		online =  away = 1;
 	
-	irc_usermsg( irc, "%-16.16s  %-40.40s  %s", "Nickname", "User/Host/Network", "Status" );
+	irc_usermsg( irc, "%-16.16s  %-40.40s  %s", "Nick", "User/Host/Network", "Status" );
 	
 	if( online == 1 ) for( u = irc->users; u; u = u->next ) if( u->gc && u->online && !u->away )
 	{
@@ -767,6 +664,25 @@ int cmd_nick( irc_t *irc, char **cmd )
 		irc_usermsg( irc, "Setting your name on connection %d to `%s'", i, cmd[2] );
 		gc->prpl->set_info( gc, cmd[2] );
 	}
+	
+	return( 0 );
+}
+
+int cmd_qlist( irc_t *irc, char **cmd )
+{
+	query_t *q = irc->queries;
+	int num;
+	
+	if( !q )
+	{
+		irc_usermsg( irc, "There are no pending questions." );
+		return( 0 );
+	}
+	
+	irc_usermsg( irc, "Pending queries:" );
+	
+	for( num = 0; q; q = q->next, num ++ )
+		irc_usermsg( irc, "%d, %s", num, q->question );
 	
 	return( 0 );
 }

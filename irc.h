@@ -107,6 +107,7 @@ void irc_who( irc_t *irc, char *channel );
 void irc_spawn( irc_t *irc, user_t *u );
 void irc_join( irc_t *irc, user_t *u, char *channel );
 void irc_part( irc_t *irc, user_t *u, char *channel );
+void irc_kick( irc_t *irc, user_t *u, char *channel, user_t *kicker );
 void irc_kill( irc_t *irc, user_t *u );
 void irc_invite( irc_t *irc, char *nick, char *channel );
 void irc_whois( irc_t *irc, char *nick );

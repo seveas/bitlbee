@@ -1,3 +1,18 @@
+Version 0.82:
+- Fixed a little bug in nick.c which could cause a complete hang for
+  some tricky buddylists. (Thanks to Geert Hauwaerts for helping with
+  fixing this bug)
+- Fixed MSN support. (Lots of thanks to Wouter Paesen!)
+- Removed the old login/logout commands.
+- Added the qlist command.
+- Fixed a buffer overflow in the nick checking code. (Thanks to Jon
+  Åslund for pointing us at this problem)
+- Adds the add_private and add_channel options for set handle_unknown.
+- Some documentation updates.
+- Added two small utilities to encode/decode BitlCrypted files.
+
+Finished 31 Oct 2003
+
 Version 0.81a:
 - This version just fixes some small things we should've fixed before
   releasing 0.81:

@@ -36,7 +36,7 @@ Makefile.settings:
 	@echo
 
 clean: $(subdirs)
-	rm -f *.o $(OUTFILE) core utils/bitlbeed
+	rm -f *.o $(OUTFILE) core utils/bitlbeed encode decode
 
 distclean: clean $(subdirs)
 	rm -f Makefile.settings config.h
@@ -93,3 +93,9 @@ ifndef DEBUG
 	@echo '*' Stripping $(OUTFILE)
 	@-$(STRIP) $(OUTFILE)
 endif
+
+encode: crypting.c
+	$(CC) crypting.c protocols/md5.c $(CFLAGS) -o encode -DCRYPTING_MAIN
+
+decode: encode
+	cp encode decode

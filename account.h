@@ -26,20 +26,14 @@
 #ifndef _ACCOUNT_H
 #define _ACCOUNT_H
 
-typedef struct reconnect
-{
-	struct account *account;
-} reconnect_t;
-
 typedef struct account
 {
 	int protocol;
 	char *user;
 	char *pass;
 	char *server;
-	reconnect_t *reconnect;	/* Keep this to prevent double reconnects,
-	                           reconnecting removed accounts and all
-	                           other scary things. */
+	
+	int reconnect;
 	
 	struct gaim_connection *gc;
 	struct account *next;

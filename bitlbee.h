@@ -26,7 +26,7 @@
 #ifndef _BITLBEE_H
 #define _BITLBEE_H
 
-#define BITLBEE_VERSION "0.81"
+#define BITLBEE_VERSION "0.81a"
 
 #include "config.h"
 

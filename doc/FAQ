@@ -52,23 +52,6 @@ A: Short answer: we don't need it.
    project while having the capacity of more people available. The system
    works and we are kind of attached to it.
 
-Q: Why doesn't BitlBee reconnect to IM-networks automatically when a
-   connection fails?
-A: Because we don't want it to. We think it can be a bit dangerous, for
-   example for protocols which don't allow you to log in more than once
-   on the same account.
-   
-   Also, is it really that bad not to be online on MSN/ICQ/whatever when
-   you're away from your keyboard anyway? Typing "account on" is enough
-   to bring all the lost connections back up, which is good enough for us.
-   
-   If you feel like writing a patch which adds this auto-reconnect stuff,
-   you're welcome to write one. We're not going to take the time to implement
-   it, but good patches will never be rejected.
-   
-   -- A patch was submitted some time ago, it's imported now. See
-      "help set auto_reconnect" for more information.
-
 Q: When is $random_feature going to be implemented?
 A: Please do consult doc/TODO before asking. You're not going to be the
    first one to ask for file transfer support. ;-) Please also check the
@@ -78,26 +61,24 @@ A: Please do consult doc/TODO before asking. You're not going to be the
    If your fabulous feature seems not to be requested before, just join
    #bitlbee on irc.oftc.net and tell us the news.
 
-Q: What about MSN Messenger support?
-A: At least until 15 October 2003 it will be supported. We don't know what
-   will happen after that, when Microsoft closes all the pre-protocol-9
-   clients from their network. We're certainly *not* going to pay for (or
-   put our name/signature under) a Microsoft License Agreement, because
-   that's probably going to be some kind of NDA or yet another "Open
-   Source equals Devil" document. Not to mention paying for it...
+Q: Will MSN ever work again?
+A: In theory: Yes. Gaim still works, so with some efforts those fixes should
+   be portable to BitlBee. That's going to be quite a lot of work though.
    
-   As soon as we get more information about the new protocol (it is said
-   that it's not much more than a new authentication method), support might
-   come. Just don't be surprised to see MSN support disappear completely.
-   We're not really going to miss it, sorry.
+   Unfortunately Microsoft is threatening with the DMCA to anyone who
+   touches "their protocol". Probably not a big issue, but certainly not
+   something we want to have trouble with. Even though the local
+   European/Dutch law allows reverse-engineering for interoperability, we
+   don't feel like being banned from the USA, especially not by Microsoft.
+   </paranoid>
    
-   We just suggest you to set your "friendly name" to something like
-   "Wilmer - I won't be here anymore after 15 October 2003, so please do
-   speak up if you still have anything important to tell."... ;-)
+   Anyway, ATM backporting changes from Gaim would be a waste because the
+   current IM-system used by BitlBee is about to be ditched in favour of
+   something new/better, which means all the efforts put into a fix would
+   be wasted. We know we've been saying this for ages, but this time we
+   really mean it! ;-)
    
-   Most MSN-clone developers seem to be quite optimistic about the situation.
-   The new authentication method they implemented might be enough to keep
-   working after 15 October 2003. But we can't be sure about that.
-   
-   In short, it won't work for a while. If possible, we'll fix it. If that's
-   not possible, bad luck...
+   And as always, if you do feel like spending your time on this, go ahead
+   and write a patch. We'll see what we can do. Let's hope DMCA doesn't
+   prohibit our site to link to your patch. Oh, sorry, I promised to stop
+   being paranoid eh?

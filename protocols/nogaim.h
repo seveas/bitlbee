@@ -273,6 +273,9 @@ void nogaim_init();
 struct gaim_connection *gc_nr( int i );
 int proto_away( struct gaim_connection *gc, char *away );
 
+gboolean auto_reconnect( gpointer data );
+void cancel_auto_reconnect( struct account *a );
+
 /* multi.c */
 struct gaim_connection *new_gaim_conn( struct aim_user *user );
 void destroy_gaim_conn( struct gaim_connection *gc );

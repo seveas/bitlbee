@@ -1,3 +1,15 @@
+Version 0.81a:
+- This version just fixes some small things we should've fixed before
+  releasing 0.81:
+- Fixed a small bug in the auto-reconnect cleanup code.
+- Fixed the Makefile: Now it doesn't just overwrite your etc files when
+  installing.
+- Fixed the Makefile: $prefix/etc/bitlbee/ is the default etcdir now.
+- Disabling MSN by default, now that it doesn't work. It'll be back on
+  as soon as we get the module working again.
+
+Finished 16 Oct 2003
+
 Version 0.81:
 - Added a configuration file.
 - Added support for the PASS command to restrict access to the daemon to

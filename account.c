@@ -69,12 +69,13 @@ account_t *account_get( irc_t *irc, int nr )
 
 void account_del( irc_t *irc, int nr )
 {
-	account_t *a, *t, *l = NULL;
+	account_t *a, *l = NULL;
 	
 	for( a = irc->accounts; a; a = (l=a)->next )
 		if( ( nr-- ) == 0 )
 		{
-			t = a;
+			if( a->gc ) return; /* Caller should have checked, accounts still in use can't be deleted. */
+			
 			if( l )
 			{
 				l->next = a->next;
@@ -84,12 +85,12 @@ void account_del( irc_t *irc, int nr )
 				irc->accounts = a->next;
 			}
 			
-			free( t->user );
-			free( t->pass );
-			if( t->server ) free( t->server );
-			if( t->reconnect )	/* This prevents any reconnect still queued to happen */
-				t->reconnect->account = NULL;
-			free( t );
+			free( a->user );
+			free( a->pass );
+			if( a->server ) free( a->server );
+			if( a->reconnect )	/* This prevents any reconnect still queued to happen */
+				cancel_auto_reconnect( a );
+			free( a );
 			
 			break;
 		}
@@ -105,6 +106,8 @@ void account_on( irc_t *irc, account_t *a )
 		return;
 	}
 	
+	cancel_auto_reconnect( a );
+	
 	u = malloc( sizeof( struct aim_user ) );
 	memset( u, 0, sizeof( *u ) );
 	u->protocol = a->protocol;
@@ -112,9 +115,8 @@ void account_on( irc_t *irc, account_t *a )
 	strcpy( u->password, a->pass );
 	if( a->server) strcpy( u->proto_opt[0], a->server );
 	
-	// Bit hackish :/
-	a->gc = ( struct gaim_connection * ) u;
-	a->reconnect = NULL;
+	a->gc = (struct gaim_connection *) u; /* Bit hackish :-/ */
+	a->reconnect = 0;
 	
 	proto_prpl[a->protocol]->login( u );
 }
@@ -123,5 +125,9 @@ void account_off( irc_t *irc, account_t *a )
 {
 	account_offline( a->gc );
 	a->gc = NULL;
-	a->reconnect = NULL;
+	if( a->reconnect )
+	{
+		/* Shouldn't happen */
+		cancel_auto_reconnect( a );
+	}
 }

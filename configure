@@ -9,12 +9,12 @@
 
 prefix='/usr/local/'
 bindir='$prefix/sbin/'
-etcdir='$prefix/etc/'
+etcdir='$prefix/etc/bitlbee/'
 mandir='$prefix/share/man/'
 datadir='$prefix/share/bitlbee/'
 config='/var/lib/bitlbee/'
 
-msn=1
+msn=0
 jabber=1
 oscar=1
 yahoo=1
@@ -263,6 +263,9 @@ Linux )
 ;;
 *BSD )
 	echo 'Although our primary development system is Linux, BitlBee should run quite well on most BSD systems.'
+	if [ "$iconv" = 1 ]; then
+		echo 'LFLAGS+=-liconv' >> Makefile.settings;
+	fi
 ;;
 SunOS )
 	echo 'Solaris does not work with stripping enabled, so we will disable that.'

@@ -290,17 +290,18 @@ void account_online( struct gaim_connection *gc )
 
 gboolean auto_reconnect( gpointer data )
 {
-	reconnect_t *r = data;
-	account_t *a;
+	account_t *a = data;
 	
-	if( ( a = r->account ) )
-	{
-		a->reconnect = NULL;
-		account_on( (irc_t *) NULL, a );
-	}
-	free( r );
+	a->reconnect = 0;
+	account_on( (irc_t *) NULL, a );
 	
 	return( FALSE );	/* Only have to run the timeout once */
+}
+
+void cancel_auto_reconnect( account_t *a )
+{
+	while( g_source_remove_by_user_data( (gpointer) a ) );
+	a->reconnect = 0;
 }
 
 void account_offline( struct gaim_connection *gc )
@@ -346,13 +347,9 @@ void signoff( struct gaim_connection *gc )
 	{
 		int delay = set_getint( irc, "reconnect_delay" );
 		irc_usermsg( gc->irc, "%s - Reconnecting in %d seconds..", proto_name[gc->protocol], delay);
-		a->reconnect = malloc( sizeof( reconnect_t ) );
-		a->reconnect->account = a;
-		g_timeout_add( delay * 1000, auto_reconnect, a->reconnect );
-	}
-	else
-	{
-		a->reconnect = NULL;
+		
+		a->reconnect = 1;
+		g_timeout_add( delay * 1000, auto_reconnect, a );
 	}
 	
 	destroy_gaim_conn( gc );

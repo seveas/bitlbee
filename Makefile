@@ -18,9 +18,13 @@ CFLAGS += -Wall
 
 all: $(OUTFILE)
 
-uninstall: uninstall-bin uninstall-doc uninstall-etc
-install: install-bin install-doc install-etc
-	@if ! [ -d $(DESTDIR)$(CONFIG) ]; then echo -en '\n\nThe configuration directory $(DESTDIR)$(CONFIG) does not exist yet, don'\''t forget to create it!\n\n\n'; fi
+uninstall: uninstall-bin uninstall-doc
+	@echo -e '\n\nmake uninstall does not remove files in '$(DESTDIR)$(ETCDIR)', you can use make uninstall-etc to do that.\n\n'
+
+install: install-bin install-doc
+	@if ! [ -d $(DESTDIR)$(CONFIG) ]; then echo -e '\n\nThe configuration directory $(DESTDIR)$(CONFIG) does not exist yet, don'\''t forget to create it!'; fi
+	@if ! [ -e $(DESTDIR)$(ETCDIR)/bitlbee.conf ]; then echo -e '\n\nNo files are installed in '$(DESTDIR)$(ETCDIR)' by make install. Run make install-etc to do that.'; fi
+	@echo -e '\n'
 
 .PHONY:   install   install-bin   install-etc   install-doc \
         uninstall uninstall-bin uninstall-etc uninstall-doc \

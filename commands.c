@@ -376,9 +376,8 @@ int cmd_account( irc_t *irc, char **cmd )
 			}
 			else if( a->reconnect )
 			{
+				cancel_auto_reconnect( a );
 				irc_usermsg( irc, "Reconnect for connection %d cancelled", i );
-				a->reconnect->account = NULL;
-				a->reconnect = NULL;
 			}
 			else
 			{

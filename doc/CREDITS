@@ -29,6 +29,8 @@ The authors thank the following people:
 - Wouter Paesen, for the MSN friendlyname code.
 - Tony Perrie, for the RPM's and the Yahoo! patch.
 - Andrej Kacian/Ticho for some patches.
+- Jochem Kossen, for giving an account on his OpenBSD box to do some
+  portability testing.
 
 - And all other users who help us by sending useful bug reports, positive
   feedback, nice patches and cool addons. Mentioning you all would make

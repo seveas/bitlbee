@@ -9,7 +9,7 @@
 -include Makefile.settings
 
 # Program variables
-objects = irc.o bitlbee.o user.o nick.o set.o commands.o crypting.o help.o account.o ini.o conf.o
+objects = irc.o bitlbee.o user.o nick.o set.o commands.o crypting.o help.o account.o ini.o conf.o log.o
 subdirs = protocols
 
 # Expansion of variables
@@ -86,7 +86,7 @@ $(objects): %.o: %.c
 
 $(objects): Makefile Makefile.settings config.h
 
-$(OUTFILE): $(subdirs) $(objects)
+$(OUTFILE): $(objects) $(subdirs)
 	@echo '*' Linking $(OUTFILE)
 	@$(CC) $(objects) $(subdirobjs) -o $(OUTFILE) $(LFLAGS) $(EFLAGS)
 ifndef DEBUG

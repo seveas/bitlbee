@@ -967,7 +967,10 @@ static void jabber_handlepresence(gjconn gjc, jpacket p)
 	from = xmlnode_get_attrib(p->x, "from");
 	type = xmlnode_get_attrib(p->x, "type");
 	
-	if ((y = xmlnode_get_tag(p->x, "show"))) {
+	if (type && strcasecmp(type, "error") == 0) {
+		return;
+	}
+	else if ((y = xmlnode_get_tag(p->x, "show"))) {
 		show = xmlnode_get_data(y);
 		if (!show) {
 			state = 0;
@@ -2096,40 +2099,6 @@ static void jabber_chat_whisper(struct gaim_connection *gc, int id, char *who, c
 }
 ** End of chat - Bitlbee ** */
 
-static char *jabber_normalize(const char *s)
-{
-	static char buf[BUF_LEN];
-	char *t, *u;
-	int x = 0;
-
-	g_return_val_if_fail((s != NULL), NULL);
-
-	/* Somebody called us with s == NULL once... */
-	if(s == NULL) {
-		return(NULL);
-	} else {
-		u = t = g_strdup(s);
-
-		g_strdown(t);
-
-		while (*t && (x < BUF_LEN - 1)) {
-			if (*t != ' ')
-				buf[x++] = *t;
-			t++;
-		}
-		buf[x] = '\0';
-		g_free(u);
-
-		if (!strchr(buf, '@')) {
-			strcat(buf, "@jabber.org"); /* this isn't always right, but eh */
-		} else if ((u = strchr(strchr(buf, '@'), '/')) != NULL) {
-			*u = '\0';
-		}
-
-		return buf;
-	}
-}
-
 static void jabber_get_info(struct gaim_connection *gc, char *who) {
 	xmlnode x;
 	char *id;
@@ -2970,7 +2939,7 @@ void jabber_init(struct prpl *ret)
 	ret->chat_send = jabber_chat_send;
 ** End of chat stuff - Bitlbee ** */
 	ret->keepalive = jabber_keepalive;
-	ret->normalize = jabber_normalize;
+//	ret->normalize = jabber_normalize;
 	ret->buddy_free = jabber_buddy_free;
 	ret->alias_buddy = jabber_roster_update;
 	ret->group_buddy = jabber_group_change;

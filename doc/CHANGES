@@ -1,3 +1,33 @@
+Version 0.85:
+- Users can specify alternate configuration files/directories at runtime
+  now.
+- Rename now doesn't choke on name changes with only case changes anymore.
+- Imported the daemon patch into the main source tree. The daemon mode is
+  still experimental, this just eases maintenance. This daemon patch brings
+  a lot of features, including (as the name says) a real daemon mode and
+  also buffering of the data sent to the user, and flood protection.
+- Strips font and colour codes from Yahoo! messages.
+- Support for groupchats on Yahoo!
+- Fixed removing Yahoo! buddies from a different group than "Buddies".
+- Jabber presence packets with error messages are interpreted correctly now.
+  (They used to be parsed as a signin.)
+- bitlbee_save() checks return values from fprintf() and writes to tempfiles
+  first to make sure no old files get lost when there's a write error.
+- ICQ buddies are added all at once instead of once at a time. This should
+  solve problems with huge buddy lists.
+- Made the client pinging timings configurable. (Without requiring
+  recompilation)
+- MSN and Yahoo flag the connection as "wants_to_die" when they're logged
+  off because of a concurrent login. This means reconnection will be disabled
+  on concurrent logins.
+- BitlBee can now buffer the messages sent to someone before they're actually
+  sent, and wait for a specified number of seconds for more lines to be added
+  to the buffer before the message will really be sent.
+- Renamed the reconnect_delay setting to auto_reconnect_delay.
+- Unknown settings aren't saved anymore.
+
+Finished 13 Mar 2004
+
 Version 0.84:
 - Removed the libsoup dependency.
 - Fixed AuthMode=Registered: It will now restore your accounts when
@@ -10,7 +40,7 @@ Version 0.84:
   is disabled by default.
 - Fixed some memory leaks in IM-code.
 
-Finished ... 2004
+Finished 13 Feb 2004
 
 Version 0.83:
 - Fixed a crash bug on connecting to unsupported accounts.

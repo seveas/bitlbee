@@ -43,9 +43,9 @@ void nick_set( irc_t *irc, char *handle, int proto, char *nick )
 	}
 	
 	if( m )
-		n = m->next = malloc( sizeof( nick_t ) );
+		n = m->next = bitlbee_alloc( sizeof( nick_t ) );
 	else
-		n = irc->nicks = malloc( sizeof( nick_t ) );
+		n = irc->nicks = bitlbee_alloc( sizeof( nick_t ) );
 	memset( n, 0, sizeof( nick_t ) );
 	
 	n->handle = strdup( handle );

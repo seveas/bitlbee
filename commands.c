@@ -65,8 +65,8 @@ int cmd_help( irc_t *irc, char **cmd )
 		strncat( param, cmd[i], sizeof(param) - strlen(param) - 1 );
 	}
 
-	s = help_get( irc, param );
-	if( !s ) s = help_get( irc, "" );
+	s = help_get( &(global.help), param );
+	if( !s ) s = help_get( &(global.help), "" );
 	
 	if( s )
 	{
@@ -110,23 +110,23 @@ int cmd_register( irc_t *irc, char **cmd )
 	int checkie;
 	char *str;
 	
-	if( conf->authmode == REGISTERED )
+	if( global.conf->authmode == REGISTERED )
 	{
 		irc_usermsg( irc, "This server does not allow registering new accounts" );
 		return( 0 );
 	}
 	
-	str = (char *) malloc( strlen( irc->nick ) +
-	      strlen( CONFIG ) +
+	str = (char *) bitlbee_alloc( strlen( irc->nick ) +
+	      strlen( global.conf->configdir ) +
 	      strlen( ".accounts" ) + 1 );
 	
-	strcpy( str, CONFIG );
+	strcpy( str, global.conf->configdir );
 	strcat( str, irc->nick );
 	strcat( str, ".accounts" );
 	
 	checkie = access( str, F_OK );
 	
-	strcpy( str, CONFIG );
+	strcpy( str, global.conf->configdir );
 	strcat( str, irc->nick );
 	strcat( str, ".nicks" );
 	
@@ -150,7 +150,7 @@ int cmd_account( irc_t *irc, char **cmd )
 	account_t *a;
 	int i;
 	
-	if( conf->authmode == REGISTERED && irc->status < USTATUS_IDENTIFIED )
+	if( global.conf->authmode == REGISTERED && irc->status < USTATUS_IDENTIFIED )
 	{
 		irc_usermsg( irc, "This server only accepts registered users" );
 		return( 0 );
@@ -160,7 +160,7 @@ int cmd_account( irc_t *irc, char **cmd )
 	{
 		int prot;
 		
-		if( cmd[4] == NULL )
+		if( cmd[2] == NULL || cmd[3] == NULL || cmd[4] == NULL )
 		{
 			irc_usermsg( irc, "Not enough parameters" );
 			return( 0 );
@@ -375,7 +375,7 @@ int cmd_rename( irc_t *irc, char **cmd)
 		irc_usermsg( irc, "Nick `%s' can't be changed", cmd[1] );
 		return( 1 );
 	}
-	if( user_find( irc, cmd[2] ) )
+	if( user_find( irc, cmd[2] ) && ( nick_cmp( cmd[1], cmd[2] ) != 0 ) )
 	{
 		irc_usermsg( irc, "Nick `%s' already exists", cmd[2] );
 		return( 1 );
@@ -546,6 +546,7 @@ int cmd_yesno( irc_t *irc, char **cmd )
 			prevq->next = q->next;
 
 			free( q->question );
+			free( q->data );
 			free( q );
 			return( 0 );
 		}
@@ -559,7 +560,7 @@ int cmd_yesno( irc_t *irc, char **cmd )
 
 int cmd_set( irc_t *irc, char **cmd )
 {
-	if( cmd[2] )
+	if( cmd[1] && cmd[2] )
 	{
 		set_setstr( irc, cmd[1], cmd[2] );
 	}

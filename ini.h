@@ -23,6 +23,9 @@
   Suite 330, Boston, MA  02111-1307  USA
 */
 
+#ifndef _INI_H
+#define _INI_H
+
 #ifndef MAX_STRING
 #define MAX_STRING 128
 #endif
@@ -40,3 +43,5 @@ typedef struct
 ini_t *ini_open( char *file );
 int ini_read( ini_t *file );
 void ini_close( ini_t *file );
+
+#endif

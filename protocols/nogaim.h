@@ -127,6 +127,7 @@ struct conversation {
         char *channel;
         char *title;
         char joined;
+        void *data;
 };
 
 struct buddy {
@@ -200,6 +201,7 @@ struct prpl {
 	void (* chat_leave)	(struct gaim_connection *, int id);
 	void (* chat_whisper)	(struct gaim_connection *, int id, char *who, char *message);
 	int  (* chat_send)	(struct gaim_connection *, int id, char *message);
+	int  (* chat_open)	(struct gaim_connection *, char *who);
 	void (* keepalive)	(struct gaim_connection *);
 
 	/* get "chat buddy" info and away message */
@@ -214,12 +216,6 @@ struct prpl {
 
 	void (* buddy_free)	(struct buddy *);
 
-	/* this is really bad. */
-	void (* convo_closed)   (struct gaim_connection *, char *who);
-	int  (* convo_open)     (struct gaim_connection *, char *who);
-
-	char *(* normalize)(const char *);
-	
 	char *(* get_status_string) (int stat);
 };
 
@@ -273,6 +269,7 @@ char *set_eval_charset(irc_t *irc, set_t *set, char *value);
 void nogaim_init();
 struct gaim_connection *gc_nr( int i );
 int proto_away( struct gaim_connection *gc, char *away );
+char *set_eval_away_devoice( irc_t *irc, set_t *set, char *value );
 int handle_cmp( char *a, char *b, int protocol );
 
 gboolean auto_reconnect( gpointer data );

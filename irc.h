@@ -30,17 +30,26 @@
 #define IRC_MAX_ARGS 8
 
 #define IRC_LOGIN_TIMEOUT 60
-#define IRC_PING_INTERVAL 180
-#define IRC_PING_TIMEOUT 300
+/* These are now in bitlbee.conf:
+   #define IRC_PING_INTERVAL 180
+   #define IRC_PING_TIMEOUT 300 */
 #define IRC_PING_STRING "PinglBee"
+
+/* #define FLOOD_SEND 
+ * Not yet enabled by default due to some problems.
+ */
+#define FLOOD_SEND_INTERVAL 30
+#define FLOOD_SEND_BYTES (1024*10)
+#define FLOOD_SEND_MAXBUFFER (1024*20)
 
 #define UMODES "ais"
 #define CMODES "nt"
-#define CMODE "nt"
+#define CMODE "t"
 #define UMODE "s"
 
 typedef struct query
 {
+	void *gc;
 	char *question;
 	void (* yes) ( gpointer w, void *data );
 	void (* no) ( gpointer w, void *data );
@@ -67,7 +76,13 @@ typedef struct irc
 	irc_status_t status;
 	double last_pong;
 	int pinging;
-	
+	char *sendbuffer;
+	char *readbuffer;
+	int quit;
+
+	int sentbytes;
+	time_t oldtime;
+
 	char *nick;
 	char *user;
 	char *host;
@@ -81,7 +96,7 @@ typedef struct irc
 
 	char *channel;
 	int c_id;
-	
+
 	char private;
 	query_t *queries;
 	struct account *accounts;
@@ -96,14 +111,20 @@ typedef struct irc
 #include "nick.h"
 
 irc_t *irc_new( int fd );
+void irc_free( irc_t *irc );
 
 int irc_exec( irc_t *irc, char **cmd );
 int irc_process( irc_t *irc );
-int irc_process_string( irc_t *irc, char *line, int bytes );
+int irc_write_buffer( irc_t *irc );
+int irc_fill_buffer( irc_t *irc );
+int irc_process_line( irc_t *irc, char *line );
 
-int irc_write( irc_t *irc, char *format, ... );
-int irc_reply( irc_t *irc, int code, char *format, ... );
+void irc_vawrite( irc_t *irc, char *format, va_list params );
+void irc_write( irc_t *irc, char *format, ... );
+void irc_write_all( char *format, ... );
+void irc_reply( irc_t *irc, int code, char *format, ... );
 int irc_usermsg( irc_t *irc, char *format, ... );
+char **irc_tokenize( char *buffer );
 
 void irc_login( irc_t *irc );
 void irc_motd( irc_t *irc );

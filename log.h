@@ -4,7 +4,7 @@
   * Copyright 2002-2004 Wilmer van der Gaast and others                *
   \********************************************************************/
 
-/* Help file control                                                    */
+/* Logging services for the bee                               */
 
 /*
   This program is free software; you can redistribute it and/or modify
@@ -23,26 +23,39 @@
   Suite 330, Boston, MA  02111-1307  USA
 */
 
-#ifndef _HELP_H
-#define _HELP_H
+#ifndef _LOG_H
+#define _LOG_H
 
-typedef union
-{
-	off_t file_offset;
-	char *mem_offset;
-} help_off_t;
+typedef enum {
+	LOGLVL_INFO,
+	LOGLVL_WARNING,
+	LOGLVL_ERROR,
+#ifdef DEBUG
+	LOGLVL_DEBUG,
+#endif
+} loglvl_t;
 
-typedef struct help_t
-{
-	int fd;
-	time_t mtime;
-	char *string;
-	help_off_t offset;
-	int length;
-	void *next;
-} help_t;
+typedef enum {
+	LOGOUTPUT_NULL,
+	LOGOUTPUT_IRC,
+	LOGOUTPUT_SYSLOG,
+	LOGOUTPUT_CONSOLE,
+} logoutput_t;
 
-help_t *help_init( help_t **help );
-char *help_get( help_t **help, char *string );
+typedef struct log_t {
+	void (*error)(int level, char *logmessage);
+	void (*warning)(int level, char *logmessage); 
+	void (*informational)(int level, char *logmessage);
+#ifdef DEBUG
+	void (*debug)(int level, char *logmessage);
+#endif
+} log_t;
+
+void log_init(void);
+void log_link(int level, int output);
+void log_message(int level, char *message, ...);
+void log_error(char *functionname);
+
+char *my_vasprintf(const char *fmt, va_list ap);
 
 #endif

@@ -110,7 +110,7 @@ char *hashpass (irc_t *irc) {
 	
 	if (irc->password == NULL) return (NULL);
 	
-	rv = (char *)malloc (33);
+	rv = (char *)bitlbee_alloc (33);
 	memset (rv, 0, 33);
 	
 	md5_init (&md5state);
@@ -119,7 +119,7 @@ char *hashpass (irc_t *irc) {
 	
 	for (i = 0; i < 16; i++) {
 		/* Build a hash of the pass */
-		snprintf (digits, sizeof (digits), "%02x\n", digest[i]);
+		snprintf (digits, sizeof (digits), "%02x", digest[i]);
 		strcat (rv, digits);
 	}
 	
@@ -132,7 +132,7 @@ char *obfucrypt (irc_t *irc, char *line) {
 	
 	if (irc->password == NULL) return (NULL);
 	
-	rv = (char *)malloc (strlen (line) + 1);
+	rv = (char *)bitlbee_alloc (strlen (line) + 1);
 	memset (rv, '\0', strlen (line) + 1);
 	
 	i = j = 0;
@@ -157,7 +157,7 @@ char *deobfucrypt (irc_t *irc, char *line) {
 	
 	if (irc->password == NULL) return (NULL);
 	
-	rv = (char *)malloc (strlen (line) + 1);
+	rv = (char *)bitlbee_alloc (strlen (line) + 1);
 	memset (rv, '\0', strlen (line) + 1);
 	
 	i = j = 0;

@@ -43,5 +43,10 @@ int set_getint( irc_t *irc, char *key );
 int set_setstr( irc_t *irc, char *key, char *value );
 int set_setint( irc_t *irc, char *key, int value );
 void set_del( irc_t *irc, char *key );
+
 char *set_eval_int( irc_t *irc, set_t *set, char *value );
 char *set_eval_bool( irc_t *irc, set_t *set, char *value );
+char *set_eval_to_char( irc_t *irc, set_t *set, char *value );
+char *set_eval_ops( irc_t *irc, set_t *set, char *value );
+
+

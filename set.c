@@ -176,3 +176,46 @@ char *set_eval_bool( irc_t *irc, set_t *set, char *value )
 		return( value );
 	return( set_eval_int( irc, set, value ) );
 }
+
+char *set_eval_to_char( irc_t *irc, set_t *set, char *value )
+{
+	char *s = bitlbee_alloc( 3 );
+	
+	if( *value == ' ' )
+		strcpy( s, " " );
+	else
+		sprintf( s, "%c ", *value );
+	
+	return( s );
+}
+
+char *set_eval_ops( irc_t *irc, set_t *set, char *value )
+{
+	if( strcasecmp( value, "user" ) == 0 )
+	{
+		irc_write( irc, ":%s!%s@%s MODE %s %s %s %s", irc->mynick, irc->mynick, irc->myhost,
+		                                              irc->channel, "+o-o", irc->nick, irc->mynick );
+		return( value );
+	}
+	else if( strcasecmp( value, "root" ) == 0 )
+	{
+		irc_write( irc, ":%s!%s@%s MODE %s %s %s %s", irc->mynick, irc->mynick, irc->myhost,
+		                                              irc->channel, "-o+o", irc->nick, irc->mynick );
+		return( value );
+	}
+	else if( strcasecmp( value, "both" ) == 0 )
+	{
+		irc_write( irc, ":%s!%s@%s MODE %s %s %s %s", irc->mynick, irc->mynick, irc->myhost,
+		                                              irc->channel, "+oo", irc->nick, irc->mynick );
+		return( value );
+	}
+	else if( strcasecmp( value, "none" ) == 0 )
+	{
+		irc_write( irc, ":%s!%s@%s MODE %s %s %s %s", irc->mynick, irc->mynick, irc->myhost,
+		                                              irc->channel, "-oo", irc->nick, irc->mynick );
+		return( value );
+	}
+	
+	return( NULL );
+}
+

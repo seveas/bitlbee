@@ -51,8 +51,6 @@ static char *proto_away_alias[7][5] =
 };
 static char *proto_away_alias_find( GList *gcm, char *away );
 
-static char *set_eval_away_devoice( irc_t *irc, set_t *set, char *value );
-
 static int remove_chat_buddy_silent( struct conversation *b, char *handle );
 
 GSList *connections;
@@ -62,39 +60,29 @@ GSList *connections;
 
 void nogaim_init()
 {
-	proto_prpl[PROTO_MSN] = malloc( sizeof( struct prpl ) );
+	proto_prpl[PROTO_MSN] = bitlbee_alloc( sizeof( struct prpl ) );
 	memset( proto_prpl[PROTO_MSN], 0, sizeof( struct prpl ) );
 #ifdef WITH_MSN
 	msn_init( proto_prpl[PROTO_MSN] );
 #endif
 
-	proto_prpl[PROTO_OSCAR] = malloc( sizeof( struct prpl ) );
+	proto_prpl[PROTO_OSCAR] = bitlbee_alloc( sizeof( struct prpl ) );
 	memset( proto_prpl[PROTO_OSCAR], 0, sizeof( struct prpl ) );
 #ifdef WITH_OSCAR
 	oscar_init( proto_prpl[PROTO_OSCAR] );
 #endif
 	
-	proto_prpl[PROTO_YAHOO] = malloc( sizeof( struct prpl ) );
+	proto_prpl[PROTO_YAHOO] = bitlbee_alloc( sizeof( struct prpl ) );
 	memset( proto_prpl[PROTO_YAHOO], 0, sizeof( struct prpl ) );
 #ifdef WITH_YAHOO
 	byahoo_init( proto_prpl[PROTO_YAHOO] );
 #endif
 	
-	proto_prpl[PROTO_JABBER] = malloc( sizeof( struct prpl ) );
+	proto_prpl[PROTO_JABBER] = bitlbee_alloc( sizeof( struct prpl ) );
 	memset( proto_prpl[PROTO_JABBER], 0, sizeof( struct prpl ) );
 #ifdef WITH_JABBER
 	jabber_init( proto_prpl[PROTO_JABBER] );
 #endif
-	
-	set_add( IRC, "html", "nostrip", NULL );
-	set_add( IRC, "typing_notice", "false", set_eval_bool );
-	set_add( IRC, "away_devoice", "true", set_eval_away_devoice );
-#ifdef ICONV
-	set_add( IRC, "charset", "none", set_eval_charset );
-#endif
-	set_add( IRC, "handle_unknown", "root", NULL );
-	set_add( IRC, "auto_reconnect", "false", set_eval_bool );
-	set_add( IRC, "reconnect_delay", "300", set_eval_int );
 }
 
 struct gaim_connection *gc_nr( int i )
@@ -230,31 +218,27 @@ struct gaim_connection *new_gaim_conn( struct aim_user *user )
 	struct gaim_connection *gc;
 	account_t *a;
 	
-	gc = malloc( sizeof( struct gaim_connection ) );
-	memset( gc, 0, sizeof( struct gaim_connection ) );
+	gc = g_new0( struct gaim_connection, 1 );
 	
 	gc->protocol = user->protocol;
 	gc->prpl = proto_prpl[gc->protocol];
 	g_snprintf( gc->username, sizeof( gc->username ), "%s", user->username );
 	g_snprintf( gc->password, sizeof( gc->password ), "%s", user->password );
-	gc->inpa = 0;
-	gc->permit = NULL;
-	gc->deny = NULL;
 	gc->irc = IRC;
-
-	connections = g_slist_append(connections, gc);
-
+	
+	connections = g_slist_append( connections, gc );
+	
 	user->gc = gc;
 	gc->user = user;
 	
-	// Find the account_t so we can set it's gc pointer
+	// Find the account_t so we can set its gc pointer
 	for( a = gc->irc->accounts; a; a = a->next )
 		if( ( struct aim_user * ) a->gc == user )
 		{
 			a->gc = gc;
 			break;
 		}
-
+	
 	return( gc );
 }
 
@@ -314,15 +298,23 @@ void account_online( struct gaim_connection *gc )
 	
 //	if( gc->protocol == PROTO_OSCAR || gc->protocol == PROTO_ICQ || gc->protocol == PROTO_TOC )
 	if( gc->protocol == PROTO_ICQ )
+	{
+		GList *ul = NULL;
+		
 		while( n )
 		{
 			if( n->proto == gc->protocol )
 			{
-				gc->prpl->add_buddy( gc, n->handle );
+				ul = g_list_append( ul, n->handle );
+				// gc->prpl->add_buddy( gc, n->handle );
 				add_buddy( gc, NULL, n->handle, NULL );
 			}
 			n = n->next;
 		}
+		
+		gc->prpl->add_buddies( gc, ul );
+		g_list_free( ul );
+	}
 	
 	if( u && u->away ) proto_away( gc, u->away );
 }
@@ -384,7 +376,7 @@ void signoff( struct gaim_connection *gc )
 	}
 	else if( !gc->wants_to_die && set_getint( irc, "auto_reconnect" ) )
 	{
-		int delay = set_getint( irc, "reconnect_delay" );
+		int delay = set_getint( irc, "auto_reconnect_delay" );
 		irc_usermsg( gc->irc, "%s - Reconnecting in %d seconds..", proto_name[gc->protocol], delay);
 		
 		a->reconnect = 1;
@@ -409,14 +401,15 @@ void do_ask_dialog( char *msg, void *data, void *doit, void *dont )
 	if( q )
 	{
 		while( q->next ) q = q->next;
-		q = q->next = malloc( sizeof( query_t ) );
+		q = q->next = bitlbee_alloc( sizeof( query_t ) );
 	}
 	else
 	{
-		IRC->queries = q = malloc( sizeof( query_t ) );
+		IRC->queries = q = bitlbee_alloc( sizeof( query_t ) );
 	}
 	memset( q, 0, sizeof( query_t ) );
 	
+	// TODO: Fill in q->gc, or see how to do this....
 	q->question = strdup( msg );
 	q->yes = doit;
 	q->no = dont;
@@ -472,12 +465,8 @@ void add_buddy( struct gaim_connection *gc, char *group, char *handle, char *rea
 	
 	if( ( s = strchr( handle, '@' ) ) )
 	{
-		s ++;
-		u->host = strdup( s );
-		
-		*(s-1) = 0;
-		u->user = strdup( handle );
-		*(s-1) = '@';
+		u->host = strdup( s + 1 );
+		u->user = strndup( handle, s - handle );
 	}
 	else if( gc->user->proto_opt[0] && *gc->user->proto_opt[0] )
 	{
@@ -583,6 +572,12 @@ void serv_got_update( struct gaim_connection *gc, char *handle, int loggedin, in
 	oa = u->away != NULL;
 	oo = u->online;
 	
+	if( u->away )
+	{
+		free( u->away );
+		u->away = NULL;
+	}
+	
 	if( loggedin && !u->online )
 	{
 		irc_spawn( gc->irc, u );
@@ -594,7 +589,6 @@ void serv_got_update( struct gaim_connection *gc, char *handle, int loggedin, in
 		
 		irc_kill( gc->irc, u );
 		u->online = 0;
-		u->away = NULL;
 		
 		/* Remove him/her from the conversations to prevent PART messages after he/she QUIT already */
 		for( c = gc->conversations; c; c = c->next )
@@ -604,34 +598,34 @@ void serv_got_update( struct gaim_connection *gc, char *handle, int loggedin, in
 	if( ( type & UC_UNAVAILABLE ) && ( gc->protocol == PROTO_MSN ) )
 	{
 		if( ( type & 30 ) == ( MSN_BUSY << 1 ) )
-			u->away = "Busy";
+			u->away = strdup( "Busy" );
 		else if( ( type & 30 ) == ( MSN_IDLE << 1 ) )
-			u->away = "Idle";
+			u->away = strdup( "Idle" );
 		else if( ( type & 30 ) == ( MSN_BRB << 1 ) )
-			u->away = "Be right back";
+			u->away = strdup( "Be right back" );
 		else if( ( type & 30 ) == ( MSN_PHONE << 1 ) )
-			u->away = "On the phone";
+			u->away = strdup( "On the phone" );
 		else if( ( type & 30 ) == ( MSN_LUNCH << 1 ) )
-			u->away = "Out to lunch";
+			u->away = strdup( "Out to lunch" );
 		else // if( ( type & 30 ) == ( MSN_AWAY << 1 ) )
-			u->away = "Away";
+			u->away = strdup( "Away" );
 	}
 	else if( ( type & UC_UNAVAILABLE ) && ( gc->protocol == PROTO_OSCAR || gc->protocol == PROTO_ICQ || gc->protocol == PROTO_TOC ) )
 	{
-		u->away = "Away";
+		u->away = strdup( "Away" );
 	}
 	else if( ( type & UC_UNAVAILABLE ) && ( gc->protocol == PROTO_JABBER ) )
 	{
 		if( type & UC_DND )
-			u->away = "Do Not Disturb";
+			u->away = strdup( "Do Not Disturb" );
 		else if( type & UC_XA )
-			u->away = "Extended Away";
+			u->away = strdup( "Extended Away" );
 		else // if( type & UC_AWAY )
-			u->away = "Away";
+			u->away = strdup( "Away" );
 	}
-	else if( ( type & UC_UNAVAILABLE ) && ( gc->protocol == PROTO_YAHOO ) )
+	else if( ( type & UC_UNAVAILABLE ) && gc->prpl->get_status_string )
 	{
-		u->away = gc->prpl->get_status_string( type );
+		u->away = strdup( gc->prpl->get_status_string( type ) );
 	}
 	else
 		u->away = NULL;
@@ -717,6 +711,7 @@ void serv_got_typing( struct gaim_connection *gc, char *handle, int timeout )
 void serv_got_chat_left( struct gaim_connection *gc, int id )
 {
 	struct conversation *c, *l = NULL;
+	GList *ir;
 	
 	if( set_getint( gc->irc, "debug" ) )
 		irc_usermsg( gc->irc, "You were removed from conversation %d", (int) id );
@@ -742,9 +737,11 @@ void serv_got_chat_left( struct gaim_connection *gc, int id )
 		else
 			gc->conversations = c->next;
 		
+		for( ir = c->in_room; ir; ir = ir->next )
+			free( ir->data );
+		g_list_free( c->in_room );
 		free( c->channel );
 		free( c->title );
-		g_list_free( c->in_room );
 		free( c );
 	}
 }
@@ -786,17 +783,17 @@ struct conversation *serv_got_joined_chat( struct gaim_connection *gc, int id, c
 	if( gc->conversations )
 	{
 		for( c = gc->conversations; c->next; c = c->next );
-		c = c->next = malloc( sizeof( struct conversation ) );
+		c = c->next = bitlbee_alloc( sizeof( struct conversation ) );
 	}
 	else
-		gc->conversations = c = malloc( sizeof( struct conversation ) );
+		gc->conversations = c = bitlbee_alloc( sizeof( struct conversation ) );
 	
 	memset( c, 0, sizeof( struct conversation ) );
 	c->id = id;
 	c->gc = gc;
 	c->title = strdup( handle );
 	
-	s = malloc( 16 );
+	s = bitlbee_alloc( 16 );
 	sprintf( s, "#chat_%03d", gc->irc->c_id++ );
 	c->channel = strdup( s );
 	free( s );
@@ -827,6 +824,8 @@ void add_chat_buddy( struct conversation *b, char *handle )
 	if( strcasecmp( handle, b->gc->user->username ) == 0 )
 	{
 		u = user_find( b->gc->irc, b->gc->irc->nick );
+		if( !b->joined )
+			irc_join( b->gc->irc, u, b->channel );
 		b->joined = me = 1;
 	}
 	
@@ -838,13 +837,12 @@ void add_chat_buddy( struct conversation *b, char *handle )
 		u = user_findhandle( b->gc, handle );
 	}
 	
-	/* Send the IRC message to the client */
-	if( b->joined && u )
-		irc_join( b->gc->irc, u, b->channel );
-	
 	/* Add the handle to the room userlist, if it's not 'me' */
 	if( !me )
+	{
+		irc_join( b->gc->irc, u, b->channel );
 		b->in_room = g_list_append( b->in_room, strdup( handle ) );
+	}
 }
 
 void remove_chat_buddy( struct conversation *b, char *handle, char *reason )
@@ -882,6 +880,7 @@ static int remove_chat_buddy_silent( struct conversation *b, char *handle )
 	{
 		if( strcasecmp( handle, i->data ) == 0 )
 		{
+			free( i->data );
 			b->in_room = g_list_remove( b->in_room, i->data );
 			return( 1 );
 		}
@@ -927,7 +926,7 @@ struct conversation *conv_findchannel( char *channel )
 	return( NULL );
 }
 
-static char *set_eval_away_devoice( irc_t *irc, set_t *set, char *value )
+char *set_eval_away_devoice( irc_t *irc, set_t *set, char *value )
 {
 	int st;
 	

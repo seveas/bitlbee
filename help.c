@@ -24,36 +24,35 @@
 */
 
 #include "bitlbee.h"
-#include "help.h"
 
 #define BUFSIZE 1100
 
-help_t *help_init( irc_t *irc )
+help_t *help_init( help_t **help )
 {
 	int i, buflen = 0;
-	help_t *h; //, *h2;
+	help_t *h;
 	char *s, *t;
 	time_t mtime;
 	struct stat stat[1];
 	
-	irc->help = h = malloc( sizeof( help_t ) );
+	*help = h = bitlbee_alloc( sizeof( help_t ) );
 	memset( h, 0, sizeof( help_t ) );
 	h->fd = open( HELP_FILE, O_RDONLY );
 	
 	if( h->fd == -1 )
 	{
 		free( h );
-		return( irc->help = NULL );
+		return( *help = NULL );
 	}
 	
 	if( fstat( h->fd, stat ) != 0 )
 	{
 		free( h );
-		return( irc->help = NULL );
+		return( *help = NULL );
 	}
 	mtime = stat->st_mtime;
 	
-	s = malloc( BUFSIZE + 1 );
+	s = bitlbee_alloc( BUFSIZE + 1 );
 	s[BUFSIZE] = 0;
 	
 	while( ( ( i = read( h->fd, s + buflen, BUFSIZE - buflen ) ) > 0 ) ||
@@ -64,8 +63,8 @@ help_t *help_init( irc_t *irc )
 		if( !( t = strstr( s, "\n%\n" ) ) || s[0] != '?' )
 		{
 			/* FIXME: Clean up */
-//			help_close( irc->help );
-			irc->help = NULL;
+//			help_close( *help );
+			*help = NULL;
 			free( s );
 			return( NULL );
 		}
@@ -73,14 +72,14 @@ help_t *help_init( irc_t *irc )
 		
 		if( h->string )
 		{
-			h = h->next = malloc( sizeof( help_t ) );
+			h = h->next = bitlbee_alloc( sizeof( help_t ) );
 			memset( h, 0, sizeof( help_t ) );
 		}
-		h->string = malloc( i );
+		h->string = bitlbee_alloc( i );
 		
 		strncpy( h->string, s + 1, i - 1 );
 		h->string[i-1] = 0;
-		h->fd = ((help_t *)irc->help)->fd;
+		h->fd = (*help)->fd;
 		h->offset.file_offset = lseek( h->fd, 0, SEEK_CUR ) - buflen + i + 1;
 		h->length = t - s - i - 1;
 		h->mtime = mtime;
@@ -88,22 +87,23 @@ help_t *help_init( irc_t *irc )
 		buflen -= ( t + 3 - s );
 		t = strdup( t + 3 );
 		free( s );
-		s = realloc( t, BUFSIZE + 1 );
+		s = bitlbee_realloc( t, BUFSIZE + 1 );
 		s[BUFSIZE] = 0;
 	}
 	
 	free( s );
 	
-	return( irc->help );
+	return( *help );
 }
 
-char *help_get( irc_t *irc, char *string )
+char *help_get( help_t **help, char *string )
 {
-	help_t *h;
 	time_t mtime;
 	struct stat stat[1];
-	
-	h = irc->help;
+	help_t *h;
+
+	h=*help;	
+
 	while( h )
 	{
 		if( strcasecmp( h->string, string ) == 0 ) break;
@@ -111,19 +111,20 @@ char *help_get( irc_t *irc, char *string )
 	}
 	if( h )
 	{
-		char *s = malloc( h->length + 1 );
+		char *s = bitlbee_alloc( h->length + 1 );
 		
 		if( fstat( h->fd, stat ) != 0 )
 		{
 			free( h );
-			return( irc->help = NULL );
+			*help=NULL;
+			return( NULL );
 		}
 		mtime = stat->st_mtime;
 		
-		if( mtime > h->mtime )
+		if( mtime > h->mtime ) {
 			return( NULL );
-//			return( strdup( "Help file changed during this session. Please restart to get help back." ) );
-		
+			return( strdup( "Help file changed during this session. Please restart to get help back." ) );
+		}
 		s[h->length] = 0;
 		if( h->fd > 0 )
 		{

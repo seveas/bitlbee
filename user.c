@@ -34,19 +34,19 @@ user_t *user_add( irc_t *irc, char *nick )
 	{
 		while( 1 )
 		{
-			if( strcasecmp( u->nick, nick ) == 0 )
+			if( nick_cmp( u->nick, nick ) == 0 )
 				return( NULL );
 			if( u->next )
 				u = u->next;
 			else
 				break;
 		}
-		u->next = malloc( sizeof( user_t ) );
+		u->next = bitlbee_alloc( sizeof( user_t ) );
 		u = u->next;
 	}
 	else
 	{
-		irc->users = u = malloc( sizeof( user_t ) );
+		irc->users = u = bitlbee_alloc( sizeof( user_t ) );
 	}
 	memset( u, 0, sizeof( user_t ) );
 	
@@ -64,7 +64,7 @@ int user_del( irc_t *irc, char *nick )
 	t = NULL;
 	while( u )
 	{
-		if( strcasecmp( u->nick, nick ) == 0 )
+		if( nick_cmp( u->nick, nick ) == 0 )
 		{
 			if( t )
 				t->next = u->next;
@@ -76,12 +76,14 @@ int user_del( irc_t *irc, char *nick )
 			if( u->nick != u->user ) free( u->user );
 			if( u->nick != u->host ) free( u->host );
 			if( u->nick != u->realname ) free( u->realname );
+			if( u->away ) free( u->away );
 			if( u->handle ) free( u->handle );
+			if( u->sendbuf ) free( u->sendbuf );
+			if( u->sendbuf_timer ) g_source_remove( u->sendbuf_timer );
 			free( u );
 			return( 1 );
 		}
-		t = u;
-		u = u->next;
+		u = (t=u)->next;
 	}
 	
 	return( 0 );

@@ -38,6 +38,10 @@ typedef struct user
 	char *handle;
 	struct gaim_connection *gc;
 	
+	char *sendbuf;
+	int sendbuf_len;
+	guint sendbuf_timer;
+	
 	int (*send_handler) ( irc_t *irc, struct user *u, char *msg );
 	
 	void *next;

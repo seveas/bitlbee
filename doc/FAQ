@@ -52,10 +52,6 @@ A: Short answer: we don't need it.
    project while having the capacity of more people available. The system
    works and we are kind of attached to it.
    
-   Additional answer: There's a read-only CVS available now, for people
-   who prefer that over downloading a devel tarball. For more information,
-   see http://alioth.debian.org/projects/bitlbee/
-
 Q: When is $random_feature going to be implemented?
 A: Please do consult doc/TODO before asking. You're not going to be the
    first one to ask for file transfer support. ;-) Please also check the

@@ -23,15 +23,11 @@
   Suite 330, Boston, MA  02111-1307  USA
 */
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
-#include "ini.h"
+#include "bitlbee.h"
 
 ini_t *ini_open( char *file )
 {
-	ini_t *ini = (ini_t *) malloc( sizeof( ini_t ) );
+	ini_t *ini = (ini_t *) bitlbee_alloc( sizeof( ini_t ) );
 	
 	memset( ini, 0, sizeof( ini_t ) );
 	if( ( ini->fp = fopen( file, "r" ) ) == NULL )

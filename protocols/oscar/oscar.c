@@ -2073,6 +2073,52 @@ static void oscar_add_buddy(struct gaim_connection *g, char *name) {
 	}
 }
 
+static void oscar_add_buddies(struct gaim_connection *g, GList *buddies) {
+	struct oscar_data *odata = (struct oscar_data *)g->proto_data;
+	if (odata->icq) {
+		char buf[MSG_LEN];
+		int n=0;
+		while (buddies) {
+			if (n > MSG_LEN - 18) {
+				aim_bos_setbuddylist(odata->sess, odata->conn, buf);
+				n = 0;
+			}
+			n += g_snprintf(buf + n, sizeof(buf) - n, "%s&", (char *)buddies->data);
+			buddies = buddies->next;
+		}
+		aim_bos_setbuddylist(odata->sess, odata->conn, buf);
+	}
+#if 0
+
+BitlBee doesn't use add_buddies for AIM, just for ICQ. Let's exclude this block then, it fails to compile.
+
+ else {
+		if (odata->sess->ssi.received_data) {
+			int tmp;
+			GSList *curgrp, *curbud;
+			for (curgrp=g->groups; curgrp; curgrp=g_slist_next(curgrp)) {
+				tmp = 0;
+				for (curbud=((struct group*)curgrp->data)->members; curbud; curbud=curbud->next)
+					if (!aim_ssi_itemlist_finditem(odata->sess->ssi.items, NULL, ((struct buddy*)curbud->data)->name, 0x0000))
+						tmp++;
+				if (tmp) {
+					char **sns = (char **)malloc(tmp*sizeof(char*));
+					tmp = 0;
+					for (curbud=((struct group*)curgrp->data)->members; curbud; curbud=curbud->next)
+						if (!aim_ssi_itemlist_finditem(odata->sess->ssi.items, NULL, ((struct buddy*)curbud->data)->name, 0x0000)) {
+							debug_printf("ssi: adding buddy %s to group %s\n", ((struct buddy*)curbud->data)->name, ((struct group*)curgrp->data)->name);
+							sns[tmp] = (char *)((struct buddy*)curbud->data)->name;
+							tmp++;
+						}
+					aim_ssi_addbuddies(odata->sess, odata->conn, ((struct group*)curgrp->data)->name, sns, tmp);
+					free(sns);
+				}
+			}
+		}
+	}
+#endif
+}
+
 static void oscar_remove_buddy(struct gaim_connection *g, char *name, char *group) {
 	struct oscar_data *odata = (struct oscar_data *)g->proto_data;
 	if (odata->icq) {
@@ -2544,7 +2590,7 @@ void oscar_init(struct prpl *ret) {
 //	ret->set_idle = oscar_set_idle;
 //	ret->change_passwd = oscar_change_passwd;
 	ret->add_buddy = oscar_add_buddy;
-//	ret->add_buddies = oscar_add_buddies;
+	ret->add_buddies = oscar_add_buddies;
 //	ret->group_buddy = oscar_move_buddy;
 	ret->remove_buddy = oscar_remove_buddy;
 //	ret->remove_buddies = oscar_remove_buddies;

@@ -26,7 +26,7 @@
 #ifndef __CONF_H
 #define __CONF_H
 
-typedef enum runmode { DAEMON, INETD } runmode_t;
+typedef enum runmode { RUNMODE_DAEMON, RUNMODE_INETD } runmode_t;
 typedef enum authmode { OPEN, CLOSED, REGISTERED } authmode_t;
 
 typedef struct conf
@@ -35,11 +35,14 @@ typedef struct conf
 	signed int port;
 	int nofork;
 	int verbose;
-	int listen_socket;
 	runmode_t runmode;
 	authmode_t authmode;
 	char *password;
 	char *hostname;
+	char *configdir;
+	char *motdfile;
+	int ping_interval;
+	int ping_timeout;
 } conf_t;
 
 conf_t *conf_load( int argc, char *argv[] );

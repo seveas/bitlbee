@@ -25,7 +25,6 @@
 
 #include "bitlbee.h"
 
-// #include <getopt.h>
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -39,21 +38,24 @@ conf_t *conf_load( int argc, char *argv[] )
 	conf_t *conf;
 	int opt, i;
 	
-	conf = malloc( sizeof( conf_t ) );
-	if( conf==NULL ) { perror( "malloc" ); exit( 1 ); }
+	conf = bitlbee_alloc( sizeof( conf_t ) );
 	memset( conf, 0, sizeof( conf_t ) );
 	
 	conf->interface = "0.0.0.0";
 	conf->port = 6667;
 	conf->nofork = 0;
 	conf->verbose = 0;
-	conf->runmode = INETD;
+	conf->runmode = RUNMODE_INETD;
 	conf->authmode = OPEN;
 	conf->password = NULL;
+	conf->configdir = strdup( CONFIG );
+	conf->motdfile = strdup( ETCDIR "/motd.txt" );
+	conf->ping_interval = 180;
+	conf->ping_timeout = 300;
 	
 	conf_loadini( conf, CONF_FILE );
 	
-	while( ( opt = getopt( argc, argv, "i:p:hvncd" ) ) >= 0 )
+	while( ( opt = getopt( argc, argv, "i:p:nvIDc:d:h" ) ) >= 0 )
 	{
 		if( opt == 'i' )
 		{
@@ -72,25 +74,53 @@ conf_t *conf_load( int argc, char *argv[] )
 			conf->nofork=1;
 		else if( opt == 'v' )
 			conf->verbose=1;
+		else if( opt == 'I' )
+			conf->runmode=RUNMODE_INETD;
+		else if( opt == 'D' )
+			conf->runmode=RUNMODE_DAEMON;
 		else if( opt == 'c' )
-			conf->runmode=INETD;
+		{
+			if( strcmp( CONF_FILE, optarg ) != 0 )
+			{
+				free( CONF_FILE );
+				CONF_FILE = strdup( optarg );
+				free( conf );
+				return( conf_load( argc, argv ) );
+			}
+		}
 		else if( opt == 'd' )
-			conf->runmode=DAEMON;
+		{
+			free( conf->configdir );
+			conf->configdir = strdup( optarg );
+		}
 		else if( opt == 'h' )
 		{
-			printf( "Usage: bitlbee [-d [-i <interface>] [-p <port>] [-n] [-v]] [-c] \n"
+			printf( "Usage: bitlbee [-D [-i <interface>] [-p <port>] [-n] [-v]] [-I]\n"
+			        "               [-c <file>] [-d <dir>] [-h]\n"
+			        "\n"
 			        "An IRC-to-other-chat-networks gateway\n"
 			        "\n"
-			        "  -c  Classic mode(default). Reads from stdin, writes to stdout. Ignores all other options.\n"
-			        "  -d  Daemon mode(EXPERIMENTAL). Will fork into background and accept connections.\n"
+			        "  -I  Classic/InetD mode. (Default)\n"
+			        "  -D  Daemon mode. (Experimental!)\n"
 			        "  -i  Specify the interface (by IP address) to listen on.\n"
 			        "      (Default: 0.0.0.0 (any interface))\n"
 			        "  -p  Port number to listen on. (Default: 6667)\n"
 			        "  -n  Don't fork.\n"
 			        "  -v  Be verbose (only works in combination with -n)\n"
-			        "  -h  Show this help page.\n");
+			        "  -c  Load alternative configuration file\n"
+			        "  -d  Specify alternative user configuration directory\n"
+			        "  -h  Show this help page.\n" );
 			return( NULL );
 		}
+	}
+	
+	if( conf->configdir[strlen(conf->configdir)-1] != '/' )
+	{
+		char *s = malloc( strlen( conf->configdir ) + 2 );
+		
+		sprintf( s, "%s/", conf->configdir );
+		free( conf->configdir );
+		conf->configdir = s;
 	}
 	
 	return( conf );
@@ -99,6 +129,7 @@ conf_t *conf_load( int argc, char *argv[] )
 static int conf_loadini( conf_t *conf, char *file )
 {
 	ini_t *ini;
+	int i;
 	
 	ini = ini_open( file );
 	if( ini == NULL ) return( 0 );
@@ -109,9 +140,9 @@ static int conf_loadini( conf_t *conf, char *file )
 			if( strcasecmp( ini->key, "runmode" ) == 0 )
 			{
 				if( strcasecmp( ini->value, "daemon" ) == 0 )
-					conf->runmode = DAEMON;
+					conf->runmode = RUNMODE_DAEMON;
 				else
-					conf->runmode = INETD;
+					conf->runmode = RUNMODE_INETD;
 			}
 			else if( strcasecmp( ini->key, "daemoninterface" ) == 0 )
 			{
@@ -119,11 +150,9 @@ static int conf_loadini( conf_t *conf, char *file )
 			}
 			else if( strcasecmp( ini->key, "daemonport" ) == 0 )
 			{
-				int i;
-				
 				if( ( sscanf( ini->value, "%d", &i ) != 1 ) || ( i <= 0 ) || ( i > 65535 ) )
 				{
-					fprintf( stderr, "Invalid port number: %s\n", optarg );
+					fprintf( stderr, "Invalid port number: %s\n", ini->value );
 					return( 0 );
 				}
 				conf->port = i;
@@ -144,6 +173,34 @@ static int conf_loadini( conf_t *conf, char *file )
 			else if( strcasecmp( ini->key, "hostname" ) == 0 )
 			{
 				conf->hostname = strdup( ini->value );
+			}
+			else if( strcasecmp( ini->key, "configdir" ) == 0 )
+			{
+				free( conf->configdir );
+				conf->configdir = strdup( ini->value );
+			}
+			else if( strcasecmp( ini->key, "motdfile" ) == 0 )
+			{
+				free( conf->motdfile );
+				conf->motdfile = strdup( ini->value );
+			}
+			else if( strcasecmp( ini->key, "pinginterval" ) == 0 )
+			{
+				if( sscanf( ini->value, "%d", &i ) != 1 )
+				{
+					fprintf( stderr, "Invalid PingInterval value: %s\n", ini->value );
+					return( 0 );
+				}
+				conf->ping_interval = i;
+			}
+			else if( strcasecmp( ini->key, "pingtimeout" ) == 0 )
+			{
+				if( sscanf( ini->value, "%d", &i ) != 1 )
+				{
+					fprintf( stderr, "Invalid PingTimeOut value: %s\n", ini->value );
+					return( 0 );
+				}
+				conf->ping_timeout = i;
 			}
 			else
 			{

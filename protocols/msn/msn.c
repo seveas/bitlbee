@@ -1054,6 +1054,7 @@ static int msn_process_main(struct gaim_connection *gc, char *buf)
 		if (!g_strncasecmp(tmp, "OTH", 3)) {
 			hide_login_progress(gc, _("You have been disconnected. You have "
 						  "signed on from another location."));
+			gc->wants_to_die = TRUE;
 			signoff(gc);
 			return 0;
 		}
@@ -1882,16 +1883,8 @@ static void msn_set_info(struct gaim_connection *gc, char *txt)
 	}
 }
 
-static void msn_convo_closed(struct gaim_connection *gc, char *who)
-{
-	struct msn_switchboard *ms = msn_find_switch(gc, who);
-
-	if (ms)
-		msn_kill_switch(ms);
-}
-
 /*(BitlBee -- This one converts a standard switchboard into a conversation)*/
-static int msn_convo_open(struct gaim_connection *gc, char *who)
+static int msn_chat_open(struct gaim_connection *gc, char *who)
 {
 	struct msn_switchboard *ms = msn_find_switch(gc, who);
 
@@ -2098,9 +2091,7 @@ void msn_init(struct prpl *ret)
 	ret->chat_send = msn_chat_send;
 	ret->chat_invite = msn_chat_invite;
 	ret->chat_leave = msn_chat_leave;
-	ret->normalize = msn_normalize;
-	ret->convo_closed = msn_convo_closed;
-	ret->convo_open = msn_convo_open;
+	ret->chat_open = msn_chat_open;
 	ret->keepalive = msn_keepalive;
 	ret->set_permit_deny = msn_set_permit_deny;
 	ret->add_permit = msn_add_permit;

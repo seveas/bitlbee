@@ -34,72 +34,79 @@
 #include <gnutls/gnutls.h>
 #endif
 
-irc_t *IRC;	/* :-( */
-conf_t *conf;
+irc_t *IRC;
+GList *connection_list = NULL;
+global_t global;	/* Against global namespace pollution */
 
 static void sighandler( int signal );
 
 int main( int argc, char *argv[] )
 {
-	irc_t *irc;
-	struct timeval tv[1];
-	fd_set fds[1];
-	int i;
-
+	int i = 0;
+	struct sigaction sig, old;
+	
+	memset( &global, 0, sizeof( global_t ) );
+	
+	log_init( );
+	nogaim_init( );
 #ifdef USE_GNUTLS
 	gnutls_global_init();
 #endif
 	
-	if( 1 )
+	CONF_FILE = strdup( CONF_FILE_DEF );
+	
+	global.conf = conf_load( argc, argv );
+	if( global.conf == NULL )
+		return( 1 );
+	
+	if( global.conf->runmode == RUNMODE_INETD )
 	{
-		/* Catch some signals to tell the user what's happening before quitting */
-		struct sigaction sig, old;
-		memset( &sig, 0, sizeof( sig ) );
-		sig.sa_handler = sighandler;
-		sigaction( SIGPIPE, &sig, &old );
-		sig.sa_flags = SA_RESETHAND;
-		sigaction( SIGINT,  &sig, &old );
-		sigaction( SIGILL,  &sig, &old );
-		sigaction( SIGBUS,  &sig, &old );
-		sigaction( SIGFPE,  &sig, &old );
-		sigaction( SIGSEGV, &sig, &old );
-		sigaction( SIGTERM, &sig, &old );
-		sigaction( SIGQUIT, &sig, &old );
-		sigaction( SIGXCPU, &sig, &old );
-	}
-	
-	conf = conf_load( argc, argv );
+		i = bitlbee_inetd_init();
+		log_message(LOGLVL_INFO, "Bitlbee %s starting in inetd mode.", BITLBEE_VERSION );
 
-	if( !conf )
-		return( 1 );
+	}
+	else if( global.conf->runmode == RUNMODE_DAEMON )
+	{
+		i = bitlbee_daemon_init();
+		log_message( LOGLVL_INFO, "Bitlbee %s starting in daemon mode.", BITLBEE_VERSION );
+	}
+	if( i != 0 )
+		return( i );
+ 	
+	/* Catch some signals to tell the user what's happening before quitting */
+	memset( &sig, 0, sizeof( sig ) );
+	sig.sa_handler = sighandler;
+	sigaction( SIGPIPE, &sig, &old );
+	sig.sa_flags = SA_RESETHAND;
+	sigaction( SIGINT,  &sig, &old );
+	sigaction( SIGILL,  &sig, &old );
+	sigaction( SIGBUS,  &sig, &old );
+	sigaction( SIGFPE,  &sig, &old );
+	sigaction( SIGSEGV, &sig, &old );
+	sigaction( SIGTERM, &sig, &old );
+	sigaction( SIGQUIT, &sig, &old );
+	sigaction( SIGXCPU, &sig, &old );
 	
-	if( !( IRC = irc = irc_new( 0 ) ) )
-		return( 1 );
-	
-	nogaim_init();
-	set_add( irc, "save_on_quit", "true", set_eval_bool );
-	
-	conf_loaddefaults( irc );
+	if( !getuid() || !geteuid() )
+		log_message( LOGLVL_WARNING, "BitlBee is running with root privileges. Why?" );
+	if( access( global.conf->configdir, F_OK ) != 0 )
+		log_message( LOGLVL_WARNING, "The configuration directory %s does not exist. Configuration won't be saved.", CONFIG );
+	else if( access( global.conf->configdir, R_OK ) != 0 || access( global.conf->configdir, W_OK ) != 0 )
+		log_message( LOGLVL_WARNING, "Permission problem: Can't read/write from/to %s.", CONFIG );
+	if( help_init( &(global.help) ) == NULL )
+		log_message( LOGLVL_WARNING, "Error opening helpfile %s.", HELP_FILE );
 	
 	while( 1 )
 	{
-		FD_ZERO( fds );
-		FD_SET( irc->fd, fds );
-		tv->tv_sec = 0;
-		tv->tv_usec = 200000;
-		if( ( i = select( irc->fd + 1, fds, NULL, NULL, tv ) ) > 0 )
-		{
-			if( !irc_process( irc ) ) break;
-		}
-		else if( i == -1 ) break;
-		if( irc_userping( irc ) > 0 )
+		if( global.conf->runmode == RUNMODE_INETD )
+			i = bitlbee_inetd_main_loop();
+		else if( global.conf->runmode == RUNMODE_DAEMON )
+			i = bitlbee_daemon_main_loop();
+		if( i == -1 )
+			return( 1 );
+		else if( i != 0 )
 			break;
-		g_main_iteration( FALSE );
 	}
-	
-	if( irc->status && set_getint( irc, "save_on_quit" ) )
-		if( !bitlbee_save( irc ) )
-			irc_usermsg( irc, "Error while saving settings!" );
 	
 #ifdef USE_GNUTLS
 	gnutls_global_deinit();
@@ -107,25 +114,266 @@ int main( int argc, char *argv[] )
 	return( 0 );
 }
 
-int bitlbee_init( irc_t *irc )
+int bitlbee_daemon_init()
 {
-	if( !getuid() || !geteuid() )
-		irc_usermsg( irc, "You're running BitlBee as root. Why?" );
-	
-	if( access( CONFIG, F_OK ) != 0 )
-		irc_usermsg( irc, "The configuration directory %s does not exist. Configuration won't be saved.", CONFIG );
-	else if( access( CONFIG, R_OK ) != 0 || access( CONFIG, W_OK ) != 0 )
-		irc_usermsg( irc, "Permission problem: Can't read/write from/to %s", CONFIG );
-	
-	if( help_init( irc ) == NULL )
-		irc_usermsg( irc, "Error opening helpfile: %s", HELP_FILE );
-	
-	return( 1 );
+	struct sockaddr_in listen_addr;
+	int i;
+
+	log_link( LOGLVL_ERROR, LOGOUTPUT_SYSLOG );
+	log_link( LOGLVL_WARNING, LOGOUTPUT_SYSLOG );
+
+	global.listen_socket = socket( AF_INET, SOCK_STREAM, 0 );
+	if( global.listen_socket == -1 ) {  
+		log_error("socket");
+		return( -1 ); 
+	}
+	listen_addr.sin_family = AF_INET;         
+	listen_addr.sin_port = htons( global.conf->port );     
+	listen_addr.sin_addr.s_addr = inet_addr( global.conf->interface );
+
+	i=bind( global.listen_socket, ( struct sockaddr * )&listen_addr, sizeof( struct sockaddr ) );
+	if( i == -1 ) {
+		log_error( "bind" );
+		return( -1 );
+	}
+
+	i = listen( global.listen_socket, 10 );
+	if( i == -1 ) {
+		log_error( "listen" );
+		return( -1 );
+	}
+
+	if( !global.conf->nofork )
+	{
+		i = fork();
+		if( i == -1 ) {
+			log_error( "fork" );
+			return( -1 );
+		}
+		else if( i!=0 ) 
+			exit( 0 );
+		close(0); close(1); close(2);
+		chdir("/");
+	}
+	return( 0 );
 }
+ 
+int bitlbee_daemon_main_loop()
+{
+	GList *temp;
+	struct timeval tv;
+	int i, highest, size, new_socket;
+	struct sockaddr_in conn_info;
+ 
+	FD_ZERO( global.readfds );
+	FD_ZERO( global.writefds );
+	FD_SET( global.listen_socket, global.readfds );
+	FD_SET( global.listen_socket, global.writefds );
+		
+	temp = connection_list;
+	highest = global.listen_socket;
+	
+	while( temp != NULL ) 
+	{
+		FD_SET( ((irc_t *) temp->data)->fd, global.readfds );
+		FD_SET( ((irc_t *) temp->data)->fd, global.writefds );
+		if( ((irc_t *) temp->data)->fd > highest )
+			highest = ((irc_t *) temp->data)->fd;		
+		temp = temp->next;
+	} 
+
+	tv.tv_sec = 0;
+	tv.tv_usec = 200000;
+
+	if( ( i = select( highest + 1, global.readfds, NULL, NULL, &tv ) ) > 0 )
+	{
+		if( FD_ISSET( global.listen_socket, global.readfds ) ) 
+		{
+			size = sizeof( struct sockaddr_in );
+			new_socket = accept( global.listen_socket, (struct sockaddr *) &conn_info, 
+					     &size );
+			log_message( LOGLVL_INFO, "Creating new connection with fd %d.", new_socket );
+			i = bitlbee_connection_create( new_socket );
+			if( i != 1 )
+				return( -1 );
+		}
+		temp = connection_list;
+		while( temp != NULL ) 
+		{
+			if( FD_ISSET( ((irc_t *) temp->data)->fd, global.readfds ) )
+			{
+				IRC = temp->data;
+				if( !irc_fill_buffer( IRC ) )
+				{
+					log_message( LOGLVL_INFO, "Destroying connection with fd %d.", IRC->fd );
+					temp = bitlbee_connection_destroy( temp );
+				}
+				else
+				{
+					if( !irc_process( IRC ) )
+						temp = bitlbee_connection_destroy( temp );
+					if( irc_userping( IRC ) > 0 )
+						temp = bitlbee_connection_destroy( temp );
+				}
+			}
+			if( temp != NULL )
+				temp = temp->next;
+		}
+	}
+
+	temp = connection_list;
+
+	tv.tv_sec = 0;
+	tv.tv_usec = 0;
+
+	if( ( i = select( highest + 1, NULL, global.writefds, NULL, &tv ) ) > 0 ) {
+		while( temp != NULL ) 
+		{
+			if( FD_ISSET( ( ( irc_t *)( temp->data ) )->fd, global.writefds ) )
+				if( !irc_write_buffer(temp->data) )
+					temp = bitlbee_connection_destroy( temp );
+			if( temp != NULL )
+				temp = temp->next;	
+		}
+	}
+	 
+	else if( i == -1 )
+	{
+		log_error( "select" );
+		return -1;
+	}
+	g_main_iteration( FALSE );
+	
+	return 0;	
+}
+ 
+int bitlbee_inetd_init()
+{
+	if( !bitlbee_connection_create( 0 ) )
+		return( 1 );
+
+	IRC = (irc_t *) connection_list->data;
+
+	log_link( LOGLVL_ERROR, LOGOUTPUT_IRC );
+	log_link( LOGLVL_WARNING, LOGOUTPUT_IRC );
+
+	return( 0 );
+}
+ 
+int bitlbee_inetd_main_loop()
+{
+	struct timeval tv[1];
+	int i;
+	GList *temp;
+ 
+	FD_ZERO( global.readfds );
+	FD_ZERO( global.writefds );
+	FD_SET( IRC->fd, global.readfds );
+	FD_SET( IRC->fd, global.writefds );
+	tv->tv_sec = 0;
+	tv->tv_usec = 200000;
+	temp = connection_list;
+	
+	if( ( i = select( ((irc_t *) temp->data)->fd + 1, global.readfds, NULL, NULL, tv ) ) > 0 )
+	{
+		if( !irc_fill_buffer( (irc_t *) temp->data ) )
+		{
+			temp = bitlbee_connection_destroy( temp );
+			return( 1 );
+		}
+		else if( !irc_process( (irc_t *) temp->data ) )
+		{
+			temp = bitlbee_connection_destroy( temp );
+			return( 1 );
+		}
+	}
+
+	tv->tv_sec = 0;
+	tv->tv_usec = 0;
+
+	if( ( i = select( ((irc_t *) temp->data)->fd + 1, NULL, global.writefds, NULL, tv ) ) > 0 )
+	{
+		if( !irc_write_buffer( (irc_t *) temp->data ) )
+		{ 
+			if( ( ( irc_t * )( temp->data ) )->status && set_getint( ( (irc_t * )( temp->data ) ), "save_on_quit" ) ) 
+				if( !bitlbee_save( ( (irc_t * )( temp->data ) ) ) )
+					irc_usermsg( ( (irc_t * )( temp->data ) ), "Error while saving settings!" );
+			return 1;
+		}
+	}
+	else if( i == -1 ) return( -1 );
+	if( irc_userping( temp->data ) > 0 )
+		return( 1 );
+
+	g_main_iteration( FALSE );
+	
+	return( 0 );
+}
+
+int bitlbee_connection_create( int fd )
+{
+	irc_t *newconn;
+
+	newconn = irc_new( fd );
+	if( newconn == NULL )
+		return( 0 );
+	
+	connection_list = g_list_append( connection_list, newconn );
+	conf_loaddefaults( newconn );
+
+        set_add( newconn, "away_devoice", "true",  set_eval_away_devoice );
+	set_add( newconn, "auto_connect", "true", set_eval_bool );
+	set_add( newconn, "auto_reconnect", "false", set_eval_bool );
+	set_add( newconn, "auto_reconnect_delay", "300", set_eval_int );
+	set_add( newconn, "buddy_sendbuffer", "false", set_eval_bool );
+	set_add( newconn, "buddy_sendbuffer_delay", "1", set_eval_int );
+#ifdef ICONV
+        set_add( newconn, "charset", "none", NULL );  
+#endif
+#ifdef DEBUG
+	set_add( newconn, "debug", "true", set_eval_bool );
+#else
+	set_add( newconn, "debug", "false", set_eval_bool );
+#endif
+	set_add( newconn, "handle_unknown", "root", NULL );
+	set_add( newconn, "html", "nostrip", NULL );
+	set_add( newconn, "ops", "both", set_eval_ops );
+	set_add( newconn, "private", "false", set_eval_bool );
+	set_add( newconn, "save_on_quit", "1", set_eval_bool );
+	set_add( newconn, "to_char", ": ", set_eval_to_char );
+	set_add( newconn, "typing_notice", "false", set_eval_bool );
+
+	return( 1 );	
+} 
+
+GList *bitlbee_connection_destroy( GList *node )
+{
+	GList *returnval;
+
+	log_message(LOGLVL_INFO, "Destroying connection with fd %d", ( (irc_t * )( node->data ) )->fd); 
+	
+	if( ( (irc_t * )( node->data ) )->status && set_getint( (irc_t *)( node->data ), "save_on_quit" ) ) 
+		if( !bitlbee_save( node->data ) )
+			irc_usermsg( node->data, "Error while saving settings!" );
+
+	FD_CLR( ( (irc_t * )( node->data ) )->fd, global.readfds ); 
+	FD_CLR( ( (irc_t * )( node->data ) )->fd, global.writefds ); 
+	
+	close( ( (irc_t * )( node->data ) )->fd );
+
+	returnval=node->next;
+
+	connection_list=g_list_remove_link(connection_list, node);
+	irc_free(node->data);
+	g_list_free(node);
+
+	return returnval;
+}
+
 
 int bitlbee_load( irc_t *irc, char* password )
 {
-	char s[128];
+	char s[512];
 	char *line;
 	int proto;
 	char nick[MAX_NICK_LENGTH+1];
@@ -135,7 +383,7 @@ int bitlbee_load( irc_t *irc, char* password )
 	if( irc->status == USTATUS_IDENTIFIED )
 		return( 1 );
 	
-	snprintf( s, 127, "%s%s%s", CONFIG, irc->nick, ".accounts" );
+	snprintf( s, 511, "%s%s%s", global.conf->configdir, irc->nick, ".accounts" );
 	fp = fopen( s, "r" );
 	if( !fp ) return( 0 );
 
@@ -143,12 +391,12 @@ int bitlbee_load( irc_t *irc, char* password )
 	if( setpass( irc, password, s ) < 0 ) {
 		return( -1 );
 	}
-	
+
 	/* Do this now. If the user runs with AuthMode = Registered, the
 	   account command will not work otherwise. */
 	irc->status = USTATUS_IDENTIFIED;
-	
-	while( fscanf( fp, "%127[^\n]s", s ) > 0 )
+
+	while( fscanf( fp, "%511[^\n]s", s ) > 0 )
 	{
 		fgetc( fp );
 		line = deobfucrypt( irc, s );
@@ -157,7 +405,7 @@ int bitlbee_load( irc_t *irc, char* password )
 	}
 	fclose( fp );
 	
-	snprintf( s, 127, "%s%s%s", CONFIG, irc->nick, ".nicks" );
+	snprintf( s, 511, "%s%s%s", global.conf->configdir, irc->nick, ".nicks" );
 	fp = fopen( s, "r" );
 	if( !fp ) return( 0 );
 	while( fscanf( fp, "%s %d %s", s, &proto, nick ) > 0 )
@@ -178,8 +426,9 @@ int bitlbee_load( irc_t *irc, char* password )
 
 int bitlbee_save( irc_t *irc )
 {
-	char s[128];
+	char s[512];
 	char *line;
+	char *hash;
 	nick_t *n = irc->nicks;
 	set_t *set = irc->set;
 	mode_t ou = umask( 0077 );
@@ -201,31 +450,59 @@ int bitlbee_save( irc_t *irc )
 	 *  me. I just thought it was funny.
 	\*/
 	
-	line = hashpass( irc );
-	if( line == NULL )
+	hash = hashpass( irc );
+	if( hash == NULL )
 	{
 		irc_usermsg( irc, "Please register yourself if you want to save your settings." );
 		return( 0 );
 	}
 	
-	snprintf( s, 127, "%s%s%s", CONFIG, irc->nick, ".nicks" );
+	snprintf( s, 512, "%s%s%s", global.conf->configdir, irc->nick, ".nicks~" );
 	fp = fopen( s, "w" );
 	if( !fp ) return( 0 );
 	while( n )
 	{
 		strcpy( s, n->handle );
-		s[42] = 0; /* Prevent any overflow (42 == 128 / 3) */
+		s[169] = 0; /* Prevent any overflow (169 ~ 512 / 3) */
 		http_encode( s );
-		fprintf( fp, "%s %d %s\n", s, n->proto, n->nick );
+		snprintf( s + strlen( s ), 510 - strlen( s ), " %d %s", n->proto, n->nick );
+		if( fprintf( fp, "%s\n", s ) != strlen( s ) + 1 )
+		{
+			irc_usermsg( irc, "fprintf() wrote too little. Disk full?" );
+			fclose( fp );
+			return( 0 );
+		}
 		n = n->next;
 	}
 	fclose( fp );
+
+	snprintf( s, 512, "%s%s%s", global.conf->configdir, irc->nick, ".nicks~" );
+	line = strndup( s, strlen( s ) - 1 );
+	if( unlink( line ) != 0 )
+	{
+		if( errno != ENOENT )
+		{
+			irc_usermsg( irc, "Error while removing old .nicks file" );
+			return( 0 );
+		}
+	}
+	if( rename( s, line ) != 0 )
+	{
+		irc_usermsg( irc, "Error while renaming new .nicks file" );
+		return( 0 );
+	}
+	free( line );
 	
-	snprintf( s, 127, "%s%s%s", CONFIG, irc->nick, ".accounts" );
+	snprintf( s, 512, "%s%s%s", global.conf->configdir, irc->nick, ".accounts~" );
 	fp = fopen( s, "w" );
 	if( !fp ) return( 0 );
-	fprintf( fp, "%s", line );
-	free( line );
+	if( fprintf( fp, "%s", hash ) != strlen( hash ) )
+	{
+		irc_usermsg( irc, "fprintf() wrote too little. Disk full?" );
+		fclose( fp );
+		return( 0 );
+	}
+	free( hash );
 	
 	/* [SH] Making s empty, because if no settings nor accounts are defined
 	   the file will contain it's name encrypted. How 'bout redundant
@@ -234,21 +511,38 @@ int bitlbee_save( irc_t *irc )
 	for( a = irc->accounts; a; a = a->next )
 	{
 		if( a->protocol == PROTO_OSCAR || a->protocol == PROTO_ICQ || a->protocol == PROTO_TOC )
-			snprintf( s, sizeof( s ), "account add oscar \"%s\" %s %s", a->user, a->pass, a->server );
+			snprintf( s, sizeof( s ), "account add oscar \"%s\" \"%s\" %s", a->user, a->pass, a->server );
 		else
-			snprintf( s, sizeof( s ), "account add %s %s %s", proto_name[a->protocol], a->user, a->pass );
+			snprintf( s, sizeof( s ), "account add %s \"%s\" \"%s\"", proto_name[a->protocol], a->user, a->pass );
 		
 		line = obfucrypt( irc, s );
-		if( *line ) fprintf( fp, "%s\n", line );
+		if( *line )
+		{
+			if( fprintf( fp, "%s\n", line ) != strlen( line ) + 1 )
+			{
+				irc_usermsg( irc, "fprintf() wrote too little. Disk full?" );
+				fclose( fp );
+				return( 0 );
+			}
+		}
 		free( line );
 	}
 	memset( s, 0, sizeof( s ) );
 	while( set )
 	{
-		if( set->value ) {
+		if( set->value && set->def )
+		{
 			snprintf( s, sizeof( s ), "set %s %s", set->key, set->value );
 			line = obfucrypt( irc, s );
-			if( *line ) fprintf( fp, "%s\n", line );
+			if( *line )
+			{
+				if( fprintf( fp, "%s\n", line ) != strlen( line ) + 1 )
+				{
+					irc_usermsg( irc, "fprintf() wrote too little. Disk full?" );
+					fclose( fp );
+					return( 0 );
+				}
+			}
 			free( line );
 		}
 		set = set->next;
@@ -257,10 +551,35 @@ int bitlbee_save( irc_t *irc )
 	{
 		snprintf( s, sizeof( s ), "rename %s %s", ROOT_NICK, irc->mynick );
 		line = obfucrypt( irc, s );
-		if( *line ) fprintf( fp, "%s\n", line );
+		if( *line )
+		{
+			if( fprintf( fp, "%s\n", line ) != strlen( line ) + 1 )
+			{
+				irc_usermsg( irc, "fprintf() wrote too little. Disk full?" );
+				fclose( fp );
+				return( 0 );
+			}
+		}
 		free( line );
 	}
 	fclose( fp );
+	
+	snprintf( s, 512, "%s%s%s", global.conf->configdir, irc->nick, ".accounts~" );
+	line = strndup( s, strlen( s ) - 1 );
+	if( unlink( line ) != 0 )
+	{
+		if( errno != ENOENT )
+		{
+			irc_usermsg( irc, "Error while removing old .accounts file" );
+			return( 0 );
+		}
+	}
+	if( rename( s, line ) != 0 )
+	{
+		irc_usermsg( irc, "Error while renaming new .accounts file" );
+		return( 0 );
+	}
+	free( line );
 	
 	umask( ou );
 	
@@ -367,8 +686,7 @@ void http_encode( char *s )
 	char *t;
 	int i, j;
 	
-	t = malloc( strlen( s ) + 1 );
-	strcpy( t, s );
+	t = strdup( s );
 	
 	for( i = j = 0; t[i]; i ++, j ++ )
 	{
@@ -387,30 +705,50 @@ void http_encode( char *s )
 	free( t );
 }
 
+
+void *bitlbee_alloc( size_t size )
+{
+	void *mem;
+
+	mem=malloc(size);
+	if(mem==NULL) {
+		log_error("malloc");
+		exit(1);
+	}
+	
+	return(mem);
+}
+
+void *bitlbee_realloc( void *oldmem, size_t newsize )
+{
+	void *newmem;
+
+	newmem=realloc(oldmem, newsize);
+	if(newmem==NULL) {
+		log_error("realloc");
+		exit(1);
+	}
+	
+	return(newmem);
+}
+
+
 static void sighandler( int signal )
 {
-	if( signal == SIGPIPE )
+	if( signal != SIGPIPE )
 	{
-		/* SIGPIPE is ignored by Gaim. Looks like we have to do
-		   the same, because it causes some nasty hangs. */
-		if( set_getint( IRC, "debug" ) )
-			irc_usermsg( IRC, "Warning: Caught SIGPIPE, but we probably have to ignore this and pretend nothing happened..." );
-		return;
-	}
-	else
-	{
-		irc_write( IRC, "ERROR :Fatal signal received: %d. That's probably a bug.. :-/", signal );
-#ifdef USE_GNUTLS
-		gnutls_global_deinit();
-#endif
-		raise( signal ); /* Re-raise the signal so the default handler will pick it up, dump core, etc... */
+		log_message( LOGLVL_ERROR, "Fatal signal received: %d. That's probably a bug.", signal );
+		raise( signal );
 	}
 }
 
 double gettime()
 {
 	struct timeval time[1];
-	
+
 	gettimeofday( time, 0 );
 	return( (double) time->tv_sec + (double) time->tv_usec / 1000000 );
 }
+
+
+

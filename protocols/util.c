@@ -1,27 +1,35 @@
+  /********************************************************************\
+  * BitlBee -- An IRC to other IM-networks gateway                     *
+  *                                                                    *
+  * Copyright 2002-2003 Wilmer van der Gaast and others                *
+  \********************************************************************/
+
 /*
  * nogaim
  *
  * Gaim without gaim - for BitlBee
  *
  * Copyright (C) 1998-1999, Mark Spencer <markster@marko.net>
- * Copyright 2002 Wilmer van der Gaast <lintux@lintux.cx>
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- *
+ * Copyright 2002-2003 Wilmer van der Gaast <lintux@lintux.cx>
  */
- 
+
+/*
+  This program is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License with
+  the Debian GNU/Linux distribution in /usr/share/common-licenses/GPL;
+  if not, write to the Free Software Foundation, Inc., 59 Temple Place,
+  Suite 330, Boston, MA  02111-1307  USA
+*/
+
 /* Parts from util.c from gaim needed by nogaim */
 
 #include "bitlbee.h"
@@ -257,3 +265,76 @@ time_t get_time(int year, int month, int day, int hour, int min, int sec)
 	tm.tm_sec = sec >= 0 ? sec : time(NULL) % 60;
 	return mktime(&tm);
 }
+
+typedef struct htmlentity
+{
+	char code[8];
+	char is;
+} htmlentity_t;
+
+static htmlentity_t ent[] =
+{
+	{ "lt",     '<' },
+	{ "gt",     '>' },
+	{ "amp",    '&' },
+	{ "quot",  '\'' },
+	{ "dquot",  '"' },
+	{ "aacute", 'á' },
+	{ "eacute", 'é' },
+	{ "iacute", 'é' },
+	{ "oacute", 'ó' },
+	{ "uacute", 'ú' },
+	{ "agrave", 'à' },
+	{ "egrave", 'è' },
+	{ "igrave", 'ì' },
+	{ "ograve", 'ò' },
+	{ "ugrave", 'ù' },
+	{ "acirc",  'â' },
+	{ "ecirc",  'ê' },
+	{ "icirc",  'î' },
+	{ "ocirc",  'ô' },
+	{ "ucirc",  'û' },
+	{ "nbsp",   ' ' },
+	{ "",        0  }
+};
+
+void strip_html( char *in )
+{
+	char *start = in;
+	char *out = malloc( strlen( in ) + 1 );
+	char *s = out, *cs;
+	int i;
+	
+	memset( out, 0, strlen( in ) + 1 );
+	
+	while( *in )
+	{
+		if( *in == '<' )
+		{
+			while( *in && *in != '>' ) in ++;
+			if( *in ) in ++;
+		}
+		else if( *in == '&' )
+		{
+			cs = ++in;
+			while( *in && ( ( *in >= 'a' && *in <= 'z' ) || ( *in >= 'A' && *in <= 'Z' ) ) )
+				in ++;
+			
+			if( *in == ';' ) in ++;
+			
+			for( i = 0; *ent[i].code; i ++ )
+				if( strncasecmp( ent[i].code, cs, strlen( ent[i].code ) ) == 0 )
+				{
+					*(s++) = ent[i].is;
+					break;
+				}
+		}
+		else
+		{
+			*(s++) = *(in++);
+		}
+	}
+	
+	strcpy( start, out );
+	free( out );
+} 

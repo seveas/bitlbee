@@ -28,5 +28,5 @@ distclean: clean
 $(objects): ../../Makefile.settings Makefile
 
 $(objects): %.o: %.c
-	@echo Compiling $<
+	@echo '*' Compiling $<
 	@$(CC) -c $(CFLAGS) $< -o $@

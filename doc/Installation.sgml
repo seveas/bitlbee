@@ -6,10 +6,12 @@
 <title>Downloading the package</title>
 
 <para>
-The latest BitlBee release is always available from 
-<ulink url="http://www.lintux.cx/bitlbee.html">http://www.lintux.cx/bitlbee.html</ulink>. 
-Download the package with your favorite program and unpack it:
-<command>tar xvfz BitlBee-0.71.tar.gz</command>
+The latest BitlBee release is always available from <ulink
+url="http://www.lintux.cx/bitlbee.html">http://www.lintux.cx/bitlbee.html</ulink>.
+Download the package with your favorite program and unpack it: <command>tar
+xvfz bitlbee-&lt;version&gt;.tar.gz</command> where &lt;version&gt; is to be
+replaced by the version number of the BitlBee you downloaded (e.g. 0.73,
+0.74a, 0.80).
 </para>
 
 </sect1>
@@ -57,7 +59,7 @@ Since BitlBee uses inetd, you should add the following line to <filename>/etc/in
 
 <para>
 <programlisting>
-6667    stream  tcp     nowait nobody /usr/local/bin/bitlbee bitlbee
+6667    stream  tcp     nowait nobody /usr/local/sbin/bitlbee bitlbee
 </programlisting>
 </para>
 

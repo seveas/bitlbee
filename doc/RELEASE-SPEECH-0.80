@@ -1,0 +1,67 @@
+Hello everyone. Welcome to the release party of BitlBee. Well, at least,
+that was the intention. Because of the timing of the release party, very few
+people were able to attend the release party. Because of that I'm not giving
+the speech, but instead write it at the release party.
+
+Today (June 24th 2003) it's exactly one year ago the idea behind BitlBee was
+born. Happy anniversary everyone. As most of you know Wilmer got the idea to
+build an IRC to IM gateway while farming. Yeah, he's a farmer, not a coder,
+as anyone who looked at the code can tell ;-) He told me and he started
+working on irc.c, which is still a major part of the core. Of course I liked
+the idea and I wanted to help. Well, the first thing I could do was invent a
+name...
+
+The name. It's probably the most remarkable thing of BitlBee. What does it
+mean? That just may be the most frequently asked question. It's so often
+asked that I added it to the FAQ, which is distributed for the first time in
+0.80. The answer? Well, there is no answer. I just played around with words
+for a while and BitlBee just "hit" me as the right name. Wilmer liked it.
+Of course there are possible explanations to it's symbolics. One of those is
+listed in the FAQ. If anyone has another interesting explanation, I'd like
+to hear it. You can reach me at <sjoerd@hemminga-online.nl>.
+
+One year. When people would tell us a year ago that BitlBee would be such a
+hit, we would've called him (or her) a lunatic or a nutcase. But it looked
+like it happened. I asked some of our users how they expect BitlBee to be in
+another year. Some interesting things came out of that. Some might be
+realised in the very near future, others may never be implemented. But it
+was nice to see some responses and ambition from our users. Of course this
+goes for all feature requests and bug reports too.
+
+Sometimes (when tired of hacking) we just surf around, Googling for
+'bitlbee'. Every reaction or review is kind on the Bee, which can almost
+make a man emotional. The idea that your program is appreciated by so many
+people, well, it's indescribable, but a very good feeling. I can do no other
+thing than thank you all for your support and use of the program. I think I
+speak for all developers when I say, thank you.
+
+Of course, this being a release speech, I should of course mention a few new
+things in 0.80. The thing I like most are groupchats. It's only supported on
+MSN, but that's where most IRC-wannabe's are anyway. Another very nice thing
+is a renewed login system. It might take some time to get used to, but it
+really is an improvement in that it makes it a lot easier to reconnect to a
+network once you get disconnected. A lot of other things changed too, but
+these two are the most important ones.
+
+We looked at the past and at the present. In a few moments ghost of BitlBee
+future will tell the rest. ... He's late, I'll do this part too then.
+
+I mentioned that I asked some users about there opinion on the future of the
+Bee. Of course the development team has there own expectations of the
+future. One thing we intend to do is ditch the GAIM code in favour of some
+system that takes less maintenance and makes it easier to add new protocols.
+The idea has been with us for as long as the first release, but it will get
+priority now. This gets top priority for 0.90. Other things are probably the
+cleaning of the current TODO and perhaps we'll see an 1.00 release this
+year.
+
+This is not a complete "happy-happy joy-joy" speech. Starting with the 0.80
+release our good friend and fellow developer, Jelmer Vernooij will leave the
+BitlBee development team. We wish to thank him for his contributions and his
+fellowship when working on the Bee. Jelmer, 'nepnerd', we hope you enjoyed
+your time as a BitlBee developer and wish you luck with the things that get
+your BitlBee time now.
+
+That about concludes my speech for this release. "0.80 are go!"
+
+Sjoerd Hemminga, BitlBee developer.

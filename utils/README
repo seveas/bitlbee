@@ -20,5 +20,14 @@ Of course this program can be used for other programs too, not just BitlBee.
 This program reads your ~/.licq/ configuration data and convert it to a
 correct .nicks file.
 
+* bitlbee-daemon.patch (Maurits Dijkstra <maurits@niode.nl>)
+
+With this patch, you can run BitlBee as a stand-alone daemon (without
+inetd). Because for now we don't think the program is stable enough to
+serve all users in one single process, we haven't applied the patch to
+the main source tree but put it here instead. If you'd like to have this
+funtionality anyway you can apply this patch and read the help
+information. (run the binary with a -h argument.)
+
 
 Please do send me your sources if you write anything useful for the Bee!

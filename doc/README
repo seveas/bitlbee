@@ -12,7 +12,7 @@ After installation you have to set up inetd (you got that one running,
 right? If not, just take a look at utils/bitlbeed.c) to start BitlBee. You
 need to add BitlBee to inetd.conf, like this:
 
-6667 stream tcp nowait nobody /usr/sbin/tcpd /usr/sbin/bitlbee
+6667 stream tcp nowait nobody /usr/sbin/tcpd /usr/local/sbin/bitlbee
 
 Creating a special BitlBee user and running BitlBee with that UID (instead
 of just 'nobody') might be a good idea.
@@ -23,10 +23,24 @@ directory is read-/writable by this user only.
 
 (For xinetd users a xinetd configuration file is included: doc/bitlbee.xinetd)
 
-FREEBSD NOTE: It looks like FreeBSD does allow port numbers instead of service
+
+PORTABILITY ISSUES
+==================
+
+FreeBSD NOTE: It looks like FreeBSD does allow port numbers instead of service
 names in inetd.conf, as long as the service for this port exists in
 /etc/services. Linux isn't this strict. If you got problems in FreeBSD, just
 add a line for your chosen port number to /etc/services.
+
+Darwin/Mac OS X is even more strict; you should add a bitlbee service to
+/etc/services and use that name in inetd.conf. Not really a problem, since
+that's the cleanest way of doing this on any operating system anyway.
+
+Cygwin NOTE: You'll need a glib installation to run BitlBee. However, Cygwin
+doesn't provide a glib package. You can download a binary tar.gz from:
+<http://my.dreamwiz.com/jbdoll/>. When you installed it, BitlBee should work
+fine. You'll probably like bitlbeed or xinetd to get it running on the
+network.
 
 
 USAGE
@@ -96,4 +110,5 @@ Another parts (the md5 algorithm) is licensed under the Aladdin license.
 This license can be found in the files, to which this applies.
 
 	BitlBee - An IRC to other chat networks gateway
-	Copyright (C) 2002  Wilmer van der Gaast <wilmer@gaast.net>
+	Copyright (C) 2002-2003  Wilmer van der Gaast <wilmer@gaast.net>
+	                         and others

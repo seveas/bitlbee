@@ -1,8 +1,14 @@
-Main developer:
+Current developers:
+
 Wilmer van der Gaast <wilmer@gaast.net>
+	Main developer
 
-Documentation, general hacking:
-Jelmer Vernooij <jelmer@nl.linux.org>
+Sjoerd 'lucumo' Hemminga <sjoerd@hemminga-online.nl>
+	Secondary developer, NickServ
 
-Jabber plugin, NickServ, general hacking:
-Sjoerd Hemminga <sjoerd@hemminga-online.nl>
+Retired developer:
+Jelmer 'ctrlsoft' Vernooij <jelmer@nl.linux.org>
+	Documentation, general hacking
+
+The development team wishes to thank Jelmer for his contributions to the
+Bee.

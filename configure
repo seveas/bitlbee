@@ -3,7 +3,7 @@
 ##############################
 ##  Configurer for BitlBee  ##
 ##                          ##
-##  Copyright 2002 Lintux   ##
+##  Copyright 2003 Lintux   ##
 ##  Copyright 2002 Lucumo   ##
 ##############################
 
@@ -71,7 +71,7 @@ OUTFILE=bitlbee
 
 DESTDIR=
 LFLAGS=
-
+EFLAGS=
 EOF
 
 cat<<EOF>config.h
@@ -184,10 +184,21 @@ Linux )
 	echo 'Although our primary development system is Linux, BitlBee should run quite well on most BSD systems.'
 ;;
 SunOS )
-	echo 'Solaris does not yet work. This will be fixed in future versions.'
+	echo 'Solaris does not work with stripping enabled, so we will disable that.'
+	echo 'EFLAGS+=-lresolv -lnsl -lsocket' >> Makefile.settings
+	echo 'STRIP=\# skip strip' >> Makefile.settings
+;;
+Darwin )
+	echo 'Darwin/Mac OS X. This should work well, please read the docs for more information.'
+;;
+IRIX )
+	echo 'IRIX should not be a problem. I got some positive testing reports.'
+;;
+CYGWIN* )
+	echo 'Cygwin was tested and functioning. However, you'\''ll need glib. Please read the docs on how to obtain it.'
 ;;
 * )
-	echo 'We haven'\''t tested BitlBee on many platforms yet, yours is untested. YMMV.'
+	echo 'We haven'\''t tested BitlBee on many platforms yet, yours is untested. YMMV. Please report any problems to <wilmer@gaast.net>.'
 ;;
 esac
 echo
@@ -198,7 +209,10 @@ i[0-9]86 )
 	echo 'x86 is our primary development platform, BitlBee should work well.'
 ;;
 sparc )
-	echo 'SPARC is our secondary development platform. BitlBee usually works quite well.'
+	echo 'We got a SPARC around to test on from time to time. It usually works perfectly.'
+;;
+"Power Macintosh" )
+	echo 'We test on an iBook regularly. Everything should work fine.'
 ;;
 * )
 	echo 'This platform is untested. Please report any problems to <wilmer@gaast.net>.'

@@ -1,0 +1,576 @@
+diff -Naur bitlbee-20030615/bitlbee.c bitlbee-20030615-daemon/bitlbee.c
+--- bitlbee-20030615/bitlbee.c	2003-04-28 19:18:54.000000000 +0200
++++ bitlbee-20030615-daemon/bitlbee.c	2003-06-17 22:08:37.000000000 +0200
+@@ -32,16 +32,37 @@
+ #include <signal.h>
+ 
+ irc_t *IRC;	/* :-( */
++GList *connection_list = NULL;
++settings_t *set;
+ 
+ static void sighandler( int signal );
++static int bitlbee_daemon_main_loop( void );
++static int bitlbee_inetd_main_loop( void );
++static int bitlbee_daemon_init( void );
++static int bitlbee_inetd_init( void );
+ 
+ int main( int argc, char *argv[] )
+ {
+-	irc_t *irc;
+-	struct timeval tv[1];
+-	fd_set fds[1];
+ 	int i;
+-	
++
++        if( !( set = set_load( argc, argv ) ) )
++                return( 1 );
++		
++	if( set->mode == 1 ) 
++	{
++		i=bitlbee_inetd_init( );
++		if( i!=0 ) 
++			return( i );
++	}
++	else if( set->mode == 2 )
++	{
++		i = bitlbee_daemon_init( );
++		if( i!=0 )
++			return( i );
++	}
++
++	nogaim_init();
++
+ 	if( 1 )
+ 	{
+ 		/* Catch some signals to tell the user what's happening before quitting */
+@@ -57,29 +78,177 @@
+ 		sigaction( SIGTERM, &sig, &old );
+ 	}
+ 	
+-	if( !( IRC = irc = irc_new( 0 ) ) )
+-		return( 1 );
+-	
+-	nogaim_init();
+-	set_add( irc, "save_on_quit", "true", set_eval_bool );
+-	
+ 	while( 1 )
+ 	{
+-		FD_ZERO( fds );
+-		FD_SET( irc->fd, fds );
+-		tv->tv_sec = 0;
+-		tv->tv_usec = 200000;
+-		if( ( i = select( irc->fd + 1, fds, NULL, NULL, tv ) ) > 0 )
++		if( set->mode == 1 ) {
++			i = bitlbee_inetd_main_loop();
++			if( i!=0 )
++				break;
++		}
++		else if( set->mode == 2 )
+ 		{
+-			if( !irc_process( irc ) ) break;
++			i = bitlbee_daemon_main_loop();
++			if( i!=0 )
++				break;
+ 		}
+-		else if( i == -1 ) break;
+-		g_main_iteration( FALSE );
+ 	}
++
++	return( 0 );
++}
++
++static int bitlbee_daemon_init(void) {
++	struct sockaddr_in listen_addr;
++	int i, listen_socket;
++	
++	listen_socket=socket( AF_INET, SOCK_STREAM, 0 );
++	if( listen_socket == -1 ) {  
++		perror("socket");
++		return 1; 
++	}
++	listen_addr.sin_family = AF_INET;         
++	listen_addr.sin_port = htons( set->port );     
++	listen_addr.sin_addr.s_addr = inet_addr( set->interface );
++	i=bind( listen_socket, ( struct sockaddr * )&listen_addr, 
++	       sizeof( struct sockaddr ) );
++	if( i == -1 ) {
++		perror( "bind" );
++		return 1;
++	}
++	i=listen( listen_socket, 10 );
++	if( i == -1 ) {
++		perror( "listen" );
++		return 1;
++	}
++	if( set->verbose && set->nofork )
++		printf( "Listening on port: %d, interface: %s\n", set->port, set->interface );
++	set->listen_socket = listen_socket;
++
++	if( !set->nofork ) 	
++	{
++		i = fork();
++		if( i == -1 ) {
++			perror( "fork" );
++			exit( 1 );
++		}
++		else if( i!=0 ) 
++			exit( 0 );
++	}
++	return( 0 );
++}
++
++static int bitlbee_inetd_init( void ) {
++
++	if( !( IRC = irc_new( 0 ) ) )
++		return( 1 );
++
++	connection_list = g_list_append( connection_list, IRC );
++
++	return( 0 );
++}
++
++static int bitlbee_daemon_main_loop( void ) {
++	GList *temp;
++	irc_t *new_connection;
++	fd_set fds[1];
++	struct timeval tv;
++	int i, highest, size, new_socket;
++	struct sockaddr_in conn_info;
++
++	FD_ZERO( fds );
++	FD_SET( set->listen_socket, fds );		
++	temp = connection_list;
++	highest = set->listen_socket;
++	
++	while( temp != NULL ) 
++	{
++		FD_SET( ( ( irc_t * )( temp->data ) )->fd, fds );
++		if( ( (irc_t * )( temp->data ) )->fd > highest )
++			highest = ( ( irc_t * )( temp->data ) )->fd;		
++		temp = temp->next;
++	} 
++	tv.tv_sec = 0;
++	tv.tv_usec = 200000;
++	if( ( i = select( highest + 1, fds, NULL, NULL, &tv ) ) > 0 )
++	{
++		if( FD_ISSET( set->listen_socket, fds ) ) 
++		{
++			size = sizeof( struct sockaddr_in );
++			new_socket = accept( set->listen_socket, ( struct sockaddr * )&conn_info, 
++					     &size );
++			new_connection = irc_new( new_socket );
++			if( !new_connection )
++				return 1;
++			if( set->verbose && set->nofork )
++				puts("Adding new connection");
++
++			connection_list = g_list_append( connection_list, new_connection );
++		}
++		temp = connection_list;
++		while( temp != NULL ) 
++		{
++			if( FD_ISSET( ( ( irc_t *)( temp->data ) )->fd, fds ) )
++			{
++				IRC = temp->data;
++				if( !irc_process( IRC ) )
++				{
++					if( set->verbose && set->nofork )
++						puts("Destroying connection");
++					if( ( (irc_t * )( temp->data ) )->status && set_getint( (irc_t *)( temp->data ), "save_on_quit" ) ) 
++						if( !bitlbee_save( temp->data ) )
++							irc_usermsg( temp->data, "Error while saving settings!" );
++					
++					/* [MD] FIXME: fix memory leak/possible illegal free()
++					 *      Wilmer, can you make an irc_free()?
++					 */
++
++					free( temp->data );
++					if( ( temp->next == NULL ) && ( temp->prev == NULL ) )
++					{
++						g_list_free_1( temp );
++						connection_list = NULL;
++						
++					}
++					else
++					{
++						connection_list = g_list_remove_link ( connection_list, temp );
++						g_list_free_1( temp );
++					}
++				}			
++			}
++			temp = temp->next;
++		}
++	} 
++	else if( i == -1 )  
++		return -1;
++	g_main_iteration( FALSE );
+ 	
+-	if( irc->status && set_getint( irc, "save_on_quit" ) )
+-		if( !bitlbee_save( irc ) )
+-			irc_usermsg( irc, "Error while saving settings!" );
++	return 0;	
++}
++
++static int bitlbee_inetd_main_loop( void ) {
++	struct timeval tv[1];
++	fd_set fds[1];
++	int i;
++	GList *temp;
++
++	FD_ZERO( fds );
++	FD_SET( IRC->fd, fds );
++	tv->tv_sec = 0;
++	tv->tv_usec = 200000;
++	temp = connection_list;
++	
++	if( ( i = select( ( ( irc_t * )( temp->data ) )->fd + 1, fds, NULL, NULL, tv ) ) > 0 )
++	{
++		if( !irc_process( ( (irc_t * )( temp->data ) ) ) )
++		{ 
++			if( ( ( irc_t * )( temp->data ) )->status && set_getint( ( (irc_t * )( temp->data ) ), "save_on_quit" ) ) 
++				if( !bitlbee_save( ( (irc_t * )( temp->data ) ) ) )
++					irc_usermsg( ( (irc_t * )( temp->data ) ), "Error while saving settings!" );
++			return 1;
++		}
++	}
++	else if( i == -1 ) return( -1 );
++	g_main_iteration( FALSE );
+ 	
+ 	return( 0 );
+ }
+@@ -359,19 +528,77 @@
+ 	free( t );
+ }
+ 
++/* [MD] FIXME: SIGPIPE makes bitlbee crash for some reason */ 
+ static void sighandler( int signal )
+ {
+ 	if( signal == SIGPIPE )
+ 	{
+ 		/* SIGPIPE is ignored by Gaim. Looks like we have to do
+ 		   the same, because it causes some nasty hangs. */
+-		if( set_getint( IRC, "debug" ) )
+-			irc_usermsg( IRC, "Warning: Caught SIGPIPE, but we probably have to ignore this and pretend nothing happened..." );
++		if( set_getint( NULL, "debug" ) )
++			irc_write_all( "ERROR :Caught SIGPIPE, but we probably have to ignore this and pretend nothing happened..." );
+ 		return;
+ 	}
+ 	else
+ 	{
+-		irc_write( IRC, "ERROR :Fatal signal received: %d. That's probably a bug.. :-/", signal );
++		irc_write_all( "ERROR :Fatal signal received: %d. That's probably a bug.. :-/", signal );
+ 		exit( 1 );
+ 	}
+ }
++
++settings_t *set_load( int argc, char *argv[] )
++{
++	settings_t *set;
++	int opt, i;
++	
++	set = malloc( sizeof( settings_t ) );
++	if( set==NULL ) { perror( "malloc" ); exit( 1 ); }
++	memset( set, 0, sizeof( settings_t ) );
++
++	set->interface = "0.0.0.0";
++	set->port = 6667;
++	set->nofork = 0;
++	set->verbose = 0;
++	set->mode=1;
++	
++	while( ( opt = getopt( argc, argv, "i:p:hvncd" ) ) >= 0 )
++	{
++		if( opt == 'i' )
++		{
++			set->interface = strdup( optarg );
++		}
++		else if( opt == 'p' )
++		{
++			if( ( sscanf( optarg, "%d", &i ) != 1 ) || ( i <= 0 ) || ( i > 65535 ) )
++			{
++				fprintf( stderr, "Invalid port number: %s\n", optarg );
++				return( NULL );
++			}
++			set->port = i;
++		}
++		else if( opt == 'n' )
++			set->nofork=1;
++		else if( opt == 'v' )
++			set->verbose=1;
++		else if( opt == 'c' )
++			set->mode=1;
++		else if( opt == 'd' )
++			set->mode=2;
++		else if( opt == 'h' )
++		{
++			printf( "Usage: bitlbee [-d [-i <interface>] [-p <port>] [-n] [-v]] [-c] \n"
++			        "An IRC-to-other-chat-networks gateway\n"
++			        "\n"
++				"  -c  Classic mode(default). Reads from stdin, writes to stdout. Ignores all other options.\n"
++				"  -d  Daemon mode(EXPERIMENTAL). Will fork into background and accept connections.\n"
++			        "  -i  Specify the interface (by IP address) to listen on.\n"
++			        "      (Default: 0.0.0.0 (any interface))\n"
++			        "  -p  Port number to listen on. (Default: 6667)\n"
++			        "  -n  Don't fork.\n"
++				"  -v  Be verbose (only works in combination with -n)\n"
++				"  -h  Show this help page.\n");
++			return( NULL );
++		}
++	}
++	return( set );
++}
+diff -Naur bitlbee-20030615/bitlbee.h bitlbee-20030615-daemon/bitlbee.h
+--- bitlbee-20030615/bitlbee.h	2003-04-28 19:18:54.000000000 +0200
++++ bitlbee-20030615-daemon/bitlbee.h	2003-06-17 21:56:19.000000000 +0200
+@@ -67,6 +67,17 @@
+ #include "commands.h"
+ #include "account.h"
+ 
++typedef struct settings
++{
++	char *interface;
++	signed int port;
++	int nofork;
++	int verbose;
++	int listen_socket;
++	int mode;
++} settings_t;
++
++
+ int root_command_string( irc_t *irc, user_t *u, char *command );
+ int root_command( irc_t *irc, char *command[] );
+ int bitlbee_init( irc_t *irc );
+@@ -74,7 +85,9 @@
+ int bitlbee_save( irc_t *irc );
+ void http_encode( char *s );
+ void http_decode( char *s );
++settings_t *set_load( int argc, char *argv[] );
+ 
+ extern irc_t *IRC;
++extern GList *connection_list;
+ 
+ #endif
+diff -Naur bitlbee-20030615/irc.c bitlbee-20030615-daemon/irc.c
+--- bitlbee-20030615/irc.c	2003-06-10 23:21:14.000000000 +0200
++++ bitlbee-20030615-daemon/irc.c	2003-06-24 20:20:39.000000000 +0200
+@@ -52,11 +52,13 @@
+ 		if( ( peer = gethostbyaddr( (char*) &sock->sin_addr, sizeof(sock->sin_addr), AF_INET ) ) )
+ 			irc->host = strdup( peer->h_name );
+ #ifndef NO_TCPD
+-		i = hosts_ctl( "bitlbee", irc->host?irc->host:STRING_UNKNOWN, inet_ntoa( sock->sin_addr ), STRING_UNKNOWN );
++		if( set->mode == 1)
++			i = hosts_ctl( "bitlbee", irc->host?irc->host:STRING_UNKNOWN, inet_ntoa( sock->sin_addr ), STRING_UNKNOWN );
+ 	}
+ 	else
+ 	{
+-		i = 0;
++		if( set->mode == 1)
++			i = 0;
+ #endif
+ 	}
+ 	
+@@ -73,6 +75,12 @@
+ 		return( NULL );
+ 	}
+ #endif
++
++	/* [MD] FIXME: now that bitlbee has a global set
++	 * (use NULL as irc_t * parameter) some of these
++	 * need to be set as  global... Can someone who knows
++	 * which ones should be global do this?
++	 */
+ 	
+ 	set_add( irc, "private", "false", set_eval_bool );
+ #ifdef DEBUG
+@@ -82,7 +90,13 @@
+ #endif
+ 	set_add( irc, "to_char", ": ", set_eval_to_char );
+ 	set_add( irc, "ops", "both", set_eval_ops );
+-	
++	set_add( irc, "save_on_quit", "1", set_eval_bool );
++	set_add( irc, "html", "nostrip", NULL );
++	set_add( irc, "typing_notice", "false", set_eval_bool );
++        set_add( irc, "away_devoice", "true",  set_eval_away_devoice );
++        set_add( irc, "charset", "none", NULL );  
++	set_add( irc, "handle_unknown", "root", NULL );
++
+ 	irc_write( irc, ":%s NOTICE AUTH :%s", irc->myhost, "BitlBee-IRCd initialized, please go on" );
+ 	
+ 	return( irc );
+@@ -480,15 +494,24 @@
+ 	return( irc_msgfrom( irc, u->nick, text ) );
+ }
+ 
+-int irc_write( irc_t *irc, char *format, ... )
++int irc_write( irc_t *irc, char *format, ... ) 
+ {
+-	char line[IRC_MAX_LINE];
+ 	va_list params;
++	int i;
++
++	va_start( params, format );
++	i = irc_vawrite( irc, format, params );	
++	va_end( params );
++
++	return i;
++
++}
++int irc_vawrite( irc_t *irc, char *format, va_list params )
++{
++	char line[IRC_MAX_LINE];
+ 	int n, start = 0;
+ 	
+-	va_start( params, format );
+ 	vsnprintf( line, IRC_MAX_LINE - 3, format, params );
+-	va_end( params );
+ 	strcat( line, "\r\n" );
+ 	
+ 	while( line[start] )
+@@ -506,6 +529,23 @@
+ 	return( 1 );
+ }
+ 
++void irc_write_all( char *format, ... )
++{
++	va_list params;
++	GList *temp;	
++
++	va_start( params, format );
++
++	temp = connection_list;
++	while( temp!=NULL ) {
++		irc_vawrite( temp->data, format, params );
++		temp = temp->next;
++	}
++
++	va_end( params );
++	return;
++} 
++
+ void irc_names( irc_t *irc, char *channel )
+ {
+ 	user_t *u = irc->users;
+diff -Naur bitlbee-20030615/irc.h bitlbee-20030615-daemon/irc.h
+--- bitlbee-20030615/irc.h	2003-05-03 13:40:37.000000000 +0200
++++ bitlbee-20030615-daemon/irc.h	2003-06-17 21:56:19.000000000 +0200
+@@ -95,7 +95,9 @@
+ int irc_process( irc_t *irc );
+ int irc_process_string( irc_t *irc, char *line, int bytes );
+ 
++int irc_vawrite( irc_t *irc, char *format, va_list params );
+ int irc_write( irc_t *irc, char *format, ... );
++void irc_write_all( char *format, ... );
+ int irc_reply( irc_t *irc, int code, char *format, ... );
+ int irc_usermsg( irc_t *irc, char *format, ... );
+ 
+diff -Naur bitlbee-20030615/protocols/nogaim.c bitlbee-20030615-daemon/protocols/nogaim.c
+--- bitlbee-20030615/protocols/nogaim.c	2003-06-15 00:33:22.000000000 +0200
++++ bitlbee-20030615-daemon/protocols/nogaim.c	2003-06-17 21:58:59.000000000 +0200
+@@ -50,8 +50,6 @@
+ };
+ static char *proto_away_alias_find( GList *gcm, char *away );
+ 
+-static char *set_eval_away_devoice( irc_t *irc, set_t *set, char *value );
+-
+ static int remove_chat_buddy_silent( struct conversation *b, char *handle );
+ 
+ GSList *connections;
+@@ -76,12 +74,6 @@
+ 	proto_prpl[PROTO_JABBER] = malloc( sizeof( struct prpl ) );
+ 	memset( proto_prpl[PROTO_JABBER], 0, sizeof( struct prpl ) );
+ 	jabber_init( proto_prpl[PROTO_JABBER] );
+-	
+-	set_add( IRC, "html", "nostrip", NULL );
+-	set_add( IRC, "typing_notice", "false", set_eval_bool );
+-	set_add( IRC, "away_devoice", "true", set_eval_away_devoice );
+-	set_add( IRC, "charset", "none", NULL );
+-	set_add( IRC, "handle_unknown", "root", NULL );
+ }
+ 
+ struct gaim_connection *gc_nr( int i )
+@@ -785,7 +777,7 @@
+ 	return( NULL );
+ }
+ 
+-static char *set_eval_away_devoice( irc_t *irc, set_t *set, char *value )
++char *set_eval_away_devoice( irc_t *irc, set_t *set, char *value )
+ {
+ 	int st;
+ 	
+diff -Naur bitlbee-20030615/protocols/nogaim.h bitlbee-20030615-daemon/protocols/nogaim.h
+--- bitlbee-20030615/protocols/nogaim.h	2003-05-05 02:48:40.000000000 +0200
++++ bitlbee-20030615-daemon/protocols/nogaim.h	2003-06-17 21:56:19.000000000 +0200
+@@ -258,6 +258,7 @@
+ void nogaim_init();
+ struct gaim_connection *gc_nr( int i );
+ int proto_away( struct gaim_connection *gc, char *away );
++char *set_eval_away_devoice( irc_t *irc, set_t *set, char *value );
+ 
+ /* multi.c */
+ struct gaim_connection *new_gaim_conn( struct aim_user *user );
+diff -Naur bitlbee-20030615/set.c bitlbee-20030615-daemon/set.c
+--- bitlbee-20030615/set.c	2003-04-28 19:18:55.000000000 +0200
++++ bitlbee-20030615-daemon/set.c	2003-06-17 21:56:19.000000000 +0200
+@@ -25,10 +25,27 @@
+ 
+ #include "bitlbee.h"
+ 
++set_t *global_set=NULL;
++
+ set_t *set_add( irc_t *irc, char *key, char *def, void *eval )
+ {
+ 	set_t *s = set_find( irc, key );
+ 	
++	if( !s && !irc )
++	{
++		if( ( s = global_set ) )
++		{
++			while( s->next ) s = s->next;
++			s->next = malloc( sizeof( set_t ) );
++			s = s->next;
++		} 
++		else
++		{
++			s = global_set = malloc( sizeof( set_t ) );
++		}
++		memset( s, 0, sizeof( set_t ) );
++		s->key = strdup( key );
++	}
+ 	if( !s )
+ 	{
+ 		if( ( s = irc->set ) )
+@@ -64,7 +81,12 @@
+ 
+ set_t *set_find( irc_t *irc, char *key )
+ {
+-	set_t *s = irc->set;
++	set_t *s;
++
++	if( !irc )
++		s = global_set;
++	else
++		s = irc->set;
+ 	
+ 	while( s )
+ 	{
+@@ -139,13 +161,18 @@
+ 
+ void set_del( irc_t *irc, char *key )
+ {
+-	set_t *s = irc->set, *t = NULL;
++	set_t *s, *t = NULL;
++
++	if( !irc )
++		s = global_set;
++	else	
++		s = irc->set;
+ 	
+ 	while( s )
+ 	{
+ 		if( strcasecmp( s->key, key ) == 0 )
+ 			break;
+-		s = (t=s)->next;
++		s = ( t = s )->next;
+ 	}
+ 	if( s )
+ 	{

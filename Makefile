@@ -9,7 +9,7 @@
 -include Makefile.settings
 
 # Program variables
-objects = irc.o bitlbee.o user.o nick.o set.o commands.o crypting.o help.o
+objects = irc.o bitlbee.o user.o nick.o set.o commands.o crypting.o help.o account.o
 subdirs = protocols
 
 # Expansion of variables
@@ -18,8 +18,8 @@ CFLAGS += -Wall
 
 all: $(OUTFILE)
 
-uninstall: uninstall-bin uninstall-doc
-install: install-bin install-doc
+uninstall: uninstall-bin uninstall-doc uninstall-etc
+install: install-bin install-doc install-etc
 	@if ! [ -d $(DESTDIR)$(CONFIG) ]; then echo -en '\n\nThe configuration directory $(DESTDIR)$(CONFIG) does not exist yet, don'\''t forget to create it!\n\n\n'; fi
 
 .PHONY:   install   install-bin   install-etc   install-doc \
@@ -45,33 +45,45 @@ uninstall-doc:
 	$(MAKE) -C doc uninstall
 
 install-bin:
-	install -p -d -m 0755 -o root -g 0 $(DESTDIR)$(BINDIR)
-	install -p -d -m 0755 -o root -g 0 $(DESTDIR)$(DATADIR)
-	install -p -m 0755 -o root -g 0 $(OUTFILE) $(DESTDIR)$(BINDIR)/$(OUTFILE)
-	install -p -m 0644 -o root -g 0 help.txt $(DESTDIR)$(DATADIR)/help.txt
+	mkdir -p $(DESTDIR)$(BINDIR)
+	mkdir -p $(DESTDIR)$(DATADIR)
+	chmod 0755 $(DESTDIR)$(BINDIR) $(DESTDIR)$(DATADIR)
+	rm -f $(DESTDIR)$(DATADIR)/help.txt # Prevent help function from breaking in running sessions
+	install -m 0755 $(OUTFILE) $(DESTDIR)$(BINDIR)/$(OUTFILE)
+	install -m 0644 help.txt $(DESTDIR)$(DATADIR)/help.txt
 
 uninstall-bin:
 	rm -f $(DESTDIR)$(BINDIR)/$(OUTFILE)
 	rm -f $(DESTDIR)$(DATADIR)/help.txt
 	rmdir $(DESTDIR)$(DATADIR)
 
+install-etc:
+	mkdir -p $(DESTDIR)$(ETCDIR)
+	install -m 0644 motd.txt $(DESTDIR)$(ETCDIR)/motd.txt
+
+uninstall-etc:
+	rm -f $(DESTDIR)$(ETCDIR)/motd.txt
+	-rmdir $(DESTDIR)$(ETCDIR)
+
 tar:
-	fakeroot debian/rules clean
+	fakeroot debian/rules clean || make distclean
 	x=`pwd | sed -e 's/\/.*\///'`; \
 	cd ..; \
-	tar czf $$x.tar.gz --exclude=CVS --exclude=debian $$x
+	tar czf $$x.tar.gz --exclude=debian $$x
 
 $(subdirs):
-	$(MAKE) -C $@ $(MAKECMDGOALS)
+	@$(MAKE) -C $@ $(MAKECMDGOALS)
 
 $(objects): %.o: %.c
-	@echo Compiling $<
+	@echo '*' Compiling $<
 	@$(CC) -c $(CFLAGS) $< -o $@
 
 $(objects): Makefile Makefile.settings config.h
 
 $(OUTFILE): $(subdirs) $(objects)
-	$(CC) $(objects) $(subdirobjs) -o $(OUTFILE) $(LFLAGS)
+	@echo '*' Linking $(OUTFILE)
+	@$(CC) $(objects) $(subdirobjs) -o $(OUTFILE) $(LFLAGS) $(EFLAGS)
 ifndef DEBUG
-	-$(STRIP) $(OUTFILE)
+	@echo '*' Stripping $(OUTFILE)
+	@-$(STRIP) $(OUTFILE)
 endif

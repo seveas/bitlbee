@@ -1,3 +1,28 @@
+  /********************************************************************\
+  * BitlBee -- An IRC to other IM-networks gateway                     *
+  *                                                                    *
+  * Copyright 2002-2003 Wilmer van der Gaast and others                *
+  \********************************************************************/
+
+/* User manager (root) commands                                         */
+
+/*
+  This program is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License with
+  the Debian GNU/Linux distribution in /usr/share/common-licenses/GPL;
+  if not, write to the Free Software Foundation, Inc., 59 Temple Place,
+  Suite 330, Boston, MA  02111-1307  USA
+*/
+
 #include "commands.h"
 #include "crypting.h"
 #include "bitlbee.h"
@@ -10,9 +35,9 @@ command_t commands[] = {
 	{ "help",       0, cmd_help }, 
 	{ "identify",   1, cmd_identify },
 	{ "register",   1, cmd_register },
+	{ "account",    1, cmd_account },
 	{ "login",      3, cmd_login },
 	{ "logout",     1, cmd_logout }, 
-	{ "slist",      0, cmd_slist },
 	{ "add",        2, cmd_add },
 	{ "info",       1, cmd_info },
 	{ "rename",     2, cmd_rename },
@@ -56,76 +81,227 @@ int cmd_help( irc_t *irc, char **cmd )
 	}
 }
 
-int cmd_login( irc_t *irc, char **cmd )
+int cmd_identify( irc_t *irc, char **cmd )
 {
-	struct aim_user *u;
-	int prot;
+	int checkie = bitlbee_load( irc, cmd[1] );
 	
-	for( prot = 0; prot < PROTO_MAX; prot ++ )
-		if( proto_name[prot] && *proto_name[prot] && strcasecmp( proto_name[prot], cmd[1] ) == 0 )
-			break;
-	
-	if( ( prot == PROTO_MAX ) || ( proto_prpl[prot] == NULL ) )
+	if( checkie == -1 )
 	{
-		irc_usermsg( irc, "Unknown protocol" );
-		return( 1 );
+		irc_usermsg( irc, "Incorrect password" );
+	}
+	else if( checkie == 0 )
+	{
+		irc_usermsg( irc, "The nickname is (probably) not registered" );
+	}
+	else if( checkie == 1 )
+	{
+		irc_usermsg( irc, "Password accepted" );
+	}
+	else
+	{
+		irc_usermsg( irc, "Something very weird happened" );
 	}
 	
-	u = malloc( sizeof( struct aim_user ) );
-	memset( u, 0, sizeof( *u ) );
-	strcpy( u->username, cmd[2] );
-	strcpy( u->password, cmd[3] );
-	u->protocol = prot;
-	if( prot == PROTO_OSCAR )
+	return( 0 );
+}
+
+int cmd_register( irc_t *irc, char **cmd )
+{
+	int checkie;
+	
+	char *str = (char *) malloc( strlen( irc->nick ) +
+	            strlen( CONFIG ) +
+	            strlen( ".accounts" ) + 1 );
+	
+	strcpy( str, CONFIG );
+	strcat( str, irc->nick );
+	strcat( str, ".accounts" );
+	
+	checkie = access( str, F_OK );
+	
+	strcpy( str, CONFIG );
+	strcat( str, irc->nick );
+	strcat( str, ".nicks" );
+	
+	checkie += access( str, F_OK );
+	
+	if( checkie == -2 )
 	{
-		if( cmd[4] )
-			strcpy( u->proto_opt[0], cmd[4] );
-		else
+		setpassnc( irc, cmd[1] );
+		root_command_string( irc, user_find( irc, irc->mynick ), "save" );
+	}
+	else
+	{
+		irc_usermsg( irc, "Nick is already registered" );
+	}
+	
+	return( 0 );
+}
+
+int cmd_account( irc_t *irc, char **cmd )
+{
+	account_t *a;
+	int i;
+	
+	if( strcasecmp( cmd[1], "add" ) == 0 )
+	{
+		int prot;
+		
+		if( cmd[4] == NULL )
 		{
 			irc_usermsg( irc, "Not enough parameters" );
-			free( u );
-			return( 1 );
+			return( 0 );
+		}
+		
+		for( prot = 0; prot < PROTO_MAX; prot ++ )
+			if( proto_name[prot] && *proto_name[prot] && strcasecmp( proto_name[prot], cmd[2] ) == 0 )
+				break;
+		
+		if( ( prot == PROTO_MAX ) || ( proto_prpl[prot] == NULL ) )
+		{
+			irc_usermsg( irc, "Unknown protocol" );
+			return( 0 );
+		}
+		
+		if( prot == PROTO_OSCAR && cmd[5] == NULL )
+		{
+			irc_usermsg( irc, "Not enough parameters" );
+			return( 0 );
+		}
+		
+		a = account_add( irc, prot, cmd[3], cmd[4] );
+		
+		if( cmd[5] )
+			a->server = strdup( cmd[5] );
+		
+		irc_usermsg( irc, "Account successfully added" );
+	}
+	else if( strcasecmp( cmd[1], "del" ) == 0 )
+	{
+		if( ( cmd[2] == NULL ) || ( sscanf( cmd[2], "%d", &i ) != 1 ) )
+		{
+			irc_usermsg( irc, "Not enough, or invalid parameters" );
+		}
+		else if( ( a = account_get( irc, i ) ) && a->gc )
+		{
+			irc_usermsg( irc, "Account is still logged in, can't delete" );
+		}
+		else if( !a )
+		{
+			irc_usermsg( irc, "Invalid account number" );
+		}
+		else
+		{
+			account_del( irc, i );
+			irc_usermsg( irc, "Account deleted" );
+		}
+	}
+	else if( strcasecmp( cmd[1], "list" ) == 0 )
+	{
+		i = 0;
+		
+		for( a = irc->accounts; a; a = a->next )
+		{
+			char *con;
+			
+			if( a->gc )
+				con = " (connected)";
+			else
+				con = "";
+			
+			if( a->protocol == PROTO_OSCAR || a->protocol == PROTO_ICQ || a->protocol == PROTO_TOC )
+				irc_usermsg( irc, "%2d. OSCAR, %s on %s%s", i, a->user, a->server, con );
+			else
+				irc_usermsg( irc, "%2d. %s, %s%s", i, proto_name[a->protocol], a->user, con );
+			
+			i ++;
+		}
+		irc_usermsg( irc, "End of account list" );
+	}
+	else if( strcasecmp( cmd[1], "on" ) == 0 )
+	{
+		if( cmd[2] )
+		{
+			if( ( sscanf( cmd[2], "%d", &i ) == 1 ) && ( a = account_get( irc, i ) ) )
+			{
+				if( a->gc )
+				{
+					irc_usermsg( irc, "Account already online" );
+					return( 0 );
+				}
+				else
+				{
+					account_on( irc, a );
+				}
+			}
+			else
+			{
+				irc_usermsg( irc, "Incorrect account number" );
+				return( 0 );
+			}
+		}
+		else
+		{
+			irc_usermsg( irc, "Trying to get all accounts connected..." );
+			
+			for( a = irc->accounts; a; a = a->next )
+				if( !a->gc )
+					account_on( irc, a );
+		}
+	}
+	else if( strcasecmp( cmd[1], "off" ) == 0 )
+	{
+		if( !cmd[2] )
+		{
+			irc_usermsg( irc, "Not enough parameters" );
+			return( 0 );
+		}
+		
+		if( ( sscanf( cmd[2], "%d", &i ) == 1 ) && ( a = account_get( irc, i ) ) )
+		{
+			if( !a->gc )
+			{
+				irc_usermsg( irc, "Account already offline" );
+				return( 0 );
+			}
+			else
+			{
+				account_off( irc, a );
+			}
+		}
+		else
+		{
+			irc_usermsg( irc, "Incorrect account number" );
+			return( 0 );
 		}
 	}
 	
-	proto_prpl[prot]->login( u );
+	return( 1 );
+}
+
+/* For transition purposes we'll keep this command here for a while. The code sucks, but we can flush it soon. */
+int cmd_login( irc_t *irc, char **cmd )
+{
+	char *ncmd[7];
 	
-	return( 0 );
+	if( irc->accounts == NULL ) /* Only warn the user once. While adding the first account.. */
+	{
+		irc_usermsg( irc, "Warning: The login command is now obsolete, "
+		                  "please use account on and/or account add instead. "
+		                  "This command will stop working in future versions." );
+	}
+	
+	ncmd[1] = "add";
+	memcpy( ncmd + 2, cmd + 1, 4 * sizeof( char* ) );
+	ncmd[6] = NULL;
+	cmd_account( irc, ncmd );
+	
+	return( 1 );
 }
 
 int cmd_logout( irc_t *irc, char **cmd )
 {
-	struct gaim_connection *gc;
-	int i;
-	
-	if( !cmd[1] || !sscanf( cmd[1], "%d", &i ) || !( gc = gc_nr( i ) ) )
-	{
-		irc_usermsg( irc, "Incorrect connection number" );
-		return( 1 );
-	}
-	account_offline( gc );
-	
-	return( 0 );
-}
-
-int cmd_slist( irc_t *irc, char **cmd )
-{
-	int i = 0;
-	struct gaim_connection *gc;
-	const GSList *c = connections;
-	
-	while( c )
-	{
-		gc = c->data;
-		c = c->next;
-		
-		if( gc->protocol == PROTO_OSCAR || gc->protocol == PROTO_ICQ || gc->protocol == PROTO_TOC )
-			irc_usermsg( irc, "%2d. OSCAR, %s on %s", i, gc->user->username, gc->user->proto_opt[0] );
-		else
-			irc_usermsg( irc, "%2d. %s, %s", i, proto_name[gc->user->protocol], gc->user->username );
-		i ++;
-	}
-	irc_usermsg( irc, "End of connection list" );
+	irc_usermsg( irc, "The logout command is now obsolete, please use account off and/or account del instead." );
 	
 	return( 0 );
 }
@@ -182,7 +358,7 @@ int cmd_rename( irc_t *irc, char **cmd)
 {
 	user_t *u;
 	
-	if( ( strcasecmp( cmd[1], irc->nick ) == 0 ) ) // || ( strcasecmp( cmd[1], irc->mynick ) == 0 ) )
+	if( strcasecmp( cmd[1], irc->nick ) == 0 )
 	{
 		irc_usermsg( irc, "Nick '%s' can't be changed", cmd[1] );
 		return( 1 );
@@ -202,9 +378,10 @@ int cmd_rename( irc_t *irc, char **cmd)
 		irc_usermsg( irc, "Nick '%s' does not exist", cmd[1] );
 		return( 1 );
 	}
-	/* TODO: Hmm, this might damage u->user */
 	free( u->nick );
+	if( u->nick == u->user ) u->user = NULL;
 	u->nick = strdup( cmd[2] );
+	if( !u->user ) u->user = u->nick;
 	irc_write( irc, ":%s!%s@%s NICK %s", cmd[1], u->user, u->host, cmd[2] );
 	if( strcasecmp( cmd[1], irc->mynick ) == 0 )
 	{
@@ -326,7 +503,6 @@ int cmd_yesno( irc_t *irc, char **cmd )
 	}
 	irc->queries = irc->queries->next;
 	free( q->question );
-	/* free( q->data ); */
 	free( q );
 	if( irc->queries )
 	{
@@ -347,7 +523,7 @@ int cmd_set( irc_t *irc, char **cmd )
 	{
 		char *s = set_getstr( irc, cmd[1] );
 		if( s )
-			irc_usermsg( irc, "%s = '%s'", cmd[1], s );
+			irc_usermsg( irc, "%s = `%s'", cmd[1], s );
 	}
 	else
 	{
@@ -369,76 +545,6 @@ int cmd_save( irc_t *irc, char **cmd )
 		irc_usermsg( irc, "Configuration saved" );
 	else
 		irc_usermsg( irc, "Configuration could not be saved!" );
-	
-	return( 0 );
-}
-
-int cmd_identify( irc_t *irc, char **cmd )
-{
-	if( !cmd[1] )
-	{
-		irc_usermsg( irc, "Syntax: identify <password>" );
-	}
-	else
-	{
-		int checkie = bitlbee_load( irc, cmd[1] );
-		if( checkie == -1 )
-		{
-			irc_usermsg( irc, "Incorrect password" );
-		}
-		else if( checkie == 0 )
-		{
-			irc_usermsg( irc, "The nickname is (probably) not registered" );
-		}
-		else if( checkie == 1 )
-		{
-			irc_usermsg( irc, "Password accepted" );
-		}
-		else
-		{
-			irc_usermsg( irc, "Something very weird happened" );
-		}
-	}
-	
-	return( 0 );
-}
-
-int cmd_register( irc_t *irc, char **cmd )
-{
-	if( !cmd[1] )
-	{
-		irc_usermsg( irc, "Syntax: register <password>" );
-	}
-	else
-	{
-		int checkie;
-		
-		char *str = (char *) malloc( strlen( irc->nick ) +
-		            strlen( CONFIG ) +
-		            strlen( ".accounts" ) + 1 );
-		
-		strcpy( str, CONFIG );
-		strcat( str, irc->nick );
-		strcat( str, ".accounts" );
-		
-		checkie = access( str, F_OK );
-		
-		strcpy( str, CONFIG );
-		strcat( str, irc->nick );
-		strcat( str, ".nicks" );
-		
-		checkie += access( str, F_OK );
-		
-		if( checkie == -2 )
-		{
-			setpassnc( irc, cmd[1] );
-			root_command_string( irc, user_find( irc, irc->mynick ), "save" );
-		}
-		else
-		{
-			irc_usermsg( irc, "Nick is already registered" );
-		}
-	}
 	
 	return( 0 );
 }

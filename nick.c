@@ -1,3 +1,28 @@
+  /********************************************************************\
+  * BitlBee -- An IRC to other IM-networks gateway                     *
+  *                                                                    *
+  * Copyright 2002-2003 Wilmer van der Gaast and others                *
+  \********************************************************************/
+
+/* Some stuff to fetch, save and handle nicknames for your buddies      */
+
+/*
+  This program is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License with
+  the Debian GNU/Linux distribution in /usr/share/common-licenses/GPL;
+  if not, write to the Free Software Foundation, Inc., 59 Temple Place,
+  Suite 330, Boston, MA  02111-1307  USA
+*/
+
 #include "bitlbee.h"
 
 void nick_set( irc_t *irc, char *handle, int proto, char *nick )
@@ -85,8 +110,13 @@ void nick_del( irc_t *irc, char *nick )
 	}
 }
 
-static char *nick_lc_chars = "0123456789abcdefghijklmnopqrstuvwxyz{}|^_";
-static char *nick_uc_chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ[]\\~_";
+
+/* Character maps, _lc_[x] == _uc_[x] (but uppercase), according to the RFC's
+
+   Actually, the RFC forbids -, but I think - being an lowercase _ looks better... */
+
+static char *nick_lc_chars = "0123456789abcdefghijklmnopqrstuvwxyz{}^-|";
+static char *nick_uc_chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ[]~_\\";
 
 void nick_strip( char * nick )
 {
@@ -153,13 +183,11 @@ int nick_cmp( char *a, char *b )
 	char *aa, *bb;
 	int res;
 	
-	return( strcasecmp( a, b ) );
-	
 	aa = strdup( a );
 	bb = strdup( b );
 	if( nick_lc( aa ) && nick_lc( bb ) )
 	{
-		res = strcmp( a, b );
+		res = strcmp( aa, bb );
 	}
 	else
 	{

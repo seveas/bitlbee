@@ -13,7 +13,7 @@
 #define MSN_BUF_LEN 8192
 #define MIME_HEADER	"MIME-Version: 1.0\r\n" \
 			"Content-Type: text/plain; charset=UTF-8\r\n" \
-			"User-Agent: BitlBee\r\n" \
+			"User-Agent: BitlBee " BITLBEE_VERSION "\r\n" \
 			"X-MMS-IM-Format: FN=MS%20Sans%20Serif; EF=; CO=0; PF=0\r\n\r\n"
 
 #define MSN_ONLINE  1
@@ -29,7 +29,7 @@
 #define MSN_TYPING_RECV_TIMEOUT 6
 #define MSN_TYPING_SEND_TIMEOUT	4
 
-			
+static int msn_next_convo_id = 0;
 
 struct msn_data {
 	int fd;
@@ -360,7 +360,6 @@ static int msn_process_switch(struct msn_switchboard *ms, char *buf)
 {
 	struct gaim_connection *gc = ms->gc;
 	char sendbuf[MSN_BUF_LEN];
-	static int id = 0;
 
 	if (!g_strncasecmp(buf, "ACK", 3)) {
 	} else if (!g_strncasecmp(buf, "ANS", 3)) {
@@ -371,6 +370,7 @@ static int msn_process_switch(struct msn_switchboard *ms, char *buf)
 			char *user, *tmp = buf;
 			GET_NEXT(tmp);
 			user = tmp;
+			GET_NEXT(tmp);
 			remove_chat_buddy(ms->chat, user, NULL);
 		} else {
 			msn_kill_switch(ms);
@@ -391,7 +391,7 @@ static int msn_process_switch(struct msn_switchboard *ms, char *buf)
 
 		if (ms->total > 1) {
 			if (!ms->chat)
-				ms->chat = serv_got_joined_chat(gc, ++id, "MSN Chat");
+				ms->chat = serv_got_joined_chat(gc, ++msn_next_convo_id, "MSN Chat");
 			add_chat_buddy(ms->chat, user);
 		} 
 	} else if (!g_strncasecmp(buf, "JOI", 3)) {
@@ -400,8 +400,8 @@ static int msn_process_switch(struct msn_switchboard *ms, char *buf)
 		user = tmp;
 		GET_NEXT(tmp);
 
-		if (ms->total == 1) {
-			ms->chat = serv_got_joined_chat(gc, ++id, "MSN Chat");
+		if (ms->total == 1 && !ms->chat) {
+			ms->chat = serv_got_joined_chat(gc, ++msn_next_convo_id, "MSN Chat");
 			add_chat_buddy(ms->chat, ms->user);
 			add_chat_buddy(ms->chat, gc->username);
 			g_free(ms->user);
@@ -748,8 +748,8 @@ static int msn_process_main(struct gaim_connection *gc, char *buf)
 		ap->friend = g_strdup(url_decode(friend));
 		ap->gc = gc;
 
-		g_snprintf(msg, sizeof(msg), "The user %s (%s) wants to add you to their buddy list.",
-				ap->user, url_decode(ap->friend));
+		g_snprintf(msg, sizeof(msg), "The user %s (%s) wants to add you (%s) to their buddy list.",
+				ap->user, url_decode(ap->friend), gc->username);
 
 		do_ask_dialog(msg, ap, msn_accept_add, msn_cancel_add);
 	} else if (!g_strncasecmp(buf, "BLP", 3)) {
@@ -901,7 +901,7 @@ static int msn_process_main(struct gaim_connection *gc, char *buf)
 				ap->friend = g_strdup(friend);
 				ap->gc = gc;
                          
-		                g_snprintf(msg, sizeof(msg), "The user %s (%s) wants to add you to their buddy list",ap->user, url_decode(ap->friend));
+		                g_snprintf(msg, sizeof(msg), "The user %s (%s) wants to add you (%s) to their buddy list",ap->user, url_decode(ap->friend), gc->username);
 				do_ask_dialog(msg, ap, msn_accept_add, msn_cancel_add);
 			}
 		    }
@@ -1758,23 +1758,23 @@ static void msn_set_away(struct gaim_connection *gc, char *state, char *msg)
 
 	gc->away = NULL;
 
-	if (msg) {
+	if (strcmp(state,GAIM_AWAY_CUSTOM)==0) {
 		gc->away = "";
 		away = "AWY";
 	} else if (state) {
 		gc->away = "";
 
-		if (!strcmp(state, "Away From Computer"))
+		if (!strcasecmp(state, "Away From Computer"))
 			away = "AWY";
-		else if (!strcmp(state, "Be Right Back"))
+		else if (!strcasecmp(state, "Be Right Back"))
 			away = "BRB";
-		else if (!strcmp(state, "Busy"))
+		else if (!strcasecmp(state, "Busy"))
 			away = "BSY";
-		else if (!strcmp(state, "On The Phone"))
+		else if (!strcasecmp(state, "On The Phone"))
 			away = "PHN";
-		else if (!strcmp(state, "Out To Lunch"))
+		else if (!strcasecmp(state, "Out To Lunch"))
 			away = "LUN";
-		else if (!strcmp(state, "Hidden"))
+		else if (!strcasecmp(state, "Hidden"))
 			away = "HDN";
 		else {
 			gc->away = NULL;
@@ -1926,6 +1926,26 @@ static void msn_convo_closed(struct gaim_connection *gc, char *who)
 
 	if (ms)
 		msn_kill_switch(ms);
+}
+
+/*(BitlBee -- This one converts a standard switchboard into a conversation)*/
+static int msn_convo_open(struct gaim_connection *gc, char *who)
+{
+	struct msn_switchboard *ms = msn_find_switch(gc, who);
+	
+	if( ms )
+	{
+		ms->chat = serv_got_joined_chat(gc, ++msn_next_convo_id, "MSN Chat");
+		add_chat_buddy(ms->chat, ms->user);
+		add_chat_buddy(ms->chat, gc->username);
+		g_free(ms->user);
+		ms->user = NULL;
+		return( 1 );
+	}
+	else
+	{
+		return( 0 );
+	}
 }
 
 static void msn_keepalive(struct gaim_connection *gc)
@@ -2126,6 +2146,7 @@ void msn_init(struct prpl *ret)
 //	ret->do_action = msn_do_action;
 //	ret->actions = msn_actions;
 	ret->convo_closed = msn_convo_closed;
+	ret->convo_open = msn_convo_open;
 	ret->keepalive = msn_keepalive;
 	ret->set_permit_deny = msn_set_permit_deny;
 	ret->add_permit = msn_add_permit;

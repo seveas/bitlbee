@@ -16,9 +16,9 @@ it with your favorite irc client. Launch it and connect to localhost port 6667
 <title>The #bitlbee control channel</title>
 
 <para>
-Once you are connected to the BitlBee server, you should 'join' #bitlbee on 
-that server. This channel acts like the 'buddy list' you have on the various
-other chat networks.
+Once you are connected to the BitlBee server, you are automatically joined
+to #bitlbee on that server. This channel acts like the 'buddy list' you have
+on the various other chat networks.
 </para>
 
 <para>

@@ -1,27 +1,41 @@
+  /********************************************************************\
+  * BitlBee -- An IRC to other IM-networks gateway                     *
+  *                                                                    *
+  * Copyright 2002-2003 Wilmer van der Gaast and others                *
+  \********************************************************************/
+
 /*
  * nogaim
  *
  * Gaim without gaim - for BitlBee
  *
+ * This file contains functions called by the Gaim IM-modules. It's written
+ * from scratch for BitlBee and doesn't contain any code from Gaim anymore
+ * (except for the function names).
+ *
+ * This include file contains some struct and type definitions from Gaim.
+ *
  * Copyright (C) 1998-1999, Mark Spencer <markster@marko.net>
- * Copyright 2002 Wilmer van der Gaast <lintux@lintux.cx>
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- *
+ * Copyright 2002-2003 Wilmer van der Gaast <lintux@lintux.cx>
  */
- 
+
+/*
+  This program is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License with
+  the Debian GNU/Linux distribution in /usr/share/common-licenses/GPL;
+  if not, write to the Free Software Foundation, Inc., 59 Temple Place,
+  Suite 330, Boston, MA  02111-1307  USA
+*/
+
 #ifndef _NOGAIM_H
 #define _NOGAIM_H
 
@@ -55,24 +69,24 @@ struct gaim_connection {
 	int protocol;
 	struct prpl *prpl;
 	guint32 flags;
-
+	
 	/* all connections need an input watcher */
 	int inpa;
-
+	
 	/* buddy list stuff. there is still a global groups for the buddy list, but
 	 * we need to maintain our own set of buddies, and our own permit/deny lists */
 	GSList *permit;
 	GSList *deny;
 	int permdeny;
-
+	
 	/* all connections need a list of chats, even if they don't have chat */
 	GSList *buddy_chats;
-
+	
 	/* each connection then can have its own protocol-specific data */
 	void *proto_data;
-
+	
 	struct aim_user *user;
-
+	
 	char username[64];
 	char displayname[128];
 	char password[32];
@@ -82,15 +96,17 @@ struct gaim_connection {
 	time_t login_time;
 	time_t lastsent;
 	int is_idle;
-
+	
 	char *away;
 	int is_auto_away;
-
+	
 	int evil;
 	gboolean wants_to_die; /* defaults to FALSE */
 	
 	/* BitlBee */
 	irc_t *irc;
+	
+	struct conversation *conversations;
 };
 
 /* struct buddy_chat went away and got merged with this. */
@@ -101,11 +117,12 @@ struct conversation {
         GList *in_room;
         GList *ignored;
         int id;
-};
-
-struct away_message {
-	char name[80];
-	char message[2048];
+        
+        /* BitlBee */
+        struct conversation *next;
+        char *channel;
+        char *title;
+        char joined;
 };
 
 struct buddy {
@@ -195,6 +212,7 @@ struct prpl {
 
 	/* this is really bad. */
 	void (* convo_closed)   (struct gaim_connection *, char *who);
+	int  (* convo_open)     (struct gaim_connection *, char *who);
 
 	char *(* normalize)(const char *);
 };
@@ -238,7 +256,6 @@ extern struct prpl *proto_prpl[16];
 
 /* nogaim.c */
 void nogaim_init();
-void strip_html( char *msg );
 struct gaim_connection *gc_nr( int i );
 int proto_away( struct gaim_connection *gc, char *away );
 
@@ -292,6 +309,7 @@ char *add_cr( char *text );
 char *tobase64( const char *text );
 char *normalize( const char *s );
 time_t get_time( int year, int month, int day, int hour, int min, int sec );
+void strip_html( char *msg );
 
 /* msn.c */
 void msn_init( struct prpl *ret );
@@ -308,5 +326,7 @@ void yahoo_init( struct prpl *ret );
 /* prefs.c */
 void build_block_list();
 void build_allow_list();
+
+struct conversation *conv_findchannel( char *channel );
 
 #endif

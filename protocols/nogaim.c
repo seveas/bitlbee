@@ -1,26 +1,37 @@
+  /********************************************************************\
+  * BitlBee -- An IRC to other IM-networks gateway                     *
+  *                                                                    *
+  * Copyright 2002-2003 Wilmer van der Gaast and others                *
+  \********************************************************************/
+
 /*
  * nogaim
  *
  * Gaim without gaim - for BitlBee
  *
- * Copyright (C) 1998-1999, Mark Spencer <markster@marko.net>
- * Copyright 2002 Wilmer van der Gaast <lintux@lintux.cx>
+ * This file contains functions called by the Gaim IM-modules. It's written
+ * from scratch for BitlBee and doesn't contain any code from Gaim anymore
+ * (except for the function names).
  *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 2 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
- *
+ * Copyright 2002-2003 Wilmer van der Gaast <lintux@lintux.cx>
  */
+
+/*
+  This program is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License with
+  the Debian GNU/Linux distribution in /usr/share/common-licenses/GPL;
+  if not, write to the Free Software Foundation, Inc., 59 Temple Place,
+  Suite 330, Boston, MA  02111-1307  USA
+*/
 
 #include "nogaim.h"
 
@@ -38,6 +49,10 @@ static char *proto_away_alias[7][5] =
 	{ NULL }
 };
 static char *proto_away_alias_find( GList *gcm, char *away );
+
+static char *set_eval_away_devoice( irc_t *irc, set_t *set, char *value );
+
+static int remove_chat_buddy_silent( struct conversation *b, char *handle );
 
 GSList *connections;
 
@@ -64,38 +79,20 @@ void nogaim_init()
 	
 	set_add( IRC, "html", "nostrip", NULL );
 	set_add( IRC, "typing_notice", "false", set_eval_bool );
+	set_add( IRC, "away_devoice", "true", set_eval_away_devoice );
+	set_add( IRC, "charset", "none", NULL );
+	set_add( IRC, "handle_unknown", "root", NULL );
 }
-
-void strip_html( char *msg )
-{
-	char *m, *s, *ch;
-	int i = 1;
-	
-	m = s = malloc( strlen( msg ) + 1 );
-	memset( m, 0, strlen( msg ) + 1 );
-	for( ch = msg; *ch; ch ++ )
-		if( *ch == '<' )
-			i = 0;
-		else if( *ch == '>' && !i )
-			i = 1;
-		else if( i )
-			*(s++) = *ch;
-	
-	strcpy( msg, m );
-	free( m );
-} 
 
 struct gaim_connection *gc_nr( int i )
 {
-	GSList *c = connections;
+	account_t *a;
 	
-	while( c && i )
-	{
-		i --;
-		c = c->next;
-	}
-
-	return( c?c->data:NULL );
+	for( a = IRC->accounts; a; a = a->next )
+		if( ( i-- ) == 0 )
+			return( a->gc );
+	
+	return( NULL );
 }
 
 int proto_away( struct gaim_connection *gc, char *away )
@@ -103,6 +100,7 @@ int proto_away( struct gaim_connection *gc, char *away )
 	GList *m, *ms;
 	char *s;
 	
+	if( !away ) away = "";
 	ms = m = gc->prpl->away_states( gc );
 	
 	while( m )
@@ -179,7 +177,11 @@ static char *proto_away_alias_find( GList *gcm, char *away )
 
 struct gaim_connection *new_gaim_conn( struct aim_user *user )
 {
-	struct gaim_connection *gc = g_new0( struct gaim_connection, 1 );
+	struct gaim_connection *gc;
+	
+	gc = malloc( sizeof( struct gaim_connection ) );
+	memset( gc, 0, sizeof( struct gaim_connection ) );
+	
 	gc->protocol = user->protocol;
 	gc->prpl = proto_prpl[gc->protocol];
 	g_snprintf( gc->username, sizeof( gc->username ), "%s", user->username );
@@ -199,6 +201,16 @@ struct gaim_connection *new_gaim_conn( struct aim_user *user )
 
 void destroy_gaim_conn( struct gaim_connection *gc )
 {
+	account_t *a;
+	
+	/* Destroy the pointer to this connection from the account list */
+	for( a = gc->irc->accounts; a; a = a->next )
+		if( a->gc == gc )
+		{
+			a->gc = NULL;
+			break;
+		}
+	
 	connections = g_slist_remove( connections, gc );
 	g_free( gc->user );
 	g_free( gc );
@@ -287,7 +299,9 @@ void signoff( struct gaim_connection *gc )
 	destroy_gaim_conn( gc );
 }
 
+
 /* dialogs.c */
+
 void do_error_dialog( char *msg, char *title )
 {
 	irc_usermsg( IRC, "%s - Error: %s", title, msg );
@@ -320,7 +334,9 @@ void do_ask_dialog( char *msg, void *data, void *doit, void *dont )
 	}
 }
 
+
 /* list.c */
+
 int bud_list_cache_exists( struct gaim_connection *gc )
 {
 	return( 0 );
@@ -340,7 +356,10 @@ void add_buddy( struct gaim_connection *gc, char *group, char *handle, char *rea
 	
 	for( u = irc->users; u; u = u->next )
 		if( u->gc && u->handle && strcasecmp( u->handle, handle ) == 0 )
-			break;			/* Buddy already exists! */
+		{
+			return;
+			/* Buddy seems to exist already. Let's ignore this request then... */
+		}
 	
 	memset( nick, 0, MAX_NICK_LENGTH + 1 );
 	strcpy( nick, nick_get( gc->irc, handle, gc->protocol ) );
@@ -383,17 +402,14 @@ void add_buddy( struct gaim_connection *gc, char *group, char *handle, char *rea
 struct buddy *find_buddy( struct gaim_connection *gc, char *handle )
 {
 	static struct buddy b[1];
-	user_t *u = gc->irc->users;
+	user_t *u;
 	
 	if( !gc ) return( NULL );
 	
-	while( u )
-	{
-		if( u->handle && u->gc == gc && ( strcasecmp( u->handle, handle ) == 0 ) )
-			break;
-		u = u->next;
-	}
-	if( !u ) return( NULL );
+	u = user_findhandle( gc, handle );
+	
+	if( !u )
+		return( NULL );
 
 	memset( b, 0, sizeof( b ) );
 	strncpy( b->name, handle, 80 );
@@ -419,31 +435,12 @@ void signoff_blocked( struct gaim_connection *gc )
 
 void handle_buddy_rename( struct buddy *buddy, char *handle )
 {
-	user_t *u = buddy->gc->irc->users;
+	user_t *u = user_findhandle( buddy->gc, handle );
 	
-	while( u )
-	{
-		if( u->handle && ( strcasecmp( u->handle, handle ) == 0 ) )
-			break;
-		u = u->next;
-	}
 	if( !u ) return;
 	
 	if( u->realname != u->nick ) free( u->realname );
 	u->realname = strdup( buddy->show );
-}
-
-
-/* buddy_chat.c */
-
-void add_chat_buddy( struct conversation *b, char *handle )
-{
-	return;
-}
-
-void remove_chat_buddy( struct conversation *b, char *handle, char *reason )
-{
-	return;
 }
 
 
@@ -459,20 +456,20 @@ void show_got_added( struct gaim_connection *gc, char *id, char *handle, const c
 
 void serv_got_update( struct gaim_connection *gc, char *handle, int loggedin, int evil, time_t signon, time_t idle, int type, guint caps )
 {
-	user_t *u = gc->irc->users;
+	user_t *u;
+	int oa, oo;
 	
-	while( u->next )
-	{
-		if( u->handle && u->gc == gc && ( strcasecmp( u->handle, handle ) == 0 ) )
-			break;
-		u = u->next;
-	}
+	u = user_findhandle( gc, handle );
+	
 	if( !u )
 	{
 		irc_usermsg( gc->irc, "serv_got_update() for unknown %s handle %s:", proto_name[gc->protocol], handle );
 		irc_usermsg( gc->irc, "loggedin = %d, type = %d", loggedin, type );
 		return;
 	}
+	
+	oa = u->away != NULL;
+	oo = u->online;
 	
 	if( loggedin && !u->online )
 	{
@@ -481,23 +478,30 @@ void serv_got_update( struct gaim_connection *gc, char *handle, int loggedin, in
 	}
 	else if( !loggedin && u->online )
 	{
+		struct conversation *c;
+		
 		irc_kill( gc->irc, u );
 		u->online = 0;
+		u->away = NULL;
+		
+		/* Remove him/her from the conversations to prevent PART messages after he/she QUIT already */
+		for( c = gc->conversations; c; c = c->next )
+			remove_chat_buddy_silent( c, handle );
 	}
 	
 	if( ( type & UC_UNAVAILABLE ) && ( gc->protocol == PROTO_MSN ) )
 	{
-		if( type & ( MSN_BUSY << 1 ) )
+		if( ( type & 30 ) == ( MSN_BUSY << 1 ) )
 			u->away = "Busy";
-//		else if( type & ( MSN_IDLE << 1 ) )
-//			u->away = "Idle";
-		else if( type & ( MSN_BRB << 1 ) )
+		else if( ( type & 30 ) == ( MSN_IDLE << 1 ) )
+			u->away = "Idle";
+		else if( ( type & 30 ) == ( MSN_BRB << 1 ) )
 			u->away = "Be right back";
-		else if( type & ( MSN_PHONE << 1 ) )
+		else if( ( type & 30 ) == ( MSN_PHONE << 1 ) )
 			u->away = "On the phone";
-		else if( type & ( MSN_LUNCH << 1 ) )
+		else if( ( type & 30 ) == ( MSN_LUNCH << 1 ) )
 			u->away = "Out to lunch";
-		else // if( type & ( MSN_AWAY << 1 ) )
+		else // if( ( type & 30 ) == ( MSN_AWAY << 1 ) )
 			u->away = "Away from the computer";
 	}
 	else if( ( type & UC_UNAVAILABLE ) && ( gc->protocol == PROTO_OSCAR || gc->protocol == PROTO_ICQ || gc->protocol == PROTO_TOC ) )
@@ -515,71 +519,237 @@ void serv_got_update( struct gaim_connection *gc, char *handle, int loggedin, in
 	}
 	else if( ( type & UC_UNAVAILABLE ) && ( gc->protocol == PROTO_YAHOO ) )
 	{
-//		irc_usermsg( IRC, "Away-state for %s: %d", handle, type );
+		if( set_getint( gc->irc, "debug" ) )
+			irc_usermsg( gc->irc, "Away-state for %s: %d", handle, type );
 		u->away = "Away";
 	}
 	else
 		u->away = NULL;
+	
+	/* LISPy... */
+	if( ( set_getint( gc->irc, "away_devoice" ) ) &&		/* Don't do a thing when user doesn't want it */
+	    ( u->online ) &&						/* Don't touch offline people */
+	    ( ( ( u->online != oo ) && !u->away ) ||			/* Voice joining people */
+	      ( ( u->online == oo ) && ( oa == !u->away ) ) ) )		/* (De)voice people changing state */
+	{
+		irc_write( gc->irc, ":%s!%s@%s MODE %s %cv %s", gc->irc->mynick, gc->irc->mynick, gc->irc->myhost,
+		                                                gc->irc->channel, u->away?'-':'+', u->nick );
+	}
 }
 
 void serv_got_im( struct gaim_connection *gc, char *handle, char *msg, guint32 flags, time_t mtime, gint len )
 {
 	irc_t *irc = gc->irc;
-	user_t *u = irc->users;
+	user_t *u;
 	
-	while( u )
-	{
-		if( u->handle && u->gc == gc && ( strcasecmp( u->handle, handle ) == 0 ) )
-			break;
-		u = u->next;
-	}
+	u = user_findhandle( gc, handle );
+	
 	if( !u )
 	{
-		irc_usermsg( irc, "Message from unknown %s handle %s:", proto_name[gc->protocol], handle );
-		u = user_find( irc, irc->mynick );
+		if( strcasecmp( set_getstr( irc, "handle_unknown" ), "ignore" ) == 0 )
+		{
+			if( set_getint( irc, "debug" ) )
+				irc_usermsg( irc, "Ignoring message from unknown %s handle %s", proto_name[gc->protocol], handle );
+			
+			return;
+		}
+		else if( strcasecmp( set_getstr( irc, "handle_unknown" ), "add" ) == 0 )
+		{
+			add_buddy( gc, NULL, handle, NULL );
+			u = user_findhandle( gc, handle );
+		}
+		else
+		{
+			irc_usermsg( irc, "Message from unknown %s handle %s:", proto_name[gc->protocol], handle );
+			u = user_find( irc, irc->mynick );
+		}
 	}
 	
-	if( strcasecmp( set_getstr( gc->irc, "html" ), "strip" ) == 0 ) strip_html( msg );
+	if( strcasecmp( set_getstr( gc->irc, "html" ), "strip" ) == 0 )
+		strip_html( msg );
+	
 	irc_msgfrom( irc, u->nick, msg );
 }
 
 void serv_got_typing( struct gaim_connection *gc, char *handle, int timeout )
 {
-	irc_t *irc = gc->irc;
-	user_t *u = irc->users;
+	user_t *u;
 	
-	if( !set_getint( gc->irc, "typing_notice" ) ) return;
+	if( !set_getint( gc->irc, "typing_notice" ) )
+		return;
 	
-	while( u )
-	{
-		if( u->handle && u->gc == gc && ( strcasecmp( u->handle, handle ) == 0 ) )
-			break;
-		u = u->next;
-	}
-	
-	if( u )
-		irc_noticefrom( irc, u->nick, "* Typing a message *" );
+	if( ( u = user_findhandle( gc, handle ) ) )
+		irc_noticefrom( gc->irc, u->nick, "* Typing a message *" );
 }
 
 void serv_got_chat_left( struct gaim_connection *gc, int id )
 {
-	return;
+	struct conversation *c, *l = NULL;
+	
+	if( set_getint( gc->irc, "debug" ) )
+		irc_usermsg( gc->irc, "You were removed from conversation %d", (int) id );
+	
+	for( c = gc->conversations; c && c->id != id; c = (l=c)->next );
+	
+	if( c )
+	{
+		if( c->joined )
+		{
+			user_t *u;
+			
+			u = user_find( gc->irc, gc->irc->mynick );
+			irc_privmsg( gc->irc, u, "PRIVMSG", c->channel, "", "Cleaning up channel, bye!" );
+			
+			u = user_find( gc->irc, gc->irc->nick );
+			irc_part( gc->irc, u, c->channel );
+		}
+		
+		if( l )
+			l->next = c->next;
+		else
+			gc->conversations = c->next;
+		
+		free( c->channel );
+		free( c->title );
+		g_list_free( c->in_room );
+		free( c );
+	}
 }
 
 void serv_got_chat_in( struct gaim_connection *gc, int id, char *who, int whisper, char *msg, time_t mtime )
 {
-	return;
+	struct conversation *c;
+	user_t *u;
+	
+	/* Gaim sends own messages through this too. IRC doesn't want this, so kill them */
+	if( strcasecmp( who, gc->user->username ) == 0 )
+		return;
+	
+	u = user_findhandle( gc, who );
+	for( c = gc->conversations; c && c->id != id; c = c->next );
+	
+	if( c && u )
+		irc_privmsg( gc->irc, u, "PRIVMSG", c->channel, "", msg );
+	else
+		irc_usermsg( gc->irc, "Message from/to conversation %s@%d (unknown conv/user): %s", who, id, msg );
 }
 
 struct conversation *serv_got_joined_chat( struct gaim_connection *gc, int id, char *handle )
 {
-	return( NULL );
+	struct conversation *c;
+	char *s;
+	
+	/* This one just creates the conversation structure, user won't see anything yet */
+	
+	if( gc->conversations )
+	{
+		for( c = gc->conversations; c->next; c = c->next );
+		c = c->next = malloc( sizeof( struct conversation ) );
+	}
+	else
+		gc->conversations = c = malloc( sizeof( struct conversation ) );
+	
+	memset( c, 0, sizeof( struct conversation ) );
+	c->id = id;
+	c->gc = gc;
+	c->title = strdup( handle );
+	
+	s = malloc( 16 );
+	sprintf( s, "#chat_%03d", gc->irc->c_id++ );
+	c->channel = strdup( s );
+	free( s );
+	
+	if( set_getint( gc->irc, "debug" ) )
+		irc_usermsg( gc->irc, "Creating new conversation: (id=%d,handle=%s)", id, handle );
+	
+	return( c );
 }
 
 void serv_finish_login( struct gaim_connection *gc )
 {
 	return;
 }
+
+
+/* buddy_chat.c */
+
+void add_chat_buddy( struct conversation *b, char *handle )
+{
+	user_t *u = user_findhandle( b->gc, handle );
+	int me = 0;
+	
+	if( set_getint( b->gc->irc, "debug" ) )
+		irc_usermsg( b->gc->irc, "User %s added to conversation %d", handle, b->id );
+	
+	/* It might be yourself! */
+	if( strcasecmp( handle, b->gc->user->username ) == 0 )
+	{
+		u = user_find( b->gc->irc, b->gc->irc->nick );
+		b->joined = me = 1;
+	}
+	
+	/* Most protocols allow people to join, even when they're not in
+	   your contact list. Try to handle that here */
+	if( !u )
+	{
+		add_buddy( b->gc, NULL, handle, NULL );
+		u = user_findhandle( b->gc, handle );
+	}
+	
+	/* Send the IRC message to the client */
+	if( b->joined && u )
+		irc_join( b->gc->irc, u, b->channel );
+	
+	/* Add the handle to the room userlist, if it's not 'me' */
+	if( !me )
+		b->in_room = g_list_append( b->in_room, strdup( handle ) );
+}
+
+void remove_chat_buddy( struct conversation *b, char *handle, char *reason )
+{
+	user_t *u;
+	int me = 0;
+	
+	if( set_getint( b->gc->irc, "debug" ) )
+		irc_usermsg( b->gc->irc, "User %s removed from conversation %d (%s)", handle, b->id, reason ? reason : "" );
+	
+	/* It might be yourself! */
+	if( strcasecmp( handle, b->gc->user->username ) == 0 )
+	{
+		u = user_find( b->gc->irc, b->gc->irc->nick );
+		b->joined = 0;
+		me = 1;
+	}
+	else
+	{
+		u = user_findhandle( b->gc, handle );
+	}
+	
+	if( remove_chat_buddy_silent( b, handle ) )
+		if( ( b->joined || me ) && u )
+			irc_part( b->gc->irc, u, b->channel );
+}
+
+static int remove_chat_buddy_silent( struct conversation *b, char *handle )
+{
+	GList *i;
+	
+	/* Find the handle in the room userlist and shoot it */
+	i = b->in_room;
+	while( i )
+	{
+		if( strcasecmp( handle, i->data ) == 0 )
+		{
+			b->in_room = g_list_remove( b->in_room, i->data );
+			return( 1 );
+		}
+		
+		i = i->next;
+	}
+	
+	return( 0 );
+}
+
 
 /* prefs.c */
 
@@ -592,4 +762,83 @@ void build_block_list()
 void build_allow_list()
 {
 	return;
+}
+
+
+/* Misc. BitlBee stuff which shouldn't really be here */
+
+struct conversation *conv_findchannel( char *channel )
+{
+	struct gaim_connection *gc;
+	struct conversation *c;
+	GSList *l;
+	
+	/* This finds the connection which has a conversation which belongs to this channel */
+	for( l = connections; l; l = l->next )
+	{
+		gc = l->data;
+		for( c = gc->conversations; c && strcasecmp( c->channel, channel ) != 0; c = c->next );
+		if( c )
+			return( c );
+	}
+	
+	return( NULL );
+}
+
+static char *set_eval_away_devoice( irc_t *irc, set_t *set, char *value )
+{
+	int st;
+	
+	if( ( strcasecmp( value, "true" ) == 0 ) || ( strcasecmp( value, "yes" ) == 0 ) || ( strcasecmp( value, "on" ) == 0 ) )
+		st = 1;
+	else if( ( strcasecmp( value, "false" ) == 0 ) || ( strcasecmp( value, "no" ) == 0 ) || ( strcasecmp( value, "off" ) == 0 ) )
+		st = 0;
+	else if( sscanf( value, "%d", &st ) != 1 )
+		return( NULL );
+	
+	st = st != 0;
+	
+	/* Horror.... */
+	
+	if( st != set_getint( irc, "away_devoice" ) )
+	{
+		char list[80] = "";
+		user_t *u = irc->users;
+		int i = 0, count = 0;
+		char pm;
+		char v[80];
+		
+		if( st )
+			pm = '+';
+		else
+			pm = '-';
+		
+		while( u )
+		{
+			if( u->gc && u->online && !u->away )
+			{
+				if( ( strlen( list ) + strlen( u->nick ) ) >= 79 )
+				{
+					for( i = 0; i < count; v[i++] = 'v' ); v[i] = 0;
+					irc_write( irc, ":%s!%s@%s MODE %s %c%s%s",
+					           irc->mynick, irc->mynick, irc->myhost,
+		        			   irc->channel, pm, v, list );
+					
+					*list = 0;
+					count = 0;
+				}
+				
+				sprintf( list + strlen( list ), " %s", u->nick );
+				count ++;
+			}
+			u = u->next;
+		}
+		
+		/* $v = 'v' x $i */
+		for( i = 0; i < count; v[i++] = 'v' ); v[i] = 0;
+		irc_write( irc, ":%s!%s@%s MODE %s %c%s%s", irc->mynick, irc->mynick, irc->myhost,
+		                                            irc->channel, pm, v, list );
+	}
+	
+	return( set_eval_bool( irc, set, value ) );
 }

@@ -2242,7 +2242,11 @@ static void jabber_set_away(struct gaim_connection *gc, char *state, char *messa
 			y = xmlnode_insert_tag(x, "show");
 			xmlnode_insert_cdata(y, "away", -1);
 			y = xmlnode_insert_tag(x, "status");
-			xmlnode_insert_cdata(y, message, -1);
+			{
+				char *utf8 = str_to_utf8(message);
+				xmlnode_insert_cdata(y, utf8, -1);
+				g_free(utf8);
+			}
 			gc->away = "";
 		} else {
 			/* Gaim wants us to not be away */
@@ -2250,20 +2254,20 @@ static void jabber_set_away(struct gaim_connection *gc, char *state, char *messa
 		}
 	} else {
 		/* state is one of our own strings. it won't be NULL. */
-		if (!strcmp(state, "Online")) {
+		if (!strcasecmp(state, "Online")) {
 			/* once again, we don't have to put anything here */
-		} else if (!strcmp(state, "Chatty")) {
+		} else if (!strcasecmp(state, "Chatty")) {
 			y = xmlnode_insert_tag(x, "show");
 			xmlnode_insert_cdata(y, "chat", -1);
-		} else if (!strcmp(state, "Away")) {
+		} else if (!strcasecmp(state, "Away")) {
 			y = xmlnode_insert_tag(x, "show");
 			xmlnode_insert_cdata(y, "away", -1);
 			gc->away = "";
-		} else if (!strcmp(state, "Extended Away")) {
+		} else if (!strcasecmp(state, "Extended Away")) {
 			y = xmlnode_insert_tag(x, "show");
 			xmlnode_insert_cdata(y, "xa", -1);
 			gc->away = "";
-		} else if (!strcmp(state, "Do Not Disturb")) {
+		} else if (!strcasecmp(state, "Do Not Disturb")) {
 			y = xmlnode_insert_tag(x, "show");
 			xmlnode_insert_cdata(y, "dnd", -1);
 			gc->away = "";

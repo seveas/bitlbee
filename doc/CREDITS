@@ -14,7 +14,17 @@ The authors thank the following people:
 - Han Boetes, for testing on and porting to OpenBSD.
 - Paul Foote for some hints on running BitlBee on FreeBSD.
 - Floris Kruisselbrink, for submitting the "help set ..." patch.
+- Jan-Willem Lenting, for putting up with Wilmer, who wanted to test the
+  MSN away messages in the middle of the night.
+- Jan Sabbe, for the hints about running BitlBee on Mac OS X.
+- Kenny Gryp, for thoroughly testing the groupchat code and submitting
+  bug reports.
+- Bryan Williams, for the help in getting BitlBee to run on Cygwin.
 - Peter van Dijk for discovering a security leak in BitlBee.
+- Maurits Dijkstra, for some coding, bug finding, and the standalone
+  daemon patch.
+- Christian Häggeström, for the fix for the Jabber barf on high ASCII
+  characters in away messages.
 
 - And all other users who help us by sending useful bug reports, positive
   feedback, nice patches and cool addons. Mentioning you all would make

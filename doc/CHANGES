@@ -1,3 +1,50 @@
+Version 0.80:
+- Fixed a very stupid bug in the MSN away-state reading.
+- nick_cmp() now actually works, RFC-compliant.
+- Fixed and cleaned up the away-state handling, there were some very
+  weird things in the original Gaim code base which broke this completely
+  all the time.
+- The daemon prevents you from using root/NickServ as your nick now,
+  previous versions crashed on that.
+- At last ... GROUP CHAT SUPPORT! :-D
+- People who are *not* away get mode +v in #bitlbee now, so you can see
+  in /names who's away and who's not.
+- Crashing BitlBee by using the NICKSERV command without any arguments
+  is impossible now.
+- Added some notes about Darwin/OSX portability.
+- Separated connections from accounts. This means restoring a lost
+  connection can be done using a simple "account on <number>" command.
+  See "help account" for more information.
+  *** For now this won't cause problems when upgrading because the login
+  command still exists (as an alias for "account add"). This alias will
+  not stay forever, though.
+- irc_process() now makes sure it reads the whole available buffer before
+  executing the commands. Previous versions were very bad at handling
+  long floods from non-floodprotected clients. The code is still not
+  perfect, but good enough for local links.
+- Allow/Deny questions from msn.c now also mention your own screenname.
+  This is useful for people who run two (or even more) MSN accounts in
+  one BitlBee.
+- Fixed a little bug in the helpfile-changed-check code.
+- A little trick in "make install" makes sure the help function in running
+  sessions doesn't break while upgrading.
+- Added a nifty (and editable) MOTD.
+- Added IRIX to the compatibility list.
+- Added support for Cygwin.
+- Better HTML-stripping, it also handles &entities; correctly now.
+- Fixed some problems to make it compile on Solaris.
+- Added support for messages from Miranda/Mac ICQ. (Code port from Gaim 0.59)
+- Fixed the crash problem when removing yahoo buddies.
+- Added the handle_unknown setting.
+- Did some editing on a few docs.
+- Added a FAQ.
+- Added the daemon-patch by Maurits Dijkstra which adds stand-alone daemon
+  support to BitlBee.
+- Jabber now doesn't barf on high ASCII characters in away messages anymore.
+  (Thanks to Christian Häggström <chm@c00.info>)
+
+Finished 24 Jun 2003
+
 Version 0.74a:
 - The music-festivals-are-bad-for-your-mind release.
 - This one actually contains the fix for the bug 0.74 claimed to have.

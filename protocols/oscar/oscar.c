@@ -987,22 +987,22 @@ static int gaim_parse_oncoming(aim_session_t *sess, aim_frame_t *fr, ...) {
 
 	if (info->present & AIM_USERINFO_PRESENT_CAPABILITIES)
 		caps = info->capabilities;
+	if (info->flags & AIM_FLAG_ACTIVEBUDDY)
+		type |= UC_AB;
 
-	if (!od->icq && (info->present & AIM_USERINFO_PRESENT_FLAGS)) {
-		if (info->flags & AIM_FLAG_ACTIVEBUDDY)
-			type |= UC_AB;
-		if (info->flags & AIM_FLAG_UNCONFIRMED)
-			type |= UC_UNCONFIRMED;
-		if (info->flags & AIM_FLAG_ADMINISTRATOR)
-			type |= UC_ADMIN;
-		if (info->flags & AIM_FLAG_AOL)
-			type |= UC_AOL;
-		if (info->flags & AIM_FLAG_FREE)
-			type |= UC_NORMAL;
-		if (info->flags & AIM_FLAG_AWAY)
-			type |= UC_UNAVAILABLE;
-		if (info->flags & AIM_FLAG_WIRELESS)
-			type |= UC_WIRELESS;
+	if ((!od->icq) && (info->present & AIM_USERINFO_PRESENT_FLAGS)) {
+			if (info->flags & AIM_FLAG_UNCONFIRMED)
+				type |= UC_UNCONFIRMED;
+			if (info->flags & AIM_FLAG_ADMINISTRATOR)
+				type |= UC_ADMIN;
+			if (info->flags & AIM_FLAG_AOL)
+				type |= UC_AOL;
+			if (info->flags & AIM_FLAG_FREE)
+				type |= UC_NORMAL;
+			if (info->flags & AIM_FLAG_AWAY)
+				type |= UC_UNAVAILABLE;
+			if (info->flags & AIM_FLAG_WIRELESS)
+				type |= UC_WIRELESS;
 	}
 	if (info->present & AIM_USERINFO_PRESENT_ICQEXTSTATUS) {
 		type = (info->icqinfo.status << 7);
@@ -1155,6 +1155,16 @@ static int incomingim_chan4(aim_session_t *sess, aim_conn_t *conn, aim_userinfo_
 	struct gaim_connection *gc = sess->aux_data;
 
 	switch (args->type) {
+		case 0x0001: { /* An almost-normal instant message.  Mac ICQ sends this.  It's peculiar. */
+			char *uin, *message;
+			uin = g_strdup_printf("%lu", args->uin);
+			message = g_strdup(args->msg);
+			strip_linefeed(message);
+			serv_got_im(gc, uin, message, 0, time(NULL), -1);
+			g_free(uin);
+			g_free(message);
+		} break;
+
 		case 0x0006: { /* Someone requested authorization */
 			gaim_icq_authask(gc, args->uin, args->msg);
 		} break;
@@ -1976,27 +1986,27 @@ static void oscar_set_away_icq(struct gaim_connection *gc, struct oscar_data *od
 	if (gc->away)
 		gc->away = NULL;
 
-	if (!strcmp(state, "Online"))
+	if (!strcasecmp(state, "Online"))
 		aim_setextstatus(od->sess, od->conn, AIM_ICQ_STATE_NORMAL);
-	else if (!strcmp(state, "Away")) {
+	else if (!strcasecmp(state, "Away")) {
 		aim_setextstatus(od->sess, od->conn, AIM_ICQ_STATE_AWAY);
 		gc->away = "";
-	} else if (!strcmp(state, "Do Not Disturb")) {
+	} else if (!strcasecmp(state, "Do Not Disturb")) {
 		aim_setextstatus(od->sess, od->conn, AIM_ICQ_STATE_AWAY | AIM_ICQ_STATE_DND | AIM_ICQ_STATE_BUSY);
 		gc->away = "";
-	} else if (!strcmp(state, "Not Available")) {
+	} else if (!strcasecmp(state, "Not Available")) {
 		aim_setextstatus(od->sess, od->conn, AIM_ICQ_STATE_OUT | AIM_ICQ_STATE_AWAY);
 		gc->away = "";
-	} else if (!strcmp(state, "Occupied")) {
+	} else if (!strcasecmp(state, "Occupied")) {
 		aim_setextstatus(od->sess, od->conn, AIM_ICQ_STATE_AWAY | AIM_ICQ_STATE_BUSY);
 		gc->away = "";
-	} else if (!strcmp(state, "Free For Chat")) {
+	} else if (!strcasecmp(state, "Free For Chat")) {
 		aim_setextstatus(od->sess, od->conn, AIM_ICQ_STATE_CHAT);
 		gc->away = "";
-	} else if (!strcmp(state, "Invisible")) {
+	} else if (!strcasecmp(state, "Invisible")) {
 		aim_setextstatus(od->sess, od->conn, AIM_ICQ_STATE_INVISIBLE);
 		gc->away = "";
-	} else if (!strcmp(state, GAIM_AWAY_CUSTOM)) {
+	} else if (!strcasecmp(state, GAIM_AWAY_CUSTOM)) {
 	 	if (message) {
 			aim_setextstatus(od->sess, od->conn, AIM_ICQ_STATE_OUT | AIM_ICQ_STATE_AWAY);
 			gc->away = "";
@@ -2353,38 +2363,6 @@ static int oscar_chat_send(struct gaim_connection *g, int id, char *message) {
 	g_free(buf);
 	return 0;
 }
-
-#if 0
-/* ** BitlBee ** Not used */
-static void oscar_get_away_msg(struct gaim_connection *gc, char *who) {
-	struct oscar_data *od = gc->proto_data;
-	od->evilhack = g_slist_append(od->evilhack, g_strdup(normalize(who)));
-	if (od->icq) {
-		struct buddy *budlight = find_buddy(gc, who);
-		if (budlight)
-			if ((budlight->uc >> 7) & (AIM_ICQ_STATE_AWAY || AIM_ICQ_STATE_DND || AIM_ICQ_STATE_OUT || AIM_ICQ_STATE_BUSY || AIM_ICQ_STATE_CHAT))
-				if (budlight->caps & AIM_CAPS_ICQSERVERRELAY)
-					aim_send_im_ch2_geticqmessage(od->sess, who, (budlight->uc & 0xff80) >> 7);
-				else {
-					char *state_msg = gaim_icq_status((budlight->uc & 0xff80) >> 7);
-					char *dialog_msg = g_strdup_printf(_("<B>UIN:</B> %s<BR><B>Status:</B> %s<BR><HR><BR><I>Remote client does not support sending status messages.</I><BR>"), who, state_msg);
-//					g_show_info_text(gc, who, 2, dialog_msg, NULL);
-					free(state_msg);
-					free(dialog_msg);
-				}
-			else {
-				char *state_msg = gaim_icq_status((budlight->uc & 0xff80) >> 7);
-				char *dialog_msg = g_strdup_printf(_("<B>UIN:</B> %s<BR><B>Status:</B> %s<BR><HR><BR><I>User has no status message.</I><BR>"), who, state_msg);
-//				g_show_info_text(gc, who, 2, dialog_msg, NULL);
-				free(state_msg);
-				free(dialog_msg);
-			}
-		else
-			do_error_dialog("Could not find contact in local list, therefore unable to request status message.\n", "Gaim - Error");
-	} else
-		oscar_get_info(gc, who);
-}
-#endif
 
 static void oscar_set_permit_deny(struct gaim_connection *gc) {
 	struct oscar_data *od = (struct oscar_data *)gc->proto_data;

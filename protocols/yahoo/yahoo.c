@@ -1046,30 +1046,30 @@ static void yahoo_set_away(struct gaim_connection *gc, char *state, char *msg)
 		gc->away = "";
 	} else if (state) {
 		gc->away = "";
-		if (!strcmp(state, "Available")) {
+		if (!strcasecmp(state, "Available")) {
 			yd->current_status = YAHOO_STATUS_AVAILABLE;
 			gc->away = NULL;
-		} else if (!strcmp(state, "Be Right Back")) {
+		} else if (!strcasecmp(state, "Be Right Back")) {
 			yd->current_status = YAHOO_STATUS_BRB;
-		} else if (!strcmp(state, "Busy")) {
+		} else if (!strcasecmp(state, "Busy")) {
 			yd->current_status = YAHOO_STATUS_BUSY;
-		} else if (!strcmp(state, "Not At Home")) {
+		} else if (!strcasecmp(state, "Not At Home")) {
 			yd->current_status = YAHOO_STATUS_NOTATHOME;
-		} else if (!strcmp(state, "Not At Desk")) {
+		} else if (!strcasecmp(state, "Not At Desk")) {
 			yd->current_status = YAHOO_STATUS_NOTATDESK;
-		} else if (!strcmp(state, "Not In Office")) {
+		} else if (!strcasecmp(state, "Not In Office")) {
 			yd->current_status = YAHOO_STATUS_NOTINOFFICE;
-		} else if (!strcmp(state, "On Phone")) {
+		} else if (!strcasecmp(state, "On Phone")) {
 			yd->current_status = YAHOO_STATUS_ONPHONE;
-		} else if (!strcmp(state, "On Vacation")) {
+		} else if (!strcasecmp(state, "On Vacation")) {
 			yd->current_status = YAHOO_STATUS_ONVACATION;
-		} else if (!strcmp(state, "Out To Lunch")) {
+		} else if (!strcasecmp(state, "Out To Lunch")) {
 			yd->current_status = YAHOO_STATUS_OUTTOLUNCH;
-		} else if (!strcmp(state, "Stepped Out")) {
+		} else if (!strcasecmp(state, "Stepped Out")) {
 			yd->current_status = YAHOO_STATUS_STEPPEDOUT;
-		} else if (!strcmp(state, "Invisible")) {
+		} else if (!strcasecmp(state, "Invisible")) {
 			yd->current_status = YAHOO_STATUS_INVISIBLE;
-		} else if (!strcmp(state, GAIM_AWAY_CUSTOM)) {
+		} else if (!strcasecmp(state, GAIM_AWAY_CUSTOM)) {
 			if (gc->is_idle) {
 				yd->current_status = YAHOO_STATUS_IDLE;
 			} else {
@@ -1178,11 +1178,11 @@ static void yahoo_add_buddy(struct gaim_connection *gc, char *who)
 static void yahoo_remove_buddy(struct gaim_connection *gc, char *who, char *group)
 {
 	struct yahoo_data *yd = (struct yahoo_data *)gc->proto_data;
-
+	
 	struct yahoo_packet *pkt = yahoo_packet_new(YAHOO_SERVICE_REMBUDDY, YAHOO_STATUS_AVAILABLE, 0);
 	yahoo_packet_hash(pkt, 1, gc->displayname);
 	yahoo_packet_hash(pkt, 7, who);
-	yahoo_packet_hash(pkt, 65, group);
+	yahoo_packet_hash(pkt, 65, group ? group : "Buddies");
 	yahoo_send_packet(yd, pkt);
 	yahoo_packet_free(pkt);
 }

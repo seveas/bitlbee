@@ -14,8 +14,12 @@
 #include <netinet/in.h>
 #include <netdb.h>
 #include <arpa/inet.h>
+
+#ifndef __CYGWIN__
 #include <arpa/nameser.h>
 #include <resolv.h>
+#endif
+
 #include <sys/time.h>
 #include <time.h>
 

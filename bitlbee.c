@@ -1,3 +1,28 @@
+  /********************************************************************\
+  * BitlBee -- An IRC to other IM-networks gateway                     *
+  *                                                                    *
+  * Copyright 2002-2003 Wilmer van der Gaast and others                *
+  \********************************************************************/
+
+/* Main file                                                            */
+
+/*
+  This program is free software; you can redistribute it and/or modify
+  it under the terms of the GNU General Public License as published by
+  the Free Software Foundation; either version 2 of the License, or
+  (at your option) any later version.
+
+  This program is distributed in the hope that it will be useful,
+  but WITHOUT ANY WARRANTY; without even the implied warranty of
+  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  GNU General Public License for more details.
+
+  You should have received a copy of the GNU General Public License with
+  the Debian GNU/Linux distribution in /usr/share/common-licenses/GPL;
+  if not, write to the Free Software Foundation, Inc., 59 Temple Place,
+  Suite 330, Boston, MA  02111-1307  USA
+*/
+
 #include "bitlbee.h"
 #include "commands.h"
 #include "crypting.h"
@@ -115,6 +140,9 @@ int bitlbee_load( irc_t *irc, char* password )
 	}
 	fclose( fp );
 	
+	strcpy( s, "account on" );	/* Can't do this directly because r_c_s alters the string */
+	root_command_string( irc, ru, s );
+	
 	irc->status = USTATUS_IDENTIFIED;
 	
 	return( 1 );
@@ -125,9 +153,9 @@ int bitlbee_save( irc_t *irc )
 	char s[128];
 	char *line;
 	nick_t *n = irc->nicks;
-	GSList *c = connections;
 	set_t *set = irc->set;
 	mode_t ou = umask( 0077 );
+	account_t *a;
 	FILE *fp;
 	
 	/*\
@@ -175,15 +203,12 @@ int bitlbee_save( irc_t *irc )
 	   the file will contain it's name encrypted. How 'bout redundant
 	   information? */
 	memset( s, 0, sizeof( s ) );
-	while( c )
+	for( a = irc->accounts; a; a = a->next )
 	{
-		struct gaim_connection *gc = c->data;
-		c = c->next;
-		
-		if( gc->protocol == PROTO_OSCAR || gc->protocol == PROTO_ICQ || gc->protocol == PROTO_TOC )
-			snprintf( s, sizeof( s ), "login oscar \"%s\" %s %s", gc->user->username, gc->user->password, gc->user->proto_opt[0] );
+		if( a->protocol == PROTO_OSCAR || a->protocol == PROTO_ICQ || a->protocol == PROTO_TOC )
+			snprintf( s, sizeof( s ), "account add oscar \"%s\" %s %s", a->user, a->pass, a->server );
 		else
-			snprintf( s, sizeof( s ), "login %s %s %s", proto_name[gc->user->protocol], gc->user->username, gc->user->password );
+			snprintf( s, sizeof( s ), "account add %s %s %s", proto_name[a->protocol], a->user, a->pass );
 		
 		line = obfucrypt( irc, s );
 		if( *line ) fprintf( fp, "%s\n", line );
@@ -252,6 +277,9 @@ int root_command_string( irc_t *irc, user_t *u, char *command )
 int root_command( irc_t *irc, char *cmd[] )
 {	
 	int i;
+	
+	if( !cmd[0] )
+		return( 0 );
 	
 	for( i = 0; commands[i].command; i++ )
 		if( strcasecmp( commands[i].command, cmd[0] ) == 0 )

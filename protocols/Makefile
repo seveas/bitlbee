@@ -34,15 +34,16 @@ clean: $(subdirs)
 distclean: clean $(subdirs)
 
 $(subdirs):
-	$(MAKE) -C $@ $(MAKECMDGOALS)
+	@$(MAKE) -C $@ $(MAKECMDGOALS)
 
 ### MAIN PROGRAM
 
 protocols.o: $(objects) $(subdirs)
-	$(LD) $(LFLAGS) $(objects) $(subdirobjs) -o protocols.o
+	@echo '*' Linking protocols.o
+	@$(LD) $(LFLAGS) $(objects) $(subdirobjs) -o protocols.o
 
 $(objects): ../Makefile.settings Makefile
 
 $(objects): %.o: %.c
-	@echo Compiling $<
+	@echo '*' Compiling $<
 	@$(CC) -c $(CFLAGS) $< -o $@

@@ -1,0 +1,67 @@
+Frequently Asked Questions about BitlBee
+========================================
+
+Well, maybe not exactly "Frequently", but definately "Asked" ... mostly by
+the developers :-)
+
+Q: WTH were you guys on when you thought of that _weird_ name?
+A: Though we live in The Netherlands and one of us even lives in Amsterdam,
+   we're not on drugs ... most of the time.
+
+Q: Okay, so the cops are so evil there, you can't even admit the truth, but
+   WTH does BitlBee mean then?
+A: There are a few explanations. But the most symbolical goes like: the two
+   colors of the bee symbolize the two worlds betwee which the Bee flies. On
+   the one hand there's the IM-networks, on the other is IRC.
+   
+   Truth be told, it's absolute nonsense. The biggest nutcase in the
+   development team just played around with words for half an hour or so.
+   BitlBee was the result. We liked it, we kept it. We lovingly shorten it
+   to "the Bee" or even "het Bijtje" (Dutch for "the little Bee") sometimes.
+
+Q: What is 'root' doing in my control channel? I didn't start the Bee as
+   root.
+A: 'root' is just the name for the most powerful user in BitlBee. Just like
+   in the system, it is root who is the ... eh ... root of the
+   functionality. Luckily, in BitlBee, root follows your orders (mostly), so
+   no BOFHs there.
+   
+   We get some complaints from time to time that 'root' is a confusing name.
+   Because of that name, some package maintainers have renamed root to, for
+   example, BitlBee. We recognize that some people see that need. If the
+   package maintainer hasn't renamed root, you can do this yourself with the
+   'rename' command.
+   
+   The name root is not likely to change in the 'official' releases, though.
+   We find the metaphor of root correct and feel that there is no important
+   (security threatening) reason to change this non-creative piece of
+   artistic creativity.
+
+Q: Why is there no mailing list/CVS/<insert your favourite development tool
+   here>?
+A: Short answer: we don't need it.
+   
+   Longer answer: and we're not completely convinced of their merits.
+   
+   Long answer: we currently use some shell scripts which make sure all
+   developers' copies are in sync with Wilmer's master copy. These shell
+   scripts also produce development "releases" and packages, as well as
+   stick them on a http-server. Patches are sent to Wilmer who decides
+   whether or not a patch should be applied and if it may need some
+   additional changes. This has the consistency advantage of a one-person
+   project while having the capacity of more people available. The system
+   works and we are kind of attached to it.
+
+Q: Why doesn't BitlBee reconnect to IM-networks automatically when a
+   connection fails?
+A: Because we don't want it to. We think it can be a bit dangerous, for
+   example for protocols which don't allow you to log in more than once
+   on the same account.
+   
+   Also, is it really that bad not to be online on MSN/ICQ/whatever when
+   you're away from your keyboard anyway? Typing "account on" is enough
+   to bring all the lost connections back up, which is good enough for us.
+   
+   If you feel like writing a patch which adds this auto-reconnect stuff,
+   you're welcome to write one. We're not going to take the time to implement
+   it, but good patches will never be rejected.

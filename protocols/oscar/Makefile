@@ -29,8 +29,9 @@ distclean: clean
 $(objects): ../../Makefile.settings Makefile
 
 $(objects): %.o: %.c
-	@echo Compiling $<
+	@echo '*' Compiling $<
 	@$(CC) -c $(CFLAGS) $< -o $@
 
 oscarr.o: $(objects)
-	$(LD) $(LFLAGS) $(objects) -o oscarr.o
+	@echo '*' Linking oscarr.o
+	@$(LD) $(LFLAGS) $(objects) -o oscarr.o

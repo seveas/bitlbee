@@ -1,3 +1,7 @@
+Version 0.74:
+- Fixed a security leak, where using a / in the nickname causes the saved
+  settings and account information to be stored in undesirable places.
+
 Version 0.73:
 - Fixed the unable-to-remove-icq-users (actually users from any *local*
   contact list) bug.

@@ -94,7 +94,7 @@ static struct aim_ssi_item *aim_ssi_itemlist_add(struct aim_ssi_item **list, str
  */
 static int aim_ssi_itemlist_rebuildgroup(struct aim_ssi_item **list, struct aim_ssi_item *parentgroup)
 {
-	int newlen, i;
+	int newlen; //, i;
 	struct aim_ssi_item *cur;
 
 	/* Free the old additional data */
@@ -1012,8 +1012,8 @@ faim_export int aim_ssi_delpord(aim_session_t *sess, aim_conn_t *conn, char **sn
  * @return Return 0 if no errors, otherwise return the error number.
  */
 faim_export int aim_ssi_setpermdeny(aim_session_t *sess, aim_conn_t *conn, fu8_t permdeny, fu32_t vismask) {
-	struct aim_ssi_item *cur, *tmp;
-	fu16_t j;
+	struct aim_ssi_item *cur; //, *tmp;
+//	fu16_t j;
 	aim_tlv_t *tlv;
 
 	if (!sess || !conn)
@@ -1077,8 +1077,8 @@ faim_export int aim_ssi_setpermdeny(aim_session_t *sess, aim_conn_t *conn, fu8_t
  * @return Return 0 if no errors, otherwise return the error number.
  */
 faim_export int aim_ssi_setpresence(aim_session_t *sess, aim_conn_t *conn, fu32_t presence) {
-	struct aim_ssi_item *cur, *tmp;
-	fu16_t j;
+	struct aim_ssi_item *cur; //, *tmp;
+//	fu16_t j;
 	aim_tlv_t *tlv;
 
 	if (!sess || !conn)

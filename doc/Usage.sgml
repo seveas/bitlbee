@@ -201,6 +201,70 @@ stability... ;-)
 </sect1>
 
 <sect1>
+
+<title>Settings</title>
+
+<para>
+BitlBee can be configured by using the <command>set</command> command.
+The available settings are discussed in this section.
+</para>
+
+<sect2>
+<title>private</title>
+
+<para>Type: boolean</para>
+<para>Default: False</para>
+
+<para>
+If value is true, messages from users will appear in seperate query windows. 
+If false, messages from users will appear in #bitlbee. 
+</para>
+
+</sect2>
+
+<sect2>
+<title>save_on_quit</title>
+
+<para>Type: boolean</para>
+<para>Default: True</para>
+
+<para>
+If enabled causes bitlbee to save all current settings and account details when user disconnects.
+</para>
+
+</sect2>
+
+<sect2>
+<title>html</title>
+
+<para>Type: string</para>
+<para>Default: nostrip</para>
+
+<para>
+Determines what bitlbee should do with HTML in messages. If set to nostrip, 
+HTML in messages will not be touched. If set to strip, all html will 
+be stripped from messages.
+</para>
+
+</sect2>
+
+<sect2>
+<title>debug</title>
+
+<para>Type: boolean</para>
+<para>Default: False</para>
+
+<para>
+Some debugging messages can be sent to the control channel if you wish.
+They're probably not really useful for you, unless you're doing some
+development on BitlBee.
+</para>
+
+</sect2>
+ 
+</sect1>
+ 
+<sect1>
 <title>Talking to people</title>
 
 <para>

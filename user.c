@@ -68,7 +68,7 @@ user_t *user_find( irc_t *irc, char *nick )
 	u = irc->users;
 	while( u )
 	{
-		if( strcasecmp( u->nick, nick ) == 0 )
+		if( nick_cmp( u->nick, nick ) == 0 )
 			break;
 		u = u->next;
 	}

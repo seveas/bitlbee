@@ -1,38 +1,48 @@
 #include "commands.h"
+#include "crypting.h"
 #include "bitlbee.h"
+#include "help.h"
+
+#include <unistd.h>
 
 command_t commands[] = {
-	{ "help", "This information", 0, cmd_help}, 
-	{ "identify", "identify <password>", 1, cmd_identify },
-	{ "register", "register <password>", 1, cmd_register },
-	{ "login", "login <protocol> <username> <password> [<server>]", 3, cmd_login},
-	{ "logout",  "logout <protocol>", 1, cmd_logout }, 
-	{ "slist", "Server (connection) list", 0, cmd_slist },
-	{ "add","add <connection> <handle>", 2, cmd_add },
-	{ "rename", "rename <oldnick> <newnick>", 2, cmd_rename },
-	{ "remove", "remove <nick>", 1, cmd_remove },
-	{ "block", "block <connection> <handle> or block <nick>", 1, cmd_block },
-	{ "allow", "allow <connection> <handle> or allow <nick>", 1, cmd_allow },
-	{ "save", "Save configuration", 0, cmd_save },
-	{ "set", "Set configuration option", 0, cmd_set },
-	{ "yes", "Accept request", 0, cmd_yesno },
-	{ "no", "Deny request", 0, cmd_yesno },
+	{ "help",	"This information",					0, cmd_help }, 
+	{ "identify",	"identify <password>",					1, cmd_identify },
+	{ "register",	"register <password>",					1, cmd_register },
+	{ "login",	"login <protocol> <username> <password> [<server>]",	3, cmd_login },
+	{ "logout",	"logout <protocol>",					1, cmd_logout }, 
+	{ "slist",	"Server (connection) list",				0, cmd_slist },
+	{ "add",	"add <connection> <handle>",				2, cmd_add },
+	{ "rename",	"rename <oldnick> <newnick>",				2, cmd_rename },
+	{ "remove",	"remove <nick>",					1, cmd_remove },
+	{ "block",	"block <connection> <handle> or block <nick>",		1, cmd_block },
+	{ "allow",	"allow <connection> <handle> or allow <nick>",		1, cmd_allow },
+	{ "save",	"Save configuration",					0, cmd_save },
+	{ "set",	"Set configuration option",				0, cmd_set },
+	{ "yes",	"Accept request",					0, cmd_yesno },
+	{ "no",		"Deny request",						0, cmd_yesno },
 	{ NULL }
 };
 
 int cmd_help( irc_t *irc, char **cmd )
 {
-	int i;
+	char *s;
 	
-	irc_usermsg( irc, "BitlBee " VERSION " help:" );
-	irc_usermsg( irc, " " );
-	irc_usermsg( irc, "Commands:" );
-
-	for( i = 0; commands[i].command; i++ )
+	if( !cmd[1] ) cmd[1] = "";
+	s = help_get( irc, cmd[1] );
+	if( !s ) s = help_get( irc, "" );
+	
+	if( s )
 	{
-		irc_usermsg( irc, "  %s    - %s", commands[i].command, commands[i].description );
+		irc_usermsg( irc, "%s", s );
+		free( s );
+		return( 1 );
 	}
-	return( 1 );
+	else
+	{
+		irc_usermsg( irc, "Error opening helpfile." );
+		return( 0 );
+	}
 }
 
 int cmd_login( irc_t *irc, char **cmd )
@@ -134,7 +144,7 @@ int cmd_rename( irc_t *irc, char **cmd)
 {
 	user_t *u;
 
-	if( ( strcasecmp( cmd[1], irc->nick ) == 0 ) || ( strcasecmp( cmd[1], irc->mynick ) == 0 ) )
+	if( ( strcasecmp( cmd[1], irc->nick ) == 0 ) ) // || ( strcasecmp( cmd[1], irc->mynick ) == 0 ) )
 	{
 		irc_usermsg( irc, "Nick '%s' can't be changed", cmd[1] );
 		return( 1 );
@@ -144,15 +154,29 @@ int cmd_rename( irc_t *irc, char **cmd)
 		irc_usermsg( irc, "Nick '%s' already exists", cmd[2] );
 		return( 1 );
 	}
+	if( !nick_ok( cmd[2] ) )
+	{
+		irc_usermsg( irc, "Nick '%s' contains invalid characters", cmd[2] );
+		return( 1 );
+	}
 	if( !( u = user_find( irc, cmd[1] ) ) )
 	{
 		irc_usermsg( irc, "Nick '%s' does not exist", cmd[1] );
 		return( 1 );
 	}
+	/* TODO: Hmm, this might damage u->user */
 	free( u->nick );
 	u->nick = strdup( cmd[2] );
 	irc_write( irc, ":%s!%s@%s NICK %s", cmd[1], u->user, u->host, cmd[2] );
-	nick_set( irc, u->handle, ((struct gaim_connection *)u->gc)->protocol, cmd[2] );
+	if( strcasecmp( cmd[1], irc->mynick ) == 0 )
+	{
+		// free( irc->mynick ); // SMALL MEMORY LEAK
+		irc->mynick = strdup( cmd[2] );
+	}
+	else
+	{
+		nick_set( irc, u->handle, ((struct gaim_connection *)u->gc)->protocol, cmd[2] );
+	}
 	
 	return( 0 );
 }
@@ -283,7 +307,7 @@ int cmd_set( irc_t *irc, char **cmd )
 	if( cmd[1] ) /* else 'forgotten' on purpose.. */
 	{
 		char *s = set_getstr( irc, cmd[1] );
-		irc_usermsg( irc, "%s = `%s'", cmd[1], s );
+		irc_usermsg( irc, "%s = '%s'", cmd[1], s );
 	}
 	else
 	{
@@ -300,7 +324,7 @@ int cmd_set( irc_t *irc, char **cmd )
 
 int cmd_save( irc_t *irc, char **cmd )
 {
-	if( save_config( irc ) )
+	if( bitlbee_save( irc ) )
 		irc_usermsg( irc, "Configuration saved" );
 	else
 		irc_usermsg( irc, "Configuration could not be saved!" );
@@ -316,7 +340,7 @@ int cmd_identify( irc_t *irc, char **cmd )
 	}
 	else
 	{
-		int checkie = bitlbee_init( irc, cmd[1] );
+		int checkie = bitlbee_load( irc, cmd[1] );
 		if( checkie == -1 )
 		{
 			irc_usermsg( irc, "Incorrect password" );
@@ -334,6 +358,8 @@ int cmd_identify( irc_t *irc, char **cmd )
 			irc_usermsg( irc, "Something very weird happened" );
 		}
 	}
+	
+	return( 0 );
 }
 
 int cmd_register( irc_t *irc, char **cmd )
@@ -344,15 +370,34 @@ int cmd_register( irc_t *irc, char **cmd )
 	}
 	else
 	{
-		int checkie = bitlbee_init( irc, cmd[1] ); /* Hmmm.... Not nice.. */
-		if( checkie == 0 )
+		char checkie;
+		
+		char *str = (char *) malloc( strlen( irc->nick ) +
+			strlen( CONFIG ) +
+			strlen( ".accounts" ) + 1 );
+		
+		strcpy( str, CONFIG );
+		strcat( str, irc->nick );
+		strcat( str, ".accounts" );
+		
+		checkie = access( str, F_OK );
+		
+		strcpy( str, CONFIG );
+		strcat( str, irc->nick );
+		strcat( str, ".nicks" );
+		
+		checkie += access( str, F_OK );
+	
+		if( checkie == -2 )
 		{
-			setpassnc( cmd[1] );
-			root_command( irc, "save" );
+			setpassnc( irc, cmd[1] );
+			root_command_string( irc, user_find( irc, irc->mynick ), "save" );
 		}
 		else
 		{
 			irc_usermsg( irc, "Nick is already registered" );
 		}
 	}
+	
+	return( 0 );
 }

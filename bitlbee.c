@@ -2,10 +2,9 @@
 #include "commands.h"
 #include "crypting.h"
 #include "protocols/nogaim.h"
+#include "help.h"
 
 irc_t *IRC;	/* :-( */
-
-int root_command( irc_t *irc, char *command );
 
 int main( int argc, char *argv[] )
 {
@@ -34,22 +33,39 @@ int main( int argc, char *argv[] )
 		g_main_iteration( FALSE );
 	}
 	
-	if( irc->logged_in && set_getint( irc, "save_on_quit" ) )
-		if( !save_config( irc ) )
+	if( irc->status && set_getint( irc, "save_on_quit" ) )
+		if( !bitlbee_save( irc ) )
 			irc_usermsg( irc, "Error while saving settings!" );
 	
 	return( 0 );
 }
 
-int bitlbee_init( irc_t *irc, char* password )
+int bitlbee_init( irc_t *irc )
+{
+	if( !getuid() || !geteuid() )
+		irc_usermsg( irc, "You're running BitlBee as root. Why?" );
+	
+	if( access( CONFIG, F_OK ) != 0 )
+		irc_usermsg( irc, "The configuration directory %s does not exist. Configuration won't be saved.", CONFIG );
+	else if( access( CONFIG, R_OK ) != 0 || access( CONFIG, W_OK ) != 0 )
+		irc_usermsg( irc, "Permission problem: Can't read/write from/to %s", CONFIG );
+	
+	if( help_init( irc ) == NULL )
+		irc_usermsg( irc, "Error opening helpfile." );
+	
+	return( 1 );
+}
+
+int bitlbee_load( irc_t *irc, char* password )
 {
 	char s[128];
 	char *line;
 	int proto;
 	char nick[MAX_NICK_LENGTH+1];
 	FILE *fp;
+	user_t *ru = user_find( irc, "root" );
 	
-	if( irc->logged_in == 2 )
+	if( irc->status == USTATUS_IDENTIFIED )
 		return( 1 );
 	
 	snprintf( s, 127, "%s%s%s", CONFIG, irc->nick, ".accounts" );
@@ -57,15 +73,15 @@ int bitlbee_init( irc_t *irc, char* password )
 	if( !fp ) return( 0 );
 
 	fscanf( fp, "%32[^\n]s", s );
-	if( setpass( password, s ) < 0 ) {
+	if( setpass( irc, password, s ) < 0 ) {
 		return( -1 );
 	}
 	
 	while( fscanf( fp, "%127[^\n]s", s ) > 0 )
 	{
 		fgetc( fp );
-		line = deobfucrypt( s );
-		root_command( irc, line );
+		line = deobfucrypt( irc, s );
+		root_command_string( irc, ru, line );
 		free( line );
 	}
 	fclose( fp );
@@ -77,12 +93,12 @@ int bitlbee_init( irc_t *irc, char* password )
 		nick_set( irc, s, proto, nick );
 	fclose( fp );
 	
-	irc->logged_in = 2;
+	irc->status = USTATUS_IDENTIFIED;
 	
 	return( 1 );
 }
 
-int save_config( irc_t *irc )
+int bitlbee_save( irc_t *irc )
 {
 	char s[128];
 	char *line;
@@ -107,7 +123,7 @@ int save_config( irc_t *irc )
 	 *  me. I just thought it was funny.
 	\*/
 	
-	line = hashpass();
+	line = hashpass( irc );
 	if( line == NULL )
 	{
 		irc_usermsg( irc, "Please register yourself with NickServ if you want to save your settings." );
@@ -146,8 +162,8 @@ int save_config( irc_t *irc )
 		else if( gc->protocol == PROTO_JABBER )
 			snprintf( s, sizeof( s ), "login jabber %s %s", gc->user->username, gc->user->password );
 		
-		line = obfucrypt( s );
-		if (line[0] != '\0') fprintf( fp, "%s\n", line );
+		line = obfucrypt( irc, s );
+		if( *line ) fprintf( fp, "%s\n", line );
 		free( line );
 	}
 	memset( s, 0, sizeof( s ) );
@@ -155,13 +171,18 @@ int save_config( irc_t *irc )
 	{
 		if( set->value ) {
 			snprintf( s, sizeof( s ), "set %s %s", set->key, set->value );
-			line = obfucrypt( s );
-			
-			if (line[0] != '\0') fprintf( fp, "%s\n", line );
-			
+			line = obfucrypt( irc, s );
+			if( *line ) fprintf( fp, "%s\n", line );
 			free( line );
 		}
 		set = set->next;
+	}
+	if( strcmp( irc->mynick, ROOT_NICK ) != 0 )
+	{
+		snprintf( s, sizeof( s ), "rename %s %s", ROOT_NICK, irc->mynick );
+		line = obfucrypt( irc, s );
+		if( *line ) fprintf( fp, "%s\n", line );
+		free( line );
 	}
 	fclose( fp );
 	
@@ -170,24 +191,44 @@ int save_config( irc_t *irc )
 	return( 1 );
 }
 
-int root_command( irc_t *irc, char *command )
+int root_command_string( irc_t *irc, user_t *u, char *command )
 {
 	char *cmd[IRC_MAX_ARGS];
 	char *s;
-	int k, i;
+	int k;
+	char q = 0;
 	
 	memset( cmd, 0, sizeof( cmd ) );
 	cmd[0] = command;
 	k = 1;
 	for( s = command; *s && k < ( IRC_MAX_ARGS - 1 ); s ++ )
-		if( *s == ' ' )
+		if( *s == ' ' && !q )
 		{
-			cmd[k] = s + 1;
 			*s = 0;
-			if( *cmd[k] && *cmd[k] != ' ' )
-				k ++;
+			while( *++s == ' ' );
+			if( *s == '"' || *s == '\'' )
+			{
+				q = *s;
+				s ++;
+			}
+			if( *s )
+			{
+				cmd[k++] = s;
+				s --;
+			}
+		}
+		else if( *s == q )
+		{
+			q = *s = 0;
 		}
 	cmd[k] = NULL;
+	
+	return( root_command( irc, cmd ) );
+}
+
+int root_command( irc_t *irc, char *cmd[] )
+{	
+	int i;
 	
 	for( i = 0; commands[i].command; i++ )
 		if( strcasecmp( commands[i].command, cmd[0] ) == 0 )

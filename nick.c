@@ -11,6 +11,7 @@ void nick_set( irc_t *irc, char *handle, int proto, char *nick )
 			free( n->nick );
 			n->nick = malloc( strlen( nick ) + 1 );
 			strcpy( n->nick, nick );
+			nick_strip( n->nick );
 			return;
 		}
 		n = ( m = n )->next;	// :-P
@@ -25,6 +26,7 @@ void nick_set( irc_t *irc, char *handle, int proto, char *nick )
 	n->handle = strdup( handle );
 	n->proto = proto;
 	n->nick = strdup( nick );
+	nick_strip( n->nick );
 }
 
 char *nick_get( irc_t *irc, char *handle, int proto )
@@ -44,17 +46,104 @@ char *nick_get( irc_t *irc, char *handle, int proto )
 	if( !n )
 	{
 		snprintf( nick, MAX_NICK_LENGTH, "%s", handle );
-		if( s = strchr( nick, ' ' ) ) *s = 0;
-		if( s = strchr( nick, '@' ) ) *s = 0;
+		if( ( s = strchr( nick, ' ' ) ) ) *s = 0;
+		if( ( s = strchr( nick, '@' ) ) ) *s = 0;
+		nick_strip( nick );
 	}
 	
-	if( !*nick ) *nick = '_';	// Shouldn't happen anyway, right?
+	if( !nick_ok( nick ) ) strcpy( nick, "_" );
 	
-	while( user_find( irc, nick ) )
+	while( !nick_ok( nick) || user_find( irc, nick ) )
 		if( strlen( nick ) < MAX_NICK_LENGTH )
 			nick[strlen(nick)] = '_';
 		else
 			nick[0] ++;
 	
 	return( nick );
+}
+
+static char *nick_lc_chars = "0123456789abcdefghijklmnopqrstuvwxyz{}|^_";
+static char *nick_uc_chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ[]\\~_";
+
+void nick_strip( char * nick )
+{
+	int i,j = 0;
+	for(i = 0; nick[i]; i++)
+	{
+		if(strchr(nick_lc_chars,nick[i]) || 
+		   strchr(nick_uc_chars,nick[i]))
+		{
+			nick[j] = nick[i];
+			j++;
+		}
+	}
+	nick[j] = '\0';
+}
+
+int nick_ok( char *nick )
+{
+	char *s;
+	
+	for( s = nick; *s; s ++ )
+		if( !strchr( nick_lc_chars, *s ) && !strchr( nick_uc_chars, *s ) )
+			return( 0 );
+	
+	return( 1 );
+}
+
+int nick_lc( char *nick )
+{
+	char *s, *t;
+	int diff = nick_lc_chars - nick_uc_chars;
+	
+	for( s = nick; *s; s ++ )
+	{
+		t = strchr( nick_uc_chars, *s );
+		if( t )
+			*s = *(t+diff);
+		else if( !strchr( nick_lc_chars, *s ) )
+			return( 0 );
+	}
+	
+	return( 1 );
+}
+
+int nick_uc( char *nick )
+{
+	char *s, *t;
+	int diff = nick_uc_chars - nick_lc_chars;
+	
+	for( s = nick; *s; s ++ )
+	{
+		t = strchr( nick_lc_chars, *s );
+		if( t )
+			*s = *(t+diff);
+		else if( !strchr( nick_uc_chars, *s ) )
+			return( 0 );
+	}
+	
+	return( 1 );
+}
+
+int nick_cmp( char *a, char *b )
+{
+	char *aa, *bb;
+	int res;
+	
+	return( strcasecmp( a, b ) );
+	
+	aa = strdup( a );
+	bb = strdup( b );
+	if( nick_lc( aa ) && nick_lc( bb ) )
+	{
+		res = strcmp( a, b );
+	}
+	else
+	{
+		res = -1;	/* Hmm... Not a clear answer.. :-/ */
+	}
+	free( aa );
+	free( bb );
+	
+	return( res );
 }

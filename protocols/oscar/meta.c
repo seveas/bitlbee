@@ -10,7 +10,7 @@
 faim_export int aim_getbuildstring(char *buf, int buflen)
 {
 
-	snprintf(buf, buflen, "%d.%d.%d-%s%s", 
+	snprintf(buf, buflen, "%d.%d.%d", 
 			FAIM_VERSION_MAJOR,
 			FAIM_VERSION_MINOR,
 			FAIM_VERSION_MINORMINOR);

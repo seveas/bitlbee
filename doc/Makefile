@@ -1,6 +1,6 @@
 -include ../Makefile.settings
 
-all: user-guide.txt user-guide.html user-guide.pdf user-guide.ps user-guide.rtf
+all: user-guide.txt user-guide.html # user-guide.pdf user-guide.ps user-guide.rtf
 
 user-guide.txt: user-guide.sgml
 	sgmltools --backend txt user-guide.sgml
@@ -23,3 +23,6 @@ clean:
 install:
 	mkdir -p $(DESTDIR)$(MANDIR)/man8/
 	cp bitlbee.8 $(DESTDIR)$(MANDIR)/man8/
+
+uninstall:
+	rm -f $(DESTDIR)$(MANDIR)/man8/bitlbee.8*

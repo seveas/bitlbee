@@ -9,7 +9,7 @@
 The latest BitlBee release is always available from 
 <ulink url="http://www.lintux.cx/bitlbee.html">http://www.lintux.cx/bitlbee.html</ulink>. 
 Download the package with your favorite program and unpack it:
-<command>tar xvfz BitlBee-0.6.tar.gz</command>
+<command>tar xvfz BitlBee-0.71.tar.gz</command>
 </para>
 
 </sect1>
@@ -62,35 +62,17 @@ Since BitlBee uses inetd, you should add the following line to <filename>/etc/in
 </para>
 
 <para>
-You might be one of the.. ehr, lucky people running an xinetd-powered distro.
-<command>xinetd</command> is quite different and they seem to be proud of that.. ;-)
-Anyway, if you want BitlBee to work with <command>xinetd</command>, put the following
-text in <filename>/etc/xinetd.conf</filename> or <filename>/etc/xinetd.d/bitlbee</filename>:
-</para>
-
-<para>
-<programlisting>
-service 6667
-{
-	socket_type     = stream
-	protocol        = tcp
-	wait            = no
-	user            = bitlbee
-	server          = /usr/sbin/bitlbee
-	port		= 6667
-}
-</programlisting>
-</para>
-
-<para>
-This would start bitlbee from the default path: 
-<filename>/usr/local/bin/bitlbee</filename> and as the user nobody.
-</para>
-
-<para>
 Inetd has to be restarted after changing the configuration. Either
 <command>killall -HUP inetd</command> or 
 <command>/etc/init.d/inetd restart</command> should do the job on most systems.
+</para>
+
+<para>
+You might be one of the.. ehr, lucky people running an xinetd-powered distro.
+<command>xinetd</command> is quite different and they seem to be proud of that.. ;-)
+Anyway, if you want BitlBee to work with <command>xinetd</command>, just copy the
+bitlbee.xinetd file to your /etc/xinetd.d/ directory (and probably edit it to suit
+your needs).
 </para>
 
 <para>

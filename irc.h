@@ -18,6 +18,13 @@ typedef struct query
 	void *next;
 } query_t;
 
+typedef enum
+{
+	USTATUS_OFFLINE,
+	USTATUS_LOGGED_IN,
+	USTATUS_IDENTIFIED
+} irc_status_t;
+
 typedef struct irc
 {
 	int fd;
@@ -26,6 +33,7 @@ typedef struct irc
 	char *user;
 	char *host;
 	char *realname;
+	char *password; /* *ugh* */
 
 	char umode[8];
 	
@@ -35,11 +43,12 @@ typedef struct irc
 	char *channel;
 	
 	char private;
-	char logged_in;
+	irc_status_t status;
 	query_t *queries;
 	
 	void *users;
 	void *nicks;
+	void *help;
 	void *set;
 } irc_t;
 
@@ -68,5 +77,7 @@ int irc_away( irc_t *irc, char *away );
 
 int irc_send( irc_t *irc, char *nick, char *s );
 int irc_msgfrom( irc_t *irc, char *nick, char *msg );
+
+int buddy_send_handler( irc_t *irc, user_t *u, char *msg );
 
 #endif

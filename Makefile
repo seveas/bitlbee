@@ -8,21 +8,19 @@
 
 -include Makefile.settings
 
-# [SH] Program variables
-objects = irc.o bitlbee.o user.o nick.o set.o commands.o crypting.o
+# Program variables
+objects = irc.o bitlbee.o user.o nick.o set.o commands.o crypting.o help.o
 subdirs = protocols
 
 # Expansion of variables
 subdirobjs = $(foreach dir,$(subdirs),$(dir)/$(dir).o)
 CFLAGS += -Wall
 
-# [SH] Phony targets
 all: $(OUTFILE)
 
-install: install-bin install-etc install-doc
-uninstall: uninstall-bin uninstall-etc uninstall-doc
+install: install-bin install-doc
+uninstall: uninstall-bin uninstall-doc
 
-	# [SH] .PHONY is more efficient
 .PHONY:   install   install-bin   install-etc   install-doc \
         uninstall uninstall-bin uninstall-etc uninstall-doc \
         all clean distclean tar $(subdirs)
@@ -44,16 +42,16 @@ install-doc:
 uninstall-doc:
 	$(MAKE) -C doc uninstall
 
-install-etc:
-
-uninstall-etc:
-
 install-bin:
 	mkdir -p $(DESTDIR)$(BINDIR)
 	cp $(OUTFILE) $(DESTDIR)$(BINDIR)/$(OUTFILE)
+	
+	mkdir -p $(DESTDIR)$(DATADIR)
+	cp help.txt $(DESTDIR)$(DATADIR)
 
 uninstall-bin:
-	rm -f $(BINDIR)/$(OUTFILE)
+	rm -f $(DESTDIR)$(BINDIR)/$(OUTFILE)
+	rm -rf $(DESTDIR)$(DATADIR)
 
 tar:
 	fakeroot debian/rules clean
@@ -63,8 +61,6 @@ tar:
 
 $(subdirs):
 	$(MAKE) -C $@ $(MAKECMDGOALS)
-
-### MAIN PROGRAM
 
 $(objects): %.o: %.c
 	$(CC) -c $(CFLAGS) $< -o $@

@@ -13,6 +13,8 @@ typedef struct user
 	char *handle;
 	struct gaim_connection *gc;
 	
+	int (*send_handler) ( irc_t *irc, struct user *u, char *msg );
+	
 	void *next;
 } user_t;
 

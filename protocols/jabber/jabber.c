@@ -1364,7 +1364,7 @@ static void jabber_handleversion(gjconn gjc, xmlnode iqnode) {
 	xmlnode_put_attrib(x, "id", id);
 	querynode = xmlnode_get_tag(x, "query");
 	xmlnode_insert_cdata(xmlnode_insert_tag(querynode, "name"), PACKAGE, -1);
-	xmlnode_insert_cdata(xmlnode_insert_tag(querynode, "version"), VERSION, -1);
+	xmlnode_insert_cdata(xmlnode_insert_tag(querynode, "version"), BITLBEE_VERSION, -1);
 	xmlnode_insert_cdata(xmlnode_insert_tag(querynode, "os"), os, -1);
 
 	gjab_send(gjc, x);

@@ -22,12 +22,14 @@ a good idea.
 Also, don't forget to create the configuration directory (/var/lib/bitlbee/
 by default) and chown it to the uid BitlBee is running as.
 
+(For xinetd users a xinetd configuration file is included: doc/bitlbee.xinetd)
+
 
 BACKGROUNDS
 ===========
 
 We are both console lovers. But it is annoying to have a few tty's open with
-chat things in them. IRC, ICQ, MSN, Jabber... For X there is Gaim, which
+chat things in them. IRC, ICQ, MSN, AIM, Jabber... For X there is Gaim, which
 supports many chatprotocols. Why wasn't there such a thing for the console?
 
 The idea to port Gaim was easily thought of, of course. But we liked our IRC

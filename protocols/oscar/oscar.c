@@ -180,14 +180,14 @@ static struct chat_connection *find_oscar_chat_by_conn(struct gaim_connection *g
 static int gaim_parse_auth_resp  (aim_session_t *, aim_frame_t *, ...);
 static int gaim_parse_login      (aim_session_t *, aim_frame_t *, ...);
 static int gaim_handle_redirect  (aim_session_t *, aim_frame_t *, ...);
-static int gaim_info_change      (aim_session_t *, aim_frame_t *, ...);
-static int gaim_account_confirm  (aim_session_t *, aim_frame_t *, ...);
+//static int gaim_info_change      (aim_session_t *, aim_frame_t *, ...);
+//static int gaim_account_confirm  (aim_session_t *, aim_frame_t *, ...);
 static int gaim_parse_oncoming   (aim_session_t *, aim_frame_t *, ...);
 static int gaim_parse_offgoing   (aim_session_t *, aim_frame_t *, ...);
 static int gaim_parse_incoming_im(aim_session_t *, aim_frame_t *, ...);
 static int gaim_parse_misses     (aim_session_t *, aim_frame_t *, ...);
 static int gaim_parse_clientauto (aim_session_t *, aim_frame_t *, ...);
-static int gaim_parse_user_info  (aim_session_t *, aim_frame_t *, ...);
+//static int gaim_parse_user_info  (aim_session_t *, aim_frame_t *, ...);
 static int gaim_parse_motd       (aim_session_t *, aim_frame_t *, ...);
 static int gaim_chatnav_info     (aim_session_t *, aim_frame_t *, ...);
 static int gaim_chat_join        (aim_session_t *, aim_frame_t *, ...);
@@ -196,16 +196,16 @@ static int gaim_chat_info_update (aim_session_t *, aim_frame_t *, ...);
 static int gaim_chat_incoming_msg(aim_session_t *, aim_frame_t *, ...);
 static int gaim_parse_msgack     (aim_session_t *, aim_frame_t *, ...);
 static int gaim_parse_ratechange (aim_session_t *, aim_frame_t *, ...);
-static int gaim_parse_evilnotify (aim_session_t *, aim_frame_t *, ...);
-static int gaim_parse_searcherror(aim_session_t *, aim_frame_t *, ...);
-static int gaim_parse_searchreply(aim_session_t *, aim_frame_t *, ...);
+//static int gaim_parse_evilnotify (aim_session_t *, aim_frame_t *, ...);
+//static int gaim_parse_searcherror(aim_session_t *, aim_frame_t *, ...);
+//static int gaim_parse_searchreply(aim_session_t *, aim_frame_t *, ...);
 static int gaim_bosrights        (aim_session_t *, aim_frame_t *, ...);
 static int conninitdone_bos      (aim_session_t *, aim_frame_t *, ...);
 static int conninitdone_admin    (aim_session_t *, aim_frame_t *, ...);
 static int conninitdone_chat     (aim_session_t *, aim_frame_t *, ...);
 static int conninitdone_chatnav  (aim_session_t *, aim_frame_t *, ...);
 static int gaim_parse_msgerr     (aim_session_t *, aim_frame_t *, ...);
-static int gaim_parse_locaterights(aim_session_t *, aim_frame_t *, ...);
+//static int gaim_parse_locaterights(aim_session_t *, aim_frame_t *, ...);
 static int gaim_parse_buddyrights(aim_session_t *, aim_frame_t *, ...);
 static int gaim_parse_locerr     (aim_session_t *, aim_frame_t *, ...);
 static int gaim_icbm_param_info  (aim_session_t *, aim_frame_t *, ...);
@@ -214,12 +214,12 @@ static int gaim_memrequest       (aim_session_t *, aim_frame_t *, ...);
 static int gaim_selfinfo         (aim_session_t *, aim_frame_t *, ...);
 static int gaim_offlinemsg       (aim_session_t *, aim_frame_t *, ...);
 static int gaim_offlinemsgdone   (aim_session_t *, aim_frame_t *, ...);
-static int gaim_simpleinfo       (aim_session_t *, aim_frame_t *, ...);
-static int gaim_popup            (aim_session_t *, aim_frame_t *, ...);
+//static int gaim_simpleinfo       (aim_session_t *, aim_frame_t *, ...);
+//static int gaim_popup            (aim_session_t *, aim_frame_t *, ...);
 static int gaim_ssi_parserights  (aim_session_t *, aim_frame_t *, ...);
 static int gaim_ssi_parselist    (aim_session_t *, aim_frame_t *, ...);
 
-static int gaim_update_ui       (aim_session_t *, aim_frame_t *, ...);
+//static int gaim_update_ui       (aim_session_t *, aim_frame_t *, ...);
 
 static char *msgerrreason[] = {
 	"Invalid error",
@@ -1087,7 +1087,9 @@ static int incomingim_chan1(aim_session_t *sess, aim_conn_t *conn, aim_userinfo_
 }
 
 static int incomingim_chan2(aim_session_t *sess, aim_conn_t *conn, aim_userinfo_t *userinfo, struct aim_incomingim_ch2_args *args) {
+#if 0
 	struct gaim_connection *gc = sess->aux_data;
+#endif
 
 	if (args->status != AIM_RENDEZVOUS_PROPOSE)
 		return 1;
@@ -1459,7 +1461,7 @@ static int gaim_chatnav_info(aim_session_t *sess, aim_frame_t *fr, ...) {
 		case 0x0002: {
 			fu8_t maxrooms;
 			struct aim_chat_exchangeinfo *exchanges;
-			int exchangecount, i;
+			int exchangecount; // i;
 
 			maxrooms = (fu8_t)va_arg(ap, unsigned int);
 			exchangecount = va_arg(ap, int);
@@ -1619,6 +1621,7 @@ static int gaim_parse_msgack(aim_session_t *sess, aim_frame_t *fr, ...) {
 }
 
 static int gaim_parse_ratechange(aim_session_t *sess, aim_frame_t *fr, ...) {
+#if 0
 	static const char *codes[5] = {
 		"invalid",
 		 "change",
@@ -1626,6 +1629,7 @@ static int gaim_parse_ratechange(aim_session_t *sess, aim_frame_t *fr, ...) {
 		 "limit",
 		 "limit cleared",
 	};
+#endif
 	va_list ap;
 	fu16_t code, rateclass;
 	fu32_t windowsize, clear, alert, limit, disconnect, currentavg, maxavg;
@@ -1882,8 +1886,8 @@ static int oscar_send_im(struct gaim_connection *gc, char *name, char *message, 
 		ret = aim_send_im(odata->sess, name, AIM_IMFLAGS_AWAY, message);
 	} else {
 		struct aim_sendimext_args args;
-		char *who = normalize(name);
-		struct stat st;
+//		char *who = normalize(name);
+//		struct stat st;
 		
 		args.flags = AIM_IMFLAGS_ACK;
 		if (odata->icq)
@@ -2051,7 +2055,7 @@ static int gaim_ssi_parselist(aim_session_t *sess, aim_frame_t *fr, ...) {
 	struct oscar_data *odata = (struct oscar_data *)gc->proto_data;
 	struct aim_ssi_item *curitem;
 	int tmp;
-	char **sns;
+//	char **sns;
 
 	if (odata->icq)
 		return 1;
@@ -2289,7 +2293,7 @@ static int oscar_chat_send(struct gaim_connection *g, int id, char *message) {
 	GSList *bcs = g->buddy_chats;
 	struct conversation *b = NULL;
 	struct chat_connection *c = NULL;
-	char *buf, *buf2;
+	char *buf; // *buf2;
 	int i, j;
 
 	while (bcs) {
@@ -2343,6 +2347,8 @@ static int oscar_chat_send(struct gaim_connection *g, int id, char *message) {
 	return 0;
 }
 
+#if 0
+/* ** BitlBee ** Not used */
 static void oscar_get_away_msg(struct gaim_connection *gc, char *who) {
 	struct oscar_data *od = gc->proto_data;
 	od->evilhack = g_slist_append(od->evilhack, g_strdup(normalize(who)));
@@ -2371,6 +2377,7 @@ static void oscar_get_away_msg(struct gaim_connection *gc, char *who) {
 	} else
 		oscar_get_info(gc, who);
 }
+#endif
 
 static void oscar_set_permit_deny(struct gaim_connection *gc) {
 	struct oscar_data *od = (struct oscar_data *)gc->proto_data;
@@ -2477,6 +2484,8 @@ static GList *oscar_away_states(struct gaim_connection *gc)
 	return m;
 }
 
+#if 0
+/* ** BitlBee ** Not Used */
 static void oscar_format_screenname(struct gaim_connection *gc, char *nick) {
 	struct oscar_data *od = gc->proto_data;
 	if (!strcmp(normalize(nick), normalize(gc->username))) {
@@ -2491,7 +2500,7 @@ static void oscar_format_screenname(struct gaim_connection *gc, char *nick) {
 		do_error_dialog("The new formatting is invalid.", "Gaim");
 	}
 }
-
+#endif
 
 static struct prpl *my_protocol = NULL;
 

@@ -1,0 +1,52 @@
+Version 0.71:
+- Fixed the help command output layout (alignment)
+- Added a sample xinetd file
+- Cleaned up, 0.70 released with a build-stamp and DEADJOE file (oops)..
+- Messages can be sent like '<user>, <message>' in the control channel now,
+  instead of just '<user>: <message>'
+- Added a debug setting boolean: Set it to true for some debugging crap
+  which used to be on by default..
+- Changed the /whois reply: In the server section you know see the
+  connection this user belongs to.
+- Added some root/permission checks.
+- configure script works correctly when the terminating / is forgotten for
+  a directory.
+- Fixed format string bug in protocols/oscar/meta.c (Hmm, what's the use of
+  that file?)
+- Added '#include "crypting.h"' to commands.c to get rid of stupid warnings
+- Fixed crash-bug (SIGSEGV when adding an @-less contact to MSN/Jabber)
+- Added to_char setting
+- Fixed bug in set.c: It ignored the new value returned by the evaluator
+  :-(
+- Removed protocol tag from 'hostname' in user hostmask because this info
+  is in /whois' server section now
+- Added the GPL. Somehow 0.7 released without a COPYING file.. :-/
+- Enhanced the root_command() parser, you can 'quote' "arguments" now so
+  arguments can be strings with spaces
+- Debugging versions have True as the default value for set debug
+- NICKSERV is now an alternative for PRIVMSG root. This does not affect
+  functionality of current NICKSERV commands, but does allow people to just
+  do identify <pass> in channel.
+- NICKSERV REGISTER now doesn't try to log you in (to check if the user
+  exists) but checks for the existence of the user-configuration files.
+- NICKSERV SET password now works (as does set password in channel). This
+  makes changing your password possible.
+- NICKSERV password now stored in irc_t.
+- ./configure now only bugs you about possible problems with strip if it's
+  actually going to strip (wooohoooo! _sexy_ :)
+- Fixed a load of warnings in oscar.c, irc.c, nick.c and set.c
+- Split up root_command() into a version which eats raw strings and one
+  which eats split strings
+- New help system: Help available for most (all?) commands, all read from
+  an external help-file.
+- Changed the maximum message length in irc_usermsg() from IRC_MAX_LINE to
+  1024 (for loooong help messages..).
+- Only allow user to set supported umodes.
+- Fixed a memory leak in crypting.c (Thanks to Erik Hensema.)
+- Added a send_handler callback to user_t. Needed for the following entry:
+- Added the NickServ user as a root-clone.
+- Disabled tcpd by default because it's just a PITA for a lot of systems
+  and because you can use /usr/sbin/tcpd as well.
+- The root user can be renamed now.
+
+Finished Sep 16 2002

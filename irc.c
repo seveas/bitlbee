@@ -1,6 +1,8 @@
 #include "bitlbee.h"
 #include "crypting.h"
 
+static char *set_eval_to_char( irc_t *irc, set_t *set, char *value );
+
 irc_t *irc_new( int fd )
 {
 	irc_t *irc = malloc( sizeof( irc_t ) );
@@ -10,7 +12,7 @@ irc_t *irc_new( int fd )
 	
 	memset( irc, 0, sizeof( irc_t ) );
 	irc->fd = fd;
-	irc->mynick = "root";
+	irc->mynick = ROOT_NICK;
 	irc->channel = "#bitlbee";
 	strcpy( irc->umode, UMODE );
 	
@@ -47,6 +49,12 @@ irc_t *irc_new( int fd )
 #endif
 	
 	set_add( irc, "private", "0", set_eval_bool );
+#ifdef DEBUG
+	set_add( irc, "debug", "1", set_eval_bool );
+#else
+	set_add( irc, "debug", "0", set_eval_bool );
+#endif
+	set_add( irc, "to_char", ": ", set_eval_to_char );
 	
 	return( irc );
 }
@@ -141,7 +149,7 @@ int irc_exec( irc_t *irc, char **cmd )
 		return( 1 );
 	}
 	
-	if( !irc->user || !irc->nick ) return( 0 );
+	if( !irc->user || !irc->nick ) return( 1 );
 	
 	if( strcasecmp( cmd[0], "PING" ) == 0 )
 	{
@@ -220,7 +228,7 @@ int irc_exec( irc_t *irc, char **cmd )
 				for( i = 0; i < strlen( cmd[2] ); i ++ )
 				{
 					if( cmd[2][i] == ' ' ) break;
-					if( cmd[2][i] == ':' )
+					if( cmd[2][i] == ':' || cmd[2][i] == ',' )
 					{
 						cmd[1] = cmd[2];
 						cmd[2] += i;
@@ -290,24 +298,10 @@ int irc_exec( irc_t *irc, char **cmd )
 	}
 	else if( strcasecmp( cmd[0], "NICKSERV" ) == 0 )
 	{
-		if( !cmd[1] )
-		{
-			irc_reply( irc, 461, "%s :Need more parameters", cmd[0] );
-		}
-		else if( strcasecmp( cmd[1], "IDENTIFY" ) == 0 )
-		{
-			cmd_identify( irc, cmd + 1 );
-		}
-		else if( strcasecmp( cmd[1], "REGISTER" ) == 0 )
-		{
-			cmd_register( irc, cmd + 1 );
-		}
-		else
-		{
-			irc_usermsg( irc, "Unknown NickServ command: %s", cmd[1] );
-		}
+		/* [SH] This aliases the NickServ command to PRIVMSG root */
+		root_command( irc, cmd + 1 );
 	}
-	else
+	else if( set_getint( irc, "debug" ) )
 	{
 		irc_usermsg( irc, "\002--- Unknown command:" );
 		for( i = 0; i < IRC_MAX_ARGS && cmd[i]; i ++ ) irc_usermsg( irc, "%s", cmd[i] );
@@ -330,7 +324,7 @@ int irc_reply( irc_t *irc, int code, char *format, ... )
 
 int irc_usermsg( irc_t *irc, char *format, ... )
 {
-	char text[IRC_MAX_LINE];
+	char text[1024];
 	va_list params;
 	char private = 0;
 	user_t *u;
@@ -339,7 +333,7 @@ int irc_usermsg( irc_t *irc, char *format, ... )
 	if( u ) private = u->private;
 	
 	va_start( params, format );
-	vsnprintf( text, IRC_MAX_LINE, format, params );
+	vsnprintf( text, 1024, format, params );
 	va_end( params );
 	
 	return( irc_msgfrom( irc, u->nick, text ) );
@@ -368,7 +362,7 @@ void irc_names( irc_t *irc, char *channel )
 			irc_reply( irc, 353, "@ %s :%s", channel, u->nick );
 		u = u->next;
 	}
-	irc_reply( irc, 366, "%s :End of /NAMES list", irc->channel );
+	irc_reply( irc, 366, "%s :End of /NAMES list", channel );
 }
 
 void irc_who( irc_t *irc, char *channel )
@@ -388,7 +382,7 @@ void irc_who( irc_t *irc, char *channel )
 				irc_reply( irc, 352, "%s %s %s %s %s %c :0 %s", channel, u->user, u->host, irc->myhost, u->nick, u->away?'G':'H', u->realname );
 			u = u->next;
 		}
-	else if( u = user_find( irc, channel ) )
+	else if( ( u = user_find( irc, channel ) ) )
 		irc_reply( irc, 352, "%s %s %s %s %s %c :0 %s", channel, u->user, u->host, irc->myhost, u->nick, u->online?u->away?'G':'H':'G', u->realname );
 	
 	irc_reply( irc, 315, "%s :End of /WHO list.", channel );
@@ -399,9 +393,9 @@ void irc_login( irc_t *irc )
 	user_t *u;
 	
 	irc_reply( irc,   1, ":Welcome to the BitlBee gateway, %s", irc->nick );
-	irc_reply( irc,   2, ":Host %s is running BitlBee " VERSION ".", irc->myhost );
+	irc_reply( irc,   2, ":Host %s is running BitlBee " BITLBEE_VERSION " " ARCH "/" CPU ".", irc->myhost );
 	irc_reply( irc,   3, ":%s", IRCD_INFO );
-	irc_reply( irc,   4, "%s %s %s %s", irc->myhost, VERSION, UMODES, CMODES );
+	irc_reply( irc,   4, "%s %s %s %s", irc->myhost, BITLBEE_VERSION, UMODES, CMODES );
 	irc_reply( irc, 422, ":We don't need MOTDs." );
 	irc_umode_set( irc, irc->myhost, "+" UMODE );
 
@@ -409,19 +403,26 @@ void irc_login( irc_t *irc )
 	u->host = irc->myhost;
 	u->realname = ROOT_FN;
 	u->online = 1;
+	u->send_handler = root_command_string;
 	irc_spawn( irc, user_find( irc, irc->mynick ) );
+	
+	u = user_add( irc, "NickServ" );
+	u->host = irc->myhost;
+	u->realname = ROOT_FN;
+	u->online = 0;
+	u->send_handler = root_command_string;
 	
 	u = user_add( irc, irc->nick );
 	u->user = irc->user;
 	u->host = irc->host;
 	u->realname = irc->realname;
 	u->online = 1;
+//	u->send_handler = msg_echo;
 	irc_spawn( irc, user_find( irc, irc->nick ) );
 	
-	irc->logged_in = 1;
+	bitlbee_init( irc );
 	
-/* ** [SH] Delayed until NICKSERV authentication **
-	bitlbee_init( irc ); */
+	irc->status = USTATUS_LOGGED_IN;
 }
 
 void irc_topic( irc_t *irc, char *channel )
@@ -439,9 +440,18 @@ void irc_whois( irc_t *irc, char *nick )
 	if( u )
 	{
 		irc_reply( irc, 311, "%s %s %s * :%s", u->nick, u->user, u->host, u->realname );
-		irc_reply( irc, 312, "%s %s :%s", u->nick, irc->myhost, IRCD_INFO );
-		if( !u->online ) irc_reply( irc, 301, "%s :%s", u->nick, "User is offline" );
-		else if( u->away ) irc_reply( irc, 301, "%s :%s", u->nick, u->away );
+		
+		if( u->gc )
+			irc_reply( irc, 312, "%s %s.%s :%s network", u->nick, u->gc->user->username,
+			           *u->gc->user->proto_opt[0] ? u->gc->user->proto_opt[0] : "", proto_name[u->gc->user->protocol] );
+		else
+			irc_reply( irc, 312, "%s %s :%s", u->nick, irc->myhost, IRCD_INFO );
+		
+		if( !u->online )
+			irc_reply( irc, 301, "%s :%s", u->nick, "User is offline" );
+		else if( u->away )
+			irc_reply( irc, 301, "%s :%s", u->nick, u->away );
+		
 		irc_reply( irc, 318, "%s :End of /WHOIS list", nick );
 	}
 	else
@@ -471,7 +481,7 @@ void irc_umode_set( irc_t *irc, char *who, char *s )
 	memset( irc->umode, 0, sizeof( irc->umode ) );
 	
 	for( i = 0; i < 256 && strlen( irc->umode ) < ( sizeof( irc->umode ) - 1 ); i ++ )
-		if( m[i] )
+		if( m[i] && strchr( UMODES, m[i] ) )
 			irc->umode[strlen(irc->umode)] = i;
 	
 	irc_write( irc, ":%s MODE %s :%s", who, irc->nick, s );
@@ -566,21 +576,17 @@ int irc_send( irc_t *irc, char *nick, char *s )
 	if( u->away )
 		irc_reply( irc, 301, "%s :%s", u->nick, u->away );
 	
-	if( strcasecmp( nick, irc->mynick ) == 0 )
-		return( root_command( irc, s ) );
-/*	else if( strcasecmp( nick, NICKSERV ) == 0 )
-	{
-		int len = strlen( NICKSERV ) + 4 + strlen( s );
-		char *cmd = malloc( len );
-		
-		sprintf( cmd, "%s %s\r\n", NICKSERV, s );
-		irc_process_string( irc, cmd, len );
-		free( cmd );
-	} */
-	else if( strcasecmp( nick, irc->nick ) )
-		gc->prpl->send_im( gc, u->handle, s, strlen( s ), 0 );
+	if( u->send_handler )
+		u->send_handler( irc, u, s );
 	
 	return( 1 );
+}
+
+int buddy_send_handler( irc_t *irc, user_t *u, char *msg )
+{
+	if( !u ) return( 0 );
+	if( !u->gc ) return( 0 );
+	((struct gaim_connection *)u->gc)->prpl->send_im( u->gc, u->handle, msg, strlen( msg ), 0 );
 }
 
 int irc_msgfrom( irc_t *irc, char *nick, char *msg )
@@ -595,7 +601,7 @@ int irc_msgfrom( irc_t *irc, char *nick, char *msg )
 	if( !u->private && strcasecmp( u->nick, irc->mynick ) )
 	{
 		prefix = malloc( strlen( irc->nick) + 3 );
-		sprintf( prefix, "%s: ", irc->nick );
+		sprintf( prefix, "%s%s", irc->nick, set_getstr( irc, "to_char" ) );
 	}
 	else
 	{
@@ -617,4 +623,16 @@ int irc_msgfrom( irc_t *irc, char *nick, char *msg )
 		irc_write( irc, ":%s!%s@%s PRIVMSG %s :%s%s", u->nick, u->user, u->host, u->private?irc->nick:irc->channel, prefix, line );
 	
 	return( 1 );
+}
+
+static char *set_eval_to_char( irc_t *irc, set_t *set, char *value )
+{
+	char *s = malloc( 3 );
+	
+	if( *value == ' ' )
+		strcpy( s, " " );
+	else
+		sprintf( s, "%c ", *value );
+	
+	return( s );
 }

@@ -1,0 +1,213 @@
+?
+BitlBee help system
+
+Type help quickstart for a quick introduction to the Bee. You can get help information for any command, just type help <command>. To get a list of commands, type help commands.
+
+BitlBee is written by Wilmer van der Gaast together with Sjoerd Hemminga. Jelmer Vernooij and others. Bug reports and other kinds of feedback can be sent by e-mail to wilmer@gaast.net. (There is no BitlBee mailing list)
+%
+?commands
+BitlBee commands:
+  help     - BitlBee help system
+  register - Register yourself
+  identify - Identify yourself with your password
+  login    - Log into an IM-service
+  logout   - Log out from an IM-service
+  slist    - List all the active IM-service connections
+  add      - Add a buddy to your contact list
+  rename   - Rename a buddy
+  remove   - Remove a buddy from your contact list
+  block    - Block someone
+  allow    - Unblock someone
+  save     - Save your account data
+  set      - Miscellaneous settings
+  yes      - Accept a request
+  no       - Deny a request
+%
+?identify
+Syntax: identify <password>
+
+BitlBee saves all your settings (contacts, accounts, passwords) on-server. To prevent other users from just logging in as you and getting this information, you'll have to identify yourself with your password. You can register this password using the register command.
+Once you're registered, you can change your password using set password <password> (as always, without the brackets..).
+%
+?register
+Syntax: register <password>
+
+BitlBee saves all your settings (contacts, accounts, passwords) on-server. To prevent other users from just logging in as you and getting this information, you'll have to identify yourself with your password. You can register this password using this command.
+When you want to use the Bee again, use the identify command. You'll be logged in to all the set up IM services and your buddy nicks will be the same.
+%
+?quickstart
+Welcome to BitlBee, your IRC gateway to ICQ, MSN and other IM systems.
+
+Center of BitlBee is the control channel, #bitlbee. Two users will always be there, you (you can't leave the channel) and the system user, root. (That's me and I'm not going to leave you alone.. ;-)
+
+Because all your IM-settings (passwords, contacts, etc) are saved on the server it's important that you pick a good password before continuing. Register this password using the register command. This is quite simple. Just type register <password> (without the brackets!).
+
+When finished, type help quickstart2 to continue.
+%
+?quickstart2
+So BitlBee knows your password now. Remember this password, next time you connect to the Bee just type identify <password> and you'll be recognized and logged in to all the IM-services automatically!
+
+Now it's time to speak to some people. Let's suppose you got a jabber account itsme@jabber.com with password secret. You can connect to the Jabber server using the login command:
+
+<itsme> login jabber itsme@jabber.com secret
+<root> JABBER - Logging in: Connecting
+
+Your turn now. Try to log in. Other available IM names are msn and oscar. Oscar is the protocol used by ICQ and AIM. For oscar, you need to specify the IM-server as a third argument. For AOL Instant Messenger, the server name is login.oscar.aol.com. For ICQ, the server name is login.icq.com.
+
+Of course it's possible to log into multiple IM-services.
+
+When finished, type help quickstart3 to continue.
+%
+?quickstart3
+So you're logged in to your favourite IM-server now. If the server supports on-server contact lists the Bee should download the contact list automatically and all the on-line users should appear in the control channel. Suppose there's some funny person in the list with the ID itsme@therealme.homelinux.org. BitlBee give him/her the nickname itsme_ (after all you're itsme already!).
+
+Such a nick doesn't really look nice, does it? Try the rename command. A name like you might be better for persons like this. Try it:
+
+<itsme> rename itsme_ you
+* itsme_ is now known as you
+
+Now it's time to give all the people on your contact list useful names. Have fun! :-)
+
+When finished, type help quickstart4 to continue.
+%
+?quickstart4
+Time to add some more contacts. That's what the add command's for. It needs two arguments: a connection number (each IM-connection gets a number, you can get it with the slist command) and the user's handle.
+
+<itsme> add 0 grijpmonster@jabber.com
+* grijpmonster has joined #bitlbee
+
+Looks like grijpmonster's online, since he/she joins the channel immediately! (If you don't like the nick, of course you can use the rename command to change it.) Now you can talk to him/her. If you're in luck, you might even get something back.. ;-)
+
+<itsme> grijpmonster: Hi, how are you?
+<grijpmonster> itsme: I'm fine, and you?
+
+Of course, if you're that kind of person who wants to have five or more conversations at once, you can talk to someone outside the channel as well. Just use the /msg or /query command like you always do on IRC.
+
+This is the end of the QuickStart. For more information about other commands you can type help commands. Good luck and have fun!
+%
+?help
+Syntax: help [<command>]
+
+Gives usage information about a command
+%
+?login
+Syntax: login <protocol> <username> <password> [<server>]
+
+Logs in to the given server with the specified protocol, username and password. Specifying the server is optional and principally only necessary when using oscar.
+
+Example:
+
+00:10 < ctrlsoft> login jabber ctrlsoft@jabber.org secret
+00:10 < root> JABBER - Logging in: Connecting
+00:10 < root> JABBER - Logging in: Connected
+00:10 < root> JABBER - Logging in: Requesting Authentication Method
+00:10 < root> JABBER - Logging in: Authenticating
+00:10 < root> JABBER - Logged in
+%
+?slist
+Syntax: slist
+
+Gives a list of all active connections to servers
+
+Example:
+
+00:09 < ctrlsoft> slist
+00:09 < root>  0. MSN, jelmervernooij@hotmail.com
+00:09 < root>  1. OSCAR, 30761007 on login.icq.com
+00:09 < root>  2. OSCAR, JelmerVernooij on login.oscar.aol.com
+00:09 < root>  3. JABBER, ctrlsoft@jabber.org
+00:09 < root> End of connection list
+%
+?logout
+Syntax: logout <connection number>
+
+Log out of the specified connection number's network. The correct connection number can be retrieved by running the slist command.
+
+Example:
+
+00:11 < ctrlsoft> logout 3
+00:11 -!- gryp [gryp@jabber.jabber.org] has quit [Leaving...]
+00:11 < root> JABBER - Logged out
+%
+?add
+Syntax: add <connection> <handle>
+
+Adds the given buddy at the specified connection to your buddy list. The connection number can be retrieved with the slist command.
+
+Example:
+
+00:15 < ctrlsoft> add 3 gryp@jabber.org
+00:15 -!- gryp (gryp@jabber.org) has joined #bitlbee
+%
+?remove
+Syntax: remove <nick>
+
+Removes the specified nick from your buddy list. 
+
+Example:
+
+00:14 < ctrlsoft> remove gryp
+00:14 -!- gryp [gryp@jabber.jabber.org] has quit [Leaving...]
+%
+?block
+Syntax: block <nick>
+        block <connection> <handle>
+
+Puts the specified user on your ignore list. Either specify the users' nick when you have him/her in your contact list or a connection number and a user handle. The connection number can be retrieved with the slist command.
+%
+?allow
+Syntax: allow <nick>
+        allow <connection> <handle>
+
+Reverse of block. Unignores the specified user or user handle on specified connection. Connection number can be retrieved using the slist command.
+%
+?set
+Syntax: [<variable>] [<value>]
+
+Without any arguments, this command lists all the set variables. You can also specify a single argument, a variable name, to get that variable's value. To change this value, specify the new value as the second argument.
+%
+?save
+Syntax: save
+
+This command saves all your nicks and accounts immediately. Handy if you have the autosave functionality disabled, or if you don't trust the program's stability... ;-)
+%
+?set private
+Type: boolean
+Default: False
+
+If value is true, messages from users will appear in seperate query windows.  If false, messages from users will appear in #bitlbee.
+%
+?set save_on_quit
+Type: boolean
+Default: True
+
+If enabled causes bitlbee to save all current settings and account details when user disconnects.
+%
+?set html
+Type: string
+Default: nostrip
+
+Determines what bitlbee should do with HTML in messages. If set to nostrip, HTML in messages will not be touched. If set to strip, all html will be stripped from messages.
+%
+?set debug
+Type: boolean
+Default: False
+
+Some debugging messages can be sent to the control channel if you wish. They're probably not really useful for you, unless you're doing some development on BitlBee.
+%
+?set to_char
+Type: string (max 2 chars)
+Default: ': '
+
+It's usual that messages meant for one specific person on an IRC channel are prepended by his/her alias followed by a colon ':'. BitlBee does this by default. If you prefer a different character, you can set it using set to_char.
+%
+?yes
+Syntax: yes
+
+Sometimes an IM-module might want to ask you a question. (Accept this user as your buddy or not?) To accept a question, use the yes command.
+%
+?no
+Syntax: no
+
+Sometimes an IM-module might want to ask you a question. (Accept this user as your buddy or not?) To reject a question, use the no command.
+%

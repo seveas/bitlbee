@@ -2,6 +2,8 @@ The authors thank the following people:
 
 - The Gaim team, for letting us steal their code.
 - Sander van Schouwenburg, for his testing.
-- Marten Klecke, for his testing.
+- Marten Klencke, for his testing.
 - Lennart Kats, for putting up with Sjoerd, who bothered him many times to
-  test thhings.
+  test things.
+- Ralph Slooten, for creating the RPM packages and testing the program.
+- Erik Hensema, for creating SuSE RPM packages and some patching.

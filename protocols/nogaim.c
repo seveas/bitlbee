@@ -332,12 +332,21 @@ void add_buddy( struct gaim_connection *gc, char *group, char *handle, char *rea
 	
 	if( gc->protocol == PROTO_MSN )
 	{
-		s = strchr( handle, '@' ) + 1;
-		u->host = malloc( 5 + strlen( s ) );
-		sprintf( u->host, "msn.%s", s );
-		*(s-1) = 0;
-		u->user = strdup( handle );
-		*(s-1) = '@';
+		s = strchr( handle, '@' );
+		if( !s ) s = handle; else s ++;
+		u->host = strdup( s );
+		// u->host = malloc( 5 + strlen( s ) );
+		// sprintf( u->host, "msn.%s", s );
+		if( s > handle )
+		{
+			*(s-1) = 0;
+			u->user = strdup( handle );
+			*(s-1) = '@';
+		}
+		else
+		{
+			u->user = strdup( handle );
+		}
 	}
 	else if( gc->protocol == PROTO_OSCAR || gc->protocol == PROTO_ICQ || gc->protocol == PROTO_TOC )
 	{
@@ -346,16 +355,26 @@ void add_buddy( struct gaim_connection *gc, char *group, char *handle, char *rea
 	}
 	else if( gc->protocol == PROTO_JABBER )
 	{
-		s = strchr( handle, '@' ) + 1;
-		u->host = malloc( 8 + strlen( s ) );
-		sprintf( u->host, "jabber.%s", s );
-		*(s-1) = 0;
-		u->user = strdup( handle );
-		*(s-1) = '@';
+		s = strchr( handle, '@' );
+		if( !s ) s = handle; else s ++;
+		u->host = strdup( s );
+		// u->host = malloc( 8 + strlen( s ) );
+		// sprintf( u->host, "jabber.%s", s );
+		if( s > handle )
+		{
+			*(s-1) = 0;
+			u->user = strdup( handle );
+			*(s-1) = '@';
+		}
+		else
+		{
+			u->user = strdup( handle );
+		}
 	}
 	
 	u->gc = gc;
 	u->handle = strdup( handle );
+	u->send_handler = buddy_send_handler;
 }
 
 struct buddy *find_buddy( struct gaim_connection *gc, char *handle )

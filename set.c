@@ -6,7 +6,7 @@ set_t *set_add( irc_t *irc, char *key, char *def, void *eval )
 	
 	if( !s )
 	{
-		if( s = irc->set )
+		if( ( s = irc->set ) )
 		{
 			while( s->next ) s = s->next;
 			s->next = malloc( sizeof( set_t ) );
@@ -64,7 +64,7 @@ char *set_getstr( irc_t *irc, char *key )
 int set_getint( irc_t *irc, char *key )
 {
 	char *s = set_getstr( irc, key );
-	int i;
+	int i = 0;
 	
 	if( !s )
 		return( 0 );
@@ -95,8 +95,8 @@ int set_setstr( irc_t *irc, char *key, char *value )
 		s->value = NULL;
 	}
 	
-	if( !s->def || ( strcmp( value, s->def ) != 0 ) )
-		s->value = strdup( value );
+	if( !s->def || ( strcmp( nv, s->def ) != 0 ) )
+		s->value = strdup( nv );
 	
 	if( nv != value )
 		free( nv );

@@ -1,3 +1,4 @@
+
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
@@ -10,7 +11,7 @@
 #include "md5.h"
 #include "nogaim.h"
 
-#include <libsoup/soup.h>
+#include "passport.h"
 
 #define MSN_BUF_LEN 8192
 #define MIME_HEADER	"MIME-Version: 1.0\r\n" \
@@ -111,48 +112,6 @@ static int msn_write(int fd, void *data, int len)
 	return write(fd, data, len);
 }
 
-static char *url_decode(const char *msg)
-{
-	static char buf[MSN_BUF_LEN];
-	int i, j = 0;
-
-	bzero(buf, sizeof(buf));
-	for (i = 0; i < strlen(msg); i++) {
-		char hex[3];
-		if (msg[i] != '%') {
-			buf[j++] = msg[i];
-			continue;
-		}
-		strncpy(hex, msg + ++i, 2);
-		hex[2] = 0;
-		/* i is pointing to the start of the number */
-		i++;		/* now it's at the end and at the start of the for loop
-				   will be at the next character */
-		buf[j++] = strtol(hex, NULL, 16);
-	}
-	buf[j] = 0;
-
-	return buf;
-}
-
-static char *url_encode(const char *msg)
-{
-	static char buf[MSN_BUF_LEN];
-	int i, j = 0;
-
-	bzero(buf, sizeof(buf));
-	for (i = 0; i < strlen(msg); i++) {
-		if (isalnum(msg[i]))
-			buf[j++] = msg[i];
-		else {
-			sprintf(buf + j, "%%%02x", (unsigned char) msg[i]);
-			j += 3;
-		}
-	}
-	buf[j] = 0;
-
-	return buf;
-}
 
 static char *handle_errcode(char *buf, gboolean show)
 {
@@ -1152,73 +1111,6 @@ static int msn_process_main(struct gaim_connection *gc, char *buf)
 		ms->sessid = g_strdup(sessid);
 		ms->auth = g_strdup(auth);
 		ms->gc = gc;
-#if 0
-	} else if (!g_strncasecmp(buf, "URL", 3)) {
-		char *tmp = buf;
-		FILE *fd;
-		md5_state_t st;
-		md5_byte_t di[16];
-		int i;
-		char buf2[64];
-		char sendbuf[64];
-		char hippy[2048];
-		char *rru;
-		char *passport;
-		char *filename;
-
-		GET_NEXT(tmp);
-		GET_NEXT(tmp);
-		rru = tmp;
-		GET_NEXT(tmp);
-		passport = tmp;
-
-		snprintf(hippy, sizeof(hippy), "%s%d%s", md->mspauth, time(NULL) - md->sl,
-			 gc->password);
-
-		md5_init(&st);
-		md5_append(&st, (const md5_byte_t *) hippy, strlen(hippy));
-		md5_finish(&st, di);
-
-		bzero(sendbuf, sizeof(sendbuf));
-		for (i = 0; i < 16; i++) {
-			g_snprintf(buf2, sizeof(buf2), "%02x", di[i]);
-			strcat(sendbuf, buf2);
-		}
-
-		if (md->passport) {
-			unlink(md->passport);
-			g_free(md->passport);
-		}
-
-		fd = gaim_mkstemp(&(md->passport));
-		fprintf(fd, "<html>\n");
-		fprintf(fd, "<head>\n");
-		fprintf(fd, "<noscript>\n");
-		fprintf(fd,
-			"<meta http-equiv=Refresh content=\"0; url=http://www.hotmail.com\">\n");
-		fprintf(fd, "</noscript>\n");
-		fprintf(fd, "</head>\n\n");
-
-		fprintf(fd, "<body onload=\"document.pform.submit(); \">\n");
-		fprintf(fd, "<form name=\"pform\" action=\"%s\" method=\"POST\">\n\n", passport);
-		fprintf(fd, "<input type=\"hidden\" name=\"mode\" value=\"ttl\">\n");
-		fprintf(fd, "<input type=\"hidden\" name=\"login\" value=\"%s\">\n", gc->username);
-		fprintf(fd, "<input type=\"hidden\" name=\"username\" value=\"%s\">\n",
-			gc->username);
-		fprintf(fd, "<input type=\"hidden\" name=\"sid\" value=\"%s\">\n", md->sid);
-		fprintf(fd, "<input type=\"hidden\" name=\"kv\" value=\"%s\">\n", md->kv);
-		fprintf(fd, "<input type=\"hidden\" name=\"id\" value=\"2\">\n");
-		fprintf(fd, "<input type=\"hidden\" name=\"sl\" value=\"%ld\">\n",
-			time(NULL) - md->sl);
-		fprintf(fd, "<input type=\"hidden\" name=\"rru\" value=\"%s\">\n", rru);
-		fprintf(fd, "<input type=\"hidden\" name=\"auth\" value=\"%s\">\n", md->mspauth);
-		fprintf(fd, "<input type=\"hidden\" name=\"creds\" value=\"%s\">\n", sendbuf);	// Digest me
-		fprintf(fd, "<input type=\"hidden\" name=\"svc\" value=\"mail\">\n");
-		fprintf(fd, "<input type=\"hidden\" name=\"js\" value=\"yes\">\n");
-		fprintf(fd, "</form></body>\n");
-		fprintf(fd, "</html>\n");
-		fclose(fd);
-#endif
 	} else if (!g_strncasecmp(buf, "SYN", 3)) {
 		char *items;
 		strtok(buf, " ");
@@ -1328,54 +1220,10 @@ static void msn_process_main_msg(struct gaim_connection *gc, char *msg)
 #ifndef ICONV
 	char *utf;
 #endif
-	char *content;
-
-	content = strstr(msg, "Content-Type: ");
-
-	if ((content) && (!g_strncasecmp(content, "Content-Type: text/x-msmsgsprofile",
-					 strlen("Content-Type: text/x-msmsgsprofile")))) {
-
-		char *kv, *sid, *mspauth;
-
-		kv = strstr(msg, "kv: ");
-		sid = strstr(msg, "sid: ");
-		mspauth = strstr(msg, "MSPAuth: ");
-
-		if (kv) {
-			char *tmp;
-
-			kv += strlen("kv: ");
-			tmp = strstr(kv, "\r\n");
-			*tmp = 0;
-			md->kv = g_strdup(kv);
-		}
-
-		if (sid) {
-			char *tmp;
-
-			sid += strlen("sid: ");
-			tmp = strstr(sid, "\r\n");
-			*tmp = 0;
-			md->sid = g_strdup(sid);
-		}
-
-		if (mspauth) {
-			char *tmp;
-
-			mspauth += strlen("MSPAuth: ");
-			tmp = strstr(mspauth, "\r\n");
-			*tmp = 0;
-			md->mspauth = g_strdup(mspauth);
-		}
-
-	}
-
-
 
 	if (!g_strcasecmp(md->msguser, "hotmail")) {
 		return;
 	}
-
 
 	skiphead = strstr(msg, "\r\n\r\n");
 	if (!skiphead || !skiphead[4])
@@ -1504,128 +1352,6 @@ static void msn_login_xfr_connect(gpointer data, gint source, GaimInputCondition
 	md->inpa = gaim_input_add(md->fd, GAIM_INPUT_READ, msn_login_callback, gc);
 }
 
-/* routines necessary for MSNP8 login */
-static char *msn_create_header(char *reply, char *email, char *pwd)
-{
-	char *buffer = malloc( 2048 );
-	char *currenttoken;
-
-	currenttoken = strstr(reply, "lc=");
-	if (currenttoken == NULL)
-		return NULL;
-
-	snprintf(buffer, 2048,
-		 "Authorization: Passport1.4 OrgVerb=GET,"
-		 "OrgURL=http%%3A%%2F%%2Fmessenger%%2Emsn%%2Ecom,"
-		 "sign-in=%s,pwd=%s,%s", url_encode(email), pwd, currenttoken);
-
-	return buffer;
-}
-
-/* 
- * Retrieve the passport login server. The returned string should be deallocated.                                                            
- */
-char *get_DALogin()
-{
-	SoupContext *ctx;
-	SoupMessage *msg;
-	char *ret = NULL;
-
-	ctx = soup_context_get("https://nexus.passport.com/rdr/pprdr.asp");
-	if (!ctx)
-		return (NULL);
-
-	msg = soup_message_new(ctx, SOUP_METHOD_GET);
-
-	soup_message_send(msg);
-
-	/* Without a fixed libsoup, we have to ignore the errorcode... But
-	   well, people should just use a fixed libsoup, so we'll check it
-	   from now on. */
-	if (SOUP_ERROR_IS_SUCCESSFUL(msg->errorcode)) {
-		char *val = (char *) soup_message_get_header(msg->response_headers, "PassportURLs");
-		char *s, *se;
-
-		if (val && (s = strstr(val, "DALogin="))) {
-			s += strlen("DALogin=");
-			se = strchr(s, ',');
-			if (se)
-				*se = 0;
-			/* By default the server seems to send an URL without a correct protocol prefix. Add that,
-			   if indeed necessary. */
-			if (strstr(se, "://")) {
-				ret = strdup(s);
-			} else {
-				ret = malloc(strlen(s) + strlen("https://") + 1);
-				sprintf(ret, "%s%s", "https://", s);
-			}
-		}
-	}
-
-	soup_message_free(msg);
-	soup_context_unref(ctx);
-	return (ret);
-}
-
-char *get_PassportID(char *header_i, char *url)
-{
-	char header[4096];
-	char *val;
-	SoupContext *ctx;
-	SoupMessage *msg;
-	char *ret = NULL;
-
-	ctx = soup_context_get(url);
-	if (!ctx)
-		return (NULL);
-
-	msg = soup_message_new(ctx, SOUP_METHOD_GET);
-
-	snprintf(header, 4096, "%s", header_i);
-	val = strchr(header, ':');
-	*val++ = 0;
-	while (*val == ' ')
-		val++;
-	soup_message_add_header(msg->request_headers, header, val);
-
-	soup_message_send(msg);
-
-	/* Without a fixed libsoup, we have to ignore the errorcode... But
-	   well, people should just use a fixed libsoup, so we'll check it
-	   from now on. */
-	if (SOUP_ERROR_IS_SUCCESSFUL(msg->errorcode)) {
-		char *s, *se;
-		val =
-		    (char *) soup_message_get_header(msg->response_headers, "Authentication-Info");
-
-		if (val && (s = strstr(val, "from-PP='"))) {
-			s += strlen("from-PP='");
-			se = strchr(s, '\'');
-			if (se)
-				*se = 0;
-			ret = strdup(s);
-		}
-	}
-
-	soup_message_free(msg);
-	soup_context_unref(ctx);
-	return (ret);
-
-/*   AFAIK libsoup handles 302 redirects already
-  if ( strstr( data.authinfo, "redir" ) != NULL )
-    {
-      char* newlocation;
-      newlocation = data.location;
-      GET_NEXT(newlocation);
-      id = get_PassportID( handle, header_i , newlocation );
-      goto stop;
-    }
-  if ( strstr( data.authinfo, "success") == NULL ) goto stop;
-*/
-
-}
-
-
 static int msn_process_login(struct gaim_connection *gc, char *buf)
 {
 	struct msn_data *md = gc->proto_data;
@@ -1698,7 +1424,8 @@ static int msn_process_login(struct gaim_connection *gc, char *buf)
 			char *passport = NULL;
 			char *header = NULL;
 
-			DALogin = get_DALogin();
+			DALogin = passport_retrieve_dalogin();
+			
 			if (DALogin == NULL) {
 				hide_login_progress(gc,
 						    "Unable to determine Passport authentication server");
@@ -1706,9 +1433,10 @@ static int msn_process_login(struct gaim_connection *gc, char *buf)
 				return 0;
 			}
 
-			header = msn_create_header(buf, gc->username, gc->password);
+			header = passport_create_header(buf, gc->username, gc->password);
 			
-			passport = get_PassportID(header, DALogin);
+			passport = passport_get_id(header, DALogin);
+			free( DALogin );
 			free( header );
 
 			if (passport == NULL) {
@@ -1719,44 +1447,16 @@ static int msn_process_login(struct gaim_connection *gc, char *buf)
 
 			g_snprintf(sendbuf, sizeof(sendbuf), "USR %d TWN S %s\r\n", ++md->trId,
 				   passport);
-
+			
+			free( passport );
+			
 			if (msn_write(md->fd, sendbuf, strlen(sendbuf)) < 0) {
 				hide_login_progress(gc, "Unable to send password");
 				signoff(gc);
 				return 0;
 			}
 
-
-
-/* 			char buf2[MSN_BUF_LEN]; */
-/* 			md5_state_t st; */
-/* 			md5_byte_t di[16]; */
-/* 			int i; */
-
-/* 			g_snprintf(buf2, sizeof(buf2), "%s%s", friend, gc->password); */
-
-/* 			md5_init(&st); */
-/* 			md5_append(&st, (const md5_byte_t *)buf2, strlen(buf2)); */
-/* 			md5_finish(&st, di); */
-
-/* 			g_snprintf(sendbuf, sizeof(sendbuf), "USR %d MD5 S ", ++md->trId); */
-/* 			for (i = 0; i < 16; i++) { */
-/* 				g_snprintf(buf2, sizeof(buf2), "%02x", di[i]); */
-/* 				strcat(sendbuf, buf2); */
-/* 			} */
-/* 			strcat(sendbuf, "\n"); */
-
-/* 			if (msn_write(md->fd, sendbuf, strlen(sendbuf)) < 0) { */
-/* 				hide_login_progress(gc, "Unable to send password"); */
-/* 				signoff(gc); */
-/* 				return 0; */
-/* 			} */
-
 			set_login_progress(gc, 4, "Password sent");
-			free(DALogin);
-			if (passport != NULL)
-				free(passport);
-
 		}
 	} else if (!g_strncasecmp(buf, "XFR", 3)) {
 		char *host = strstr(buf, "NS");

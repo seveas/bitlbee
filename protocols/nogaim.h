@@ -1,7 +1,7 @@
   /********************************************************************\
   * BitlBee -- An IRC to other IM-networks gateway                     *
   *                                                                    *
-  * Copyright 2002-2003 Wilmer van der Gaast and others                *
+  * Copyright 2002-2004 Wilmer van der Gaast and others                *
   \********************************************************************/
 
 /*
@@ -9,14 +9,12 @@
  *
  * Gaim without gaim - for BitlBee
  *
- * This file contains functions called by the Gaim IM-modules. It's written
- * from scratch for BitlBee and doesn't contain any code from Gaim anymore
- * (except for the function names).
- *
- * This include file contains some struct and type definitions from Gaim.
+ * This file contains functions called by the Gaim IM-modules. It contains
+ * some struct and type definitions from Gaim.
  *
  * Copyright (C) 1998-1999, Mark Spencer <markster@marko.net>
- * Copyright 2002-2003 Wilmer van der Gaast <lintux@lintux.cx>
+ *                          (and possibly other members of the Gaim team)
+ * Copyright 2002-2004 Wilmer van der Gaast <lintux@lintux.cx>
  */
 
 /*
@@ -221,6 +219,8 @@ struct prpl {
 	int  (* convo_open)     (struct gaim_connection *, char *who);
 
 	char *(* normalize)(const char *);
+	
+	char *(* get_status_string) (int stat);
 };
 
 #define PROTO_TOC	0
@@ -347,7 +347,7 @@ void jabber_init( struct prpl *ret );
 
 #ifdef WITH_YAHOO
 /* yahoo.c */
-void yahoo_init( struct prpl *ret );
+void byahoo_init( struct prpl *ret );
 #endif
 
 /* prefs.c */

@@ -1,7 +1,7 @@
   /********************************************************************\
   * BitlBee -- An IRC to other IM-networks gateway                     *
   *                                                                    *
-  * Copyright 2002-2003 Wilmer van der Gaast and others                *
+  * Copyright 2002-2004 Wilmer van der Gaast and others                *
   \********************************************************************/
 
 /* Main file                                                            */
@@ -26,7 +26,9 @@
 #ifndef _BITLBEE_H
 #define _BITLBEE_H
 
-#define BITLBEE_VERSION "0.83"
+#define PACKAGE "BitlBee"
+#define BITLBEE_VERSION "0.84"
+#define VERSION BITLBEE_VERSION
 
 #include "config.h"
 

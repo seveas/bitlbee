@@ -40,9 +40,13 @@ The authors thank the following people:
 - Samuel Tardieu, for random patches.
 - Tibor Csoegoer, for adding support for receiving URL messages to the
   ICQ module.
-- Jonathan/rise, for reporting and fixing a problem with the Yahoo! servers.
+- Jonathan/rise, for reporting and fixing a problem with the Yahoo! servers
+  and supporting BitlBee in other ways.
+- Philip S Tellis, for libyahoo2.
 
 - And all other users who help us by sending useful bug reports, positive
   feedback, nice patches and cool addons. Mentioning you all would make
   this list fill up the whole source tree, so please don't be offended
   by don't seeing your name here.
+
+- All the people who run public BitlBee servers.

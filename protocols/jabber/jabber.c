@@ -68,7 +68,6 @@
 #define USEROPT_PORT 0
 
 #define JABBER_GROUP "Friends"
-#define PACKAGE "Bitlbee"
 
 /* i18n disabled - Bitlbee */
 #define N_(String) String

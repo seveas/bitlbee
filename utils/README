@@ -18,9 +18,10 @@ Of course this program can be used for other programs too, not just BitlBee.
 * create_nicksfile.pl (Christian Friedl <christian.friedl@chello.at>)
 
 This program reads your ~/.licq/ configuration data and convert it to a
-correct .nicks file.
+correct .nicks file. This program can be extended to read other contact
+list file formats as well.
 
-* bitlbee-daemon.patch (Maurits Dijkstra <maurits@niode.nl>)
+* bitlbee-daemon.patch (Maurits Dijkstra <mauritsd@xs4all.nl>)
 
 With this patch, you can run BitlBee as a stand-alone daemon (without
 inetd). Because for now we don't think the program is stable enough to
@@ -28,6 +29,10 @@ serve all users in one single process, we haven't applied the patch to
 the main source tree but put it here instead. If you'd like to have this
 funtionality anyway you can apply this patch and read the help
 information. (run the binary with a -h argument.)
+
+NOTE: We haven't been able to update this patch for 0.84 in time, so if
+you need this patch, please check if it's available from
+http://get.bitlbee.org/patches/
 
 * Dynamic MOTD for BitlBee (Geert Hauwaerts <geert@hauwaerts.be>)
 

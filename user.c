@@ -1,7 +1,7 @@
   /********************************************************************\
   * BitlBee -- An IRC to other IM-networks gateway                     *
   *                                                                    *
-  * Copyright 2002-2003 Wilmer van der Gaast and others                *
+  * Copyright 2002-2004 Wilmer van der Gaast and others                *
   \********************************************************************/
 
 /* Stuff to handle, save and search buddies                             */
@@ -76,6 +76,7 @@ int user_del( irc_t *irc, char *nick )
 			if( u->nick != u->user ) free( u->user );
 			if( u->nick != u->host ) free( u->host );
 			if( u->nick != u->realname ) free( u->realname );
+			if( u->handle ) free( u->handle );
 			free( u );
 			return( 1 );
 		}

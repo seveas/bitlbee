@@ -1,7 +1,7 @@
   /********************************************************************\
   * BitlBee -- An IRC to other IM-networks gateway                     *
   *                                                                    *
-  * Copyright 2002-2003 Wilmer van der Gaast and others                *
+  * Copyright 2002-2004 Wilmer van der Gaast and others                *
   \********************************************************************/
 
 /* Main file                                                            */
@@ -28,8 +28,11 @@
 #include "crypting.h"
 #include "protocols/nogaim.h"
 #include "help.h"
-
 #include <signal.h>
+
+#ifdef USE_GNUTLS
+#include <gnutls/gnutls.h>
+#endif
 
 irc_t *IRC;	/* :-( */
 conf_t *conf;
@@ -42,6 +45,10 @@ int main( int argc, char *argv[] )
 	struct timeval tv[1];
 	fd_set fds[1];
 	int i;
+
+#ifdef USE_GNUTLS
+	gnutls_global_init();
+#endif
 	
 	if( 1 )
 	{
@@ -50,7 +57,7 @@ int main( int argc, char *argv[] )
 		memset( &sig, 0, sizeof( sig ) );
 		sig.sa_handler = sighandler;
 		sigaction( SIGPIPE, &sig, &old );
-		sig.sa_flags = SA_ONESHOT;
+		sig.sa_flags = SA_RESETHAND;
 		sigaction( SIGINT,  &sig, &old );
 		sigaction( SIGILL,  &sig, &old );
 		sigaction( SIGBUS,  &sig, &old );
@@ -62,6 +69,9 @@ int main( int argc, char *argv[] )
 	}
 	
 	conf = conf_load( argc, argv );
+
+	if( !conf )
+		return( 1 );
 	
 	if( !( IRC = irc = irc_new( 0 ) ) )
 		return( 1 );
@@ -91,6 +101,9 @@ int main( int argc, char *argv[] )
 		if( !bitlbee_save( irc ) )
 			irc_usermsg( irc, "Error while saving settings!" );
 	
+#ifdef USE_GNUTLS
+	gnutls_global_deinit();
+#endif
 	return( 0 );
 }
 
@@ -131,6 +144,10 @@ int bitlbee_load( irc_t *irc, char* password )
 		return( -1 );
 	}
 	
+	/* Do this now. If the user runs with AuthMode = Registered, the
+	   account command will not work otherwise. */
+	irc->status = USTATUS_IDENTIFIED;
+	
 	while( fscanf( fp, "%127[^\n]s", s ) > 0 )
 	{
 		fgetc( fp );
@@ -155,8 +172,6 @@ int bitlbee_load( irc_t *irc, char* password )
 		strcpy( s, "account on" );	/* Can't do this directly because r_c_s alters the string */
 		root_command_string( irc, ru, s );
 	}
-	
-	irc->status = USTATUS_IDENTIFIED;
 	
 	return( 1 );
 }
@@ -385,7 +400,9 @@ static void sighandler( int signal )
 	else
 	{
 		irc_write( IRC, "ERROR :Fatal signal received: %d. That's probably a bug.. :-/", signal );
-		/* exit( 1 ); */
+#ifdef USE_GNUTLS
+		gnutls_global_deinit();
+#endif
 		raise( signal ); /* Re-raise the signal so the default handler will pick it up, dump core, etc... */
 	}
 }

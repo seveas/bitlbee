@@ -1,12 +1,10 @@
   /********************************************************************\
   * BitlBee -- An IRC to other IM-networks gateway                     *
   *                                                                    *
-  * Copyright 2002-2003 Wilmer van der Gaast and others                *
+  * Copyright 2002-2004 Sjoerd Hemminga and others                     *
   \********************************************************************/
 
-/* A little bit of encryption for the users' passwords
-
-   Copyright 2002-2003 Sjoerd Hemminga                                  */
+/* A little bit of encryption for the users' passwords                  */
 
 /*
   This program is free software; you can redistribute it and/or modify

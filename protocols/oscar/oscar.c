@@ -1330,26 +1330,6 @@ static int gaim_parse_misses(aim_session_t *sess, aim_frame_t *fr, ...) {
 	return 1;
 }
 
-static char *gaim_icq_status(int state) {
-	/* Make a cute little string that shows the status of the dude or dudet */
-	if (state & AIM_ICQ_STATE_CHAT)
-		return g_strdup_printf("Free For Chat");
-	else if (state & AIM_ICQ_STATE_DND)
-		return g_strdup_printf("Do Not Disturb");
-	else if (state & AIM_ICQ_STATE_OUT)
-		return g_strdup_printf("Not Available");
-	else if (state & AIM_ICQ_STATE_BUSY)
-		return g_strdup_printf("Occupied");
-	else if (state & AIM_ICQ_STATE_AWAY)
-		return g_strdup_printf("Away");
-	else if (state & AIM_ICQ_STATE_WEBAWARE)
-		return g_strdup_printf("Web Aware");
-	else if (state & AIM_ICQ_STATE_INVISIBLE)
-		return g_strdup_printf("Invisible");
-	else
-		return g_strdup_printf("Online");
-}
-
 static int gaim_parse_clientauto(aim_session_t *sess, aim_frame_t *fr, ...) {
 	struct gaim_connection *gc = sess->aux_data;
 	va_list ap;
@@ -1363,9 +1343,9 @@ static int gaim_parse_clientauto(aim_session_t *sess, aim_frame_t *fr, ...) {
 
 	switch(reason) {
 		case 0x0003: { /* Reply from an ICQ status message request */
-			int state = (int)va_arg(ap, fu32_t);
+//			int state = (int)va_arg(ap, fu32_t);
 			char *msg = va_arg(ap, char *);
-			char *status_msg = gaim_icq_status(state);
+			char *status_msg = "";
 			char *dialog_msg, **splitmsg;
 			struct oscar_data *od = gc->proto_data;
 			GSList *l = od->evilhack;

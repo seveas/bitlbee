@@ -99,8 +99,9 @@ GETLINE:
                         $line=<IN>;
                 }
                 if ($line) {
-                        if ($line =~ /^User\d+\s*=\s*(\d+)$/) { # getting UIN
+                        if ($line =~ /^User\d+\s*=\s*(\d+)(\.Licq)?$/) { # getting UIN
                                 $uin=$1;
+                                open(ALIAS,'<'.$dirname.'/users/'.$uin.'.Licq') ||
                                 open(ALIAS,'<'.$dirname.'/users/'.$uin.'.uin') || do {
                                         warn "unable to open userfile for $uin";
                                         return (undef,undef,0);
@@ -203,5 +204,7 @@ at the top of this script.
 =head1 AUTHORS
 
 Christian Friedl <vijeno@chello.at>
+
+Updated for the new Licq list firmat by Hugo Buddelmeijer <kmail@hugo.doemaarwat.nl>
 
 =cut

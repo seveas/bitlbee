@@ -1,7 +1,7 @@
   /********************************************************************\
   * BitlBee -- An IRC to other IM-networks gateway                     *
   *                                                                    *
-  * Copyright 2002-2003 Wilmer van der Gaast and others                *
+  * Copyright 2002-2004 Wilmer van der Gaast and others                *
   \********************************************************************/
 
 /*
@@ -13,7 +13,7 @@
  * from scratch for BitlBee and doesn't contain any code from Gaim anymore
  * (except for the function names).
  *
- * Copyright 2002-2003 Wilmer van der Gaast <lintux@lintux.cx>
+ * Copyright 2002-2004 Wilmer van der Gaast <lintux@lintux.cx>
  */
 
 /*
@@ -77,7 +77,7 @@ void nogaim_init()
 	proto_prpl[PROTO_YAHOO] = malloc( sizeof( struct prpl ) );
 	memset( proto_prpl[PROTO_YAHOO], 0, sizeof( struct prpl ) );
 #ifdef WITH_YAHOO
-	yahoo_init( proto_prpl[PROTO_YAHOO] );
+	byahoo_init( proto_prpl[PROTO_YAHOO] );
 #endif
 	
 	proto_prpl[PROTO_JABBER] = malloc( sizeof( struct prpl ) );
@@ -631,9 +631,7 @@ void serv_got_update( struct gaim_connection *gc, char *handle, int loggedin, in
 	}
 	else if( ( type & UC_UNAVAILABLE ) && ( gc->protocol == PROTO_YAHOO ) )
 	{
-		if( set_getint( gc->irc, "debug" ) )
-			irc_usermsg( gc->irc, "Away-state for %s: %d", handle, type );
-		u->away = "Away";
+		u->away = gc->prpl->get_status_string( type );
 	}
 	else
 		u->away = NULL;

@@ -3,7 +3,7 @@
 ##############################
 ##  Configurer for BitlBee  ##
 ##                          ##
-##  Copyright 2003 Lintux   ##
+##  Copyright 2004 Lintux   ##
 ##  Copyright 2002 Lucumo   ##
 ##############################
 
@@ -128,11 +128,6 @@ EFLAGS+=`pkg-config --libs glib-2.0`
 CFLAGS+=`pkg-config --cflags glib-2.0`
 EOF
 elif type glib-config > /dev/null 2> /dev/null; then
-	if [ "$msn" = 1 ]; then
-		echo
-		echo 'WARNING: GLIB <2.0 found, this is probably not going to work with the MSN'
-		echo 'module. We strongly suggest you to upgrade glib.';
-	fi
 	cat<<EOF>>Makefile.settings
 EFLAGS+=`glib-config --libs`
 CFLAGS+=`glib-config --cflags`
@@ -179,14 +174,15 @@ else
 fi
 
 if [ "$msn" = 1 ]; then
-	if pkg-config --exists soup-2.0 2> /dev/null; then
-		cat<<EOF>>Makefile.settings
-EFLAGS+=`pkg-config soup-2.0 --libs`
-CFLAGS+=`pkg-config soup-2.0 --cflags`
+	if libgnutls-config --version > /dev/null 2> /dev/null; then
+		cat <<EOF>>Makefile.settings
+EFLAGS+=`libgnutls-config --libs`
+CFLAGS+=`libgnutls-config --cflags`
 EOF
+		echo '#define USE_GNUTLS' >> config.h
 	else
 		echo
-		echo 'Could not find libsoup (v1.99 or higher), we need that for MSN. MSN disabled.'
+		echo 'WARNING: Could not find libgnutls, we need that for MSN. MSN disabled.'
 		msn=0;
 	fi;
 fi
@@ -211,12 +207,6 @@ else
 	fi;
 fi
 
-#if [ "$strip" = 1 ]; then
-#	echo
-#	echo 'The strip option is enabled. This should not be a problem usually, but on some'
-#	echo 'systems it breaks stuff.';
-#fi
-
 if [ -n "$BITLBEE_VERSION" ]; then
 	echo
 	echo 'Spoofing version number: '$BITLBEE_VERSION
@@ -232,7 +222,7 @@ if [ "$msn" = 0 ]; then
 else
 	echo '#define WITH_MSN' >> config.h
 	protocols=$protocols'msn '
-	protoobjs=$protoobjs'msn.o '
+	protoobjs=$protoobjs'msnn.o '
 fi
 
 if [ "$jabber" = 0 ]; then
@@ -289,33 +279,19 @@ SunOS )
 	fi
 ;;
 Darwin )
+	if [ "$iconv" = "1" ]; then
+		echo 'EFLAGS+=-liconv' >> Makefile.settings;
+	fi
 	echo 'Darwin/Mac OS X. This should work well, please read the docs for more information.'
 ;;
 IRIX )
 	echo 'IRIX should not be a problem. I got some positive testing reports.'
 ;;
 CYGWIN* )
-	echo 'Cygwin was tested and functioning. However, you'\''ll need glib. Please read the docs on how to obtain it.'
+	echo 'Cygwin is tested and functioning, but not officially supported.'
 ;;
 * )
 	echo 'We haven'\''t tested BitlBee on many platforms yet, yours is untested. YMMV. Please report any problems to <wilmer@gaast.net>.'
-;;
-esac
-
-echo
-echo Machine: $cpu
-case "$cpu" in
-i[0-9]86 )
-	echo 'x86 is our primary development platform, BitlBee should work well.'
-;;
-sparc )
-	echo 'We got a SPARC around to test on from time to time. It usually works perfectly.'
-;;
-"Power Macintosh" )
-	echo 'We test on an iBook regularly. Everything should work fine.'
-;;
-* )
-	echo 'This platform is untested. Please report any problems to <wilmer@gaast.net>.'
 ;;
 esac
 

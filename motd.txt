@@ -11,7 +11,7 @@ Relay Chat server. Please see the site mentioned above for more
 information.
 
 
-The developers of the Bee hope you have a zooming time.
+The developers of the Bee hope you have a buzzing time.
 
 * BitlBee development team: wilmer, lucumo, Maurits
  

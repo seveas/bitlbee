@@ -9,13 +9,14 @@
 -include ../../Makefile.settings
 
 # [SH] Program variables
-objects = msn.o
+objects = msn.o passport.o
 
 CFLAGS += -Wall
+LFLAGS += -r
 
 # [SH] Phony targets
-all: msn.o
-
+all: msnn.o
+	
 .PHONY: all clean distclean
 
 clean:
@@ -30,3 +31,9 @@ $(objects): ../../Makefile.settings Makefile
 $(objects): %.o: %.c
 	@echo '*' Compiling $<
 	@$(CC) -c $(CFLAGS) $< -o $@
+
+msnn.o: $(objects)
+	@echo '*' Linking msnn.o
+	@$(LD) $(LFLAGS) $(objects) -o msnn.o
+	
+

@@ -24,6 +24,7 @@ BitlBee commands:
   identify - Identify yourself with your password
   account  - IM-account list maintenance
   blist    - List all the buddies in your contact list
+  qlist    - List all the unanswered questions root asked
   add      - Add a buddy to your contact list
   info     - Request user information
   rename   - Rename (renick) a buddy
@@ -109,7 +110,7 @@ See help account <action> for more information
 Syntax: account add <protocol> <username> <password> [<server>]
 
 Adds an account on the given server with the specified protocol, username and password to the account list. Specifying the server is optional and principally only necessary when using oscar.
-The following protocols are supported at the moment: jabber, msn, yahoo and oscar (For AIM/ICQ. For AIM use server login.oscar.aol.com, for ICQ use server login.icq.com. For the other protocols you don't have to specify a server.)
+The following protocols are supported at the moment: jabber, msn, yahoo and oscar (For AIM/ICQ. For AIM use server login.oscar.aol.com, for ICQ use server login.icq.com. For Jabber the server is part of the username (e.g. sjoerd@hemminga-online.nl), it should not be passed in any other way in the command. (E.g.: account add jabber sjoerd@hemminga-online.nl funnypass) For the other protocols you don't have to specify a server.)
 
 Example:
 
@@ -211,7 +212,7 @@ The charset setting enables you to use different character sets in BitlBee. Thes
 Type: boolean
 Default: False
 
-If value is true, messages from users will appear in separate query windows. If false, messages from users will appear in #bitlbee.
+If value is true, messages from users will appear in separate query windows. If false, messages from users will appear in the control channel.
 
 This setting is remembered (during one session) per-user, this setting only changes the default state. This option takes effect as soon as you reconnect.
 %

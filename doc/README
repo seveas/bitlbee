@@ -27,24 +27,16 @@ directory is read-/writable by this user only.
 DEPENDENCIES
 ============
 
-Since version 0.82, BitlBee requires libsoup (a fixed version of 1.99.26 or
-a later version) with SSL support for the MSN module. Since libsoup requires
-glib 2.0, so does BitlBee. When compiling without MSN support, an older
-version of glib will work as well.
+These days, MSN Messenger clients have to connect to the MS Passport servers
+through HTTPS. BitlBee uses libgnutls for this. We're not sure about the
+exact version you'll need for this to work, but at least verion 0.8.9 is
+known to work. Of course you don't need libgnutls when you leave out MSN
+support.
 
-Because of this libsoup dependency, an Amiga/Win32/OS X version of BitlBee
-is probably a bit harder to create. If you can't get it working, we suggest
-you to use a public BitlBee server instead.
-
-If you want MSN support, please apply the libsoup patch from utils/ to your
-libsoup source and install it. If you run Debian and feel lazy, you can get
-a (Woody) .deb of a fixed libsoup from http://get.bitlbee.org/libsoup/
-
-Please note that linking Open SSL with a GPL'ed program is illegal, (people
-disagree about this sometimes, but we just want to be sure, so we don't do
-it) so it's best to use a libsoup linked with libgnutls. If you want to
-use a libsoup linked with OpenSSL, we can't stop you, but at least we warned
-you about it.
+GnuTLS might be a bit hard-to-get on the less common platforms, unfortunately.
+This means BitlBee is not as portable anymore as it used to be. You might
+wonder why we don't use OpenSSL instead then: That's because it's illegal to
+link GPL'ed programs with OpenSSL.
 
 
 PORTABILITY ISSUES
@@ -91,12 +83,18 @@ not daemons).
 
 See utils/bitlbeed.c for more information about the program.
 
+Just a little note: We run our public server im.bitlbee.org for a couple of
+weeks now, and so far we haven't experienced this problem yet. The only
+BitlBee processes killed because of CPU-time overuse were running for a long
+time already, they were usually killed during the MSN login process (which
+is quite CPU-time consuming).
+
 
 USAGE
 =====
 
 Not much to say here, it's all documented elsewhere already. Just connect to
-the new BitlBee IRC server you've just installed and enjoy chatting.
+the new BitlBee IRC server and the bot (root) will tell you what to do.
 
 
 BACKGROUNDS
@@ -157,6 +155,9 @@ compatible. It is however a free software license.
 
 Another part (the md5 algorithm) is licensed under the Aladdin license.
 This license can be found in the files, to which this applies.
+
+The Yahoo! library used by BitlBee is libyahoo2, written by Philip S Tellis
+<philip.tellis@gmx.net>, also licensed under the GPL.
 
 
 	BitlBee - An IRC to other chat networks gateway 

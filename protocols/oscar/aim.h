@@ -9,9 +9,6 @@
 #ifndef __AIM_H__
 #define __AIM_H__
 
-#include <faimconfig.h>
-#include <aim_cbtypes.h>
-
 #include <stdio.h>
 #include <string.h>
 #include <fcntl.h>
@@ -32,12 +29,6 @@ typedef guint16 flap_seqnum_t;
 
 #if defined(mach) && defined(__APPLE__)
 #define gethostbyname(x) gethostbyname2(x, AF_INET) 
-#endif
-
-#if defined(_WIN32) || defined(STRICT_ANSI)
-#define faim_shortfunc
-#else
-#define faim_shortfunc inline
 #endif
 
 /* 
@@ -87,6 +78,31 @@ typedef guint16 flap_seqnum_t;
 #define AIM_COOKIELEN            0x100
 
 #define AIM_MD5_STRING "AOL Instant Messenger (SM)"
+
+/*
+ * Default Authorizer server name and TCP port for the OSCAR farm.  
+ *
+ * You shouldn't need to change this unless you're writing
+ * your own server. 
+ *
+ * Note that only one server is needed to start the whole
+ * AIM process.  The later server addresses come from
+ * the authorizer service.
+ *
+ * This is only here for convenience.  Its still up to
+ * the client to connect to it.
+ *
+ */
+#define AIM_DEFAULT_LOGIN_SERVER "login.oscar.aol.com"
+#define AIM_LOGIN_PORT 5190
+
+/*
+ * Size of the SNAC caching hash.
+ *
+ * Default: 16
+ *
+ */
+#define AIM_SNAC_HASH_SIZE 16
 
 /*
  * Client info.  Filled in by the client and passed in to 
@@ -175,6 +191,28 @@ struct client_info_s {
 
 #define AIM_FRAMETYPE_FLAP 0x0000
 #define AIM_FRAMETYPE_OFT  0x0001
+
+/*
+ * message type flags
+ */
+#define AIM_MTYPE_PLAIN     0x01
+#define AIM_MTYPE_CHAT      0x02
+#define AIM_MTYPE_FILEREQ   0x03
+#define AIM_MTYPE_URL       0x04
+#define AIM_MTYPE_AUTHREQ   0x06
+#define AIM_MTYPE_AUTHDENY  0x07
+#define AIM_MTYPE_AUTHOK    0x08
+#define AIM_MTYPE_SERVER    0x09
+#define AIM_MTYPE_ADDED     0x0C
+#define AIM_MTYPE_WWP       0x0D
+#define AIM_MTYPE_EEXPRESS  0x0E
+#define AIM_MTYPE_CONTACTS  0x13
+#define AIM_MTYPE_PLUGIN    0x1A
+#define AIM_MTYPE_AUTOAWAY	0xE8
+#define AIM_MTYPE_AUTOBUSY	0xE9
+#define AIM_MTYPE_AUTONA	0xEA
+#define AIM_MTYPE_AUTODND	0xEB
+#define AIM_MTYPE_AUTOFFC	0xEC
 
 typedef struct aim_conn_s {
 	int fd;
@@ -303,7 +341,7 @@ typedef struct aim_session_s {
 	 *
 	 * XXX: Should these be per-connection? -mid
 	 */
-	void *snac_hash[FAIM_SNAC_HASH_SIZE];
+	void *snac_hash[AIM_SNAC_HASH_SIZE];
 	aim_snacid_t snacid_next;
 
 	struct aim_icq_info *icq_info;
@@ -323,6 +361,8 @@ typedef struct aim_session_s {
 	aim_msgcookie_t *msgcookies;
 
 	void *modlistv;
+
+	guint8 aim_icq_state;  /* ICQ representation of away state */
 } aim_session_t;
 
 /* Values for sess->flags */
@@ -340,6 +380,12 @@ typedef struct aim_session_s {
 #define AIM_ICQ_STATE_CHAT      0x00000020
 #define AIM_ICQ_STATE_INVISIBLE 0x00000100
 #define AIM_ICQ_STATE_WEBAWARE  0x00010000
+#define AIM_ICQ_STATE_HIDEIP            0x00020000
+#define AIM_ICQ_STATE_BIRTHDAY          0x00080000
+#define AIM_ICQ_STATE_DIRECTDISABLED    0x00100000
+#define AIM_ICQ_STATE_ICQHOMEPAGE       0x00200000
+#define AIM_ICQ_STATE_DIRECTREQUIREAUTH 0x10000000
+#define AIM_ICQ_STATE_DIRECTCONTACTLIST 0x20000000
 
 /*
  * AIM User Info, Standard Form.
@@ -538,6 +584,14 @@ aim_conn_t *aim_getconn_fd(aim_session_t *, int fd);
 
 /* aim_misc.c */
 
+
+struct aim_chat_roominfo {
+	unsigned short exchange;
+	char *name;
+	unsigned short instance;
+};
+
+
 #define AIM_VISIBILITYCHANGE_PERMITADD    0x05
 #define AIM_VISIBILITYCHANGE_PERMITREMOVE 0x06
 #define AIM_VISIBILITYCHANGE_DENYADD      0x07
@@ -565,7 +619,7 @@ int aim_bos_reqbuddyrights(aim_session_t *, aim_conn_t *);
 int aim_bos_reqlocaterights(aim_session_t *, aim_conn_t *);
 int aim_setdirectoryinfo(aim_session_t *sess, aim_conn_t *conn, const char *first, const char *middle, const char *last, const char *maiden, const char *nickname, const char *street, const char *city, const char *state, const char *zip, int country, guint16 privacy);
 int aim_setuserinterests(aim_session_t *sess, aim_conn_t *conn, const char *interest1, const char *interest2, const char *interest3, const char *interest4, const char *interest5, guint16 privacy);
-int aim_setextstatus(aim_session_t *sess, aim_conn_t *conn, guint32 status, const char *msg);
+int aim_setextstatus(aim_session_t *sess, aim_conn_t *conn, guint32 status);
 
 struct aim_fileheader_t *aim_getlisting(aim_session_t *sess, FILE *);
 
@@ -584,264 +638,12 @@ int aim_ads_requestads(aim_session_t *sess, aim_conn_t *conn);
 
 /* aim_im.c */
 
-struct aim_fileheader_t {
-#if 0
-	char  magic[4];		/* 0 */
-	short hdrlen; 		/* 4 */
-	short hdrtype;		/* 6 */
-#endif
-	char  bcookie[8];       /* 8 */
-	short encrypt;          /* 16 */
-	short compress;         /* 18 */
-	short totfiles;         /* 20 */
-	short filesleft;        /* 22 */
-	short totparts;         /* 24 */
-	short partsleft;        /* 26 */
-	long  totsize;          /* 28 */
-	long  size;             /* 32 */
-	long  modtime;          /* 36 */
-	long  checksum;         /* 40 */
-	long  rfrcsum;          /* 44 */
-	long  rfsize;           /* 48 */
-	long  cretime;          /* 52 */
-	long  rfcsum;           /* 56 */
-	long  nrecvd;           /* 60 */
-	long  recvcsum;         /* 64 */
-	char  idstring[32];     /* 68 */
-	char  flags;            /* 100 */
-	char  lnameoffset;      /* 101 */
-	char  lsizeoffset;      /* 102 */
-	char  dummy[69];        /* 103 */
-	char  macfileinfo[16];  /* 172 */
-	short nencode;          /* 188 */
-	short nlanguage;        /* 190 */
-	char  name[64];         /* 192 */
-				/* 256 */
-};
-
-struct aim_filetransfer_priv {
-	char sn[MAXSNLEN];
-	guint8 cookie[8];
-	char ip[30];
-	int state;
-	struct aim_fileheader_t fh;
-};
-
-struct aim_chat_roominfo {
-	unsigned short exchange;
-	char *name;
-	unsigned short instance;
-};
-
-#define AIM_IMFLAGS_AWAY		0x0001 /* mark as an autoreply */
-#define AIM_IMFLAGS_ACK			0x0002 /* request a receipt notice */
-#define AIM_IMFLAGS_UNICODE		0x0004
-#define AIM_IMFLAGS_ISO_8859_1		0x0008
-#define AIM_IMFLAGS_BUDDYREQ		0x0010 /* buddy icon requested */
-#define AIM_IMFLAGS_HASICON		0x0020 /* already has icon */
-#define AIM_IMFLAGS_SUBENC_MACINTOSH	0x0040 /* damn that Steve Jobs! */
-#define AIM_IMFLAGS_CUSTOMFEATURES 	0x0080 /* features field present */
-#define AIM_IMFLAGS_EXTDATA		0x0100
-#define AIM_IMFLAGS_CUSTOMCHARSET	0x0200 /* charset fields set */
-#define AIM_IMFLAGS_MULTIPART		0x0400 /* ->mpmsg section valid */
-#define AIM_IMFLAGS_OFFLINE		0x0800 /* send to offline user */
-
-/*
- * Multipart message structures.
- */
-typedef struct aim_mpmsg_section_s {
-	guint16 charset;
-	guint16 charsubset;
-	guint8 *data;
-	guint16 datalen;
-	struct aim_mpmsg_section_s *next;
-} aim_mpmsg_section_t;
-
-typedef struct aim_mpmsg_s {
-	int numparts;
-	aim_mpmsg_section_t *parts;
-} aim_mpmsg_t;
-
-int aim_mpmsg_init(aim_session_t *sess, aim_mpmsg_t *mpm);
-int aim_mpmsg_addraw(aim_session_t *sess, aim_mpmsg_t *mpm, guint16 charset, guint16 charsubset, const guint8 *data, guint16 datalen);
-int aim_mpmsg_addascii(aim_session_t *sess, aim_mpmsg_t *mpm, const char *ascii);
-int aim_mpmsg_addunicode(aim_session_t *sess, aim_mpmsg_t *mpm, const guint16 *unicode, guint16 unicodelen);
-void aim_mpmsg_free(aim_session_t *sess, aim_mpmsg_t *mpm);
-
-/*
- * Arguments to aim_send_im_ext().
- *
- * This is really complicated.  But immensely versatile.
- *
- */
-struct aim_sendimext_args {
-
-	/* These are _required_ */
-	const char *destsn;
-	guint32 flags; /* often 0 */
-
-	/* Only required if not using multipart messages */
-	const char *msg;
-	int msglen;
-
-	/* Required if ->msg is not provided */
-	aim_mpmsg_t *mpmsg;
-
-	/* Only used if AIM_IMFLAGS_HASICON is set */
-	guint32 iconlen;
-	time_t iconstamp;
-	guint32 iconsum;
-
-	/* Only used if AIM_IMFLAGS_CUSTOMFEATURES is set */
-	guint8 *features;
-	guint8 featureslen;
-
-	/* Only used if AIM_IMFLAGS_CUSTOMCHARSET is set and mpmsg not used */
-	guint16 charset;
-	guint16 charsubset;
-};
-
-/*
- * Arguments to aim_send_rtfmsg().
- */
-struct aim_sendrtfmsg_args {
-	const char *destsn;
-	guint32 fgcolor;
-	guint32 bgcolor;
-	const char *rtfmsg; /* must be in RTF */
-};
-
-/*
- * This information is provided in the Incoming ICBM callback for
- * Channel 1 ICBM's.  
- *
- * Note that although CUSTOMFEATURES and CUSTOMCHARSET say they
- * are optional, both are always set by the current libfaim code.
- * That may or may not change in the future.  It is mainly for
- * consistency with aim_sendimext_args.
- *
- * Multipart messages require some explanation. If you want to use them,
- * I suggest you read all the comments in im.c.
- *
- */
-struct aim_incomingim_ch1_args {
-
-	/* Always provided */
-	aim_mpmsg_t mpmsg;
-	guint32 icbmflags; /* some flags apply only to ->msg, not all mpmsg */
-	
-	/* Only provided if message has a human-readable section */
-	char *msg;
-	int msglen;
-
-	/* Only provided if AIM_IMFLAGS_HASICON is set */
-	time_t iconstamp;
-	guint32 iconlen;
-	guint16 iconsum;
-
-	/* Only provided if AIM_IMFLAGS_CUSTOMFEATURES is set */
-	guint8 *features;
-	guint8 featureslen;
-
-	/* Only provided if AIM_IMFLAGS_EXTDATA is set */
-	guint8 extdatalen;
-	guint8 *extdata;
-
-	/* Only used if AIM_IMFLAGS_CUSTOMCHARSET is set */
-	guint16 charset;
-	guint16 charsubset;
-};
-
-/* Valid values for channel 2 args->status */
-#define AIM_RENDEZVOUS_PROPOSE 0x0000
-#define AIM_RENDEZVOUS_CANCEL  0x0001
-#define AIM_RENDEZVOUS_ACCEPT  0x0002
-
-struct aim_incomingim_ch2_args {
-	guint8 cookie[8];
-	guint16 reqclass;
-	guint16 status;
-	guint16 errorcode;
-	const char *clientip;
-	const char *clientip2;
-	const char *verifiedip;
-	guint16 port;
-	const char *msg; /* invite message or file description */
-	const char *encoding;
-	const char *language;
-	union {
-		struct {
-			guint32 checksum;
-			guint32 length;
-			time_t timestamp;
-			guint8 *icon;
-		} icon;
-		struct {
-			struct aim_chat_roominfo roominfo;
-		} chat;
-		struct {
-			guint32 fgcolor;
-			guint32 bgcolor;
-			const char *rtfmsg;
-		} rtfmsg;
-	} info;
-	void *destructor; /* used internally only */
-};
-
-/* Valid values for channel 4 args->type */
-#define AIM_ICQMSG_AUTHREQUEST 0x0006
-#define AIM_ICQMSG_AUTHDENIED 0x0007
-#define AIM_ICQMSG_AUTHGRANTED 0x0008
-
-struct aim_incomingim_ch4_args {
-	guint32 uin; /* Of the sender of the ICBM */
-	guint16 type;
-	char *msg; /* Reason for auth request, deny, or accept */
-};
-
-int aim_send_rtfmsg(aim_session_t *sess, struct aim_sendrtfmsg_args *args);
-int aim_send_im_ext(aim_session_t *sess, struct aim_sendimext_args *args);
-int aim_send_im(aim_session_t *, const char *destsn, unsigned short flags, const char *msg);
-int aim_send_icon(aim_session_t *sess, const char *sn, const guint8 *icon, int iconlen, time_t stamp, guint16 iconsum);
-guint16 aim_iconsum(const guint8 *buf, int buflen);
-int aim_send_typing(aim_session_t *sess, aim_conn_t *conn, int typing);
-int aim_send_im_direct(aim_session_t *, aim_conn_t *, const char *msg, int len);
-const char *aim_directim_getsn(aim_conn_t *conn);
-aim_conn_t *aim_directim_initiate(aim_session_t *, const char *destsn);
-aim_conn_t *aim_directim_connect(aim_session_t *, const char *sn, const char *addr, const guint8 *cookie);
-
-int aim_send_im_ch2_geticqmessage(aim_session_t *sess, const char *sn, int type);
 aim_conn_t *aim_sendfile_initiate(aim_session_t *, const char *destsn, const char *filename, guint16 numfiles, guint32 totsize);
 
 aim_conn_t *aim_getfile_initiate(aim_session_t *sess, aim_conn_t *conn, const char *destsn);
 int aim_oft_getfile_request(aim_session_t *sess, aim_conn_t *conn, const char *name, int size);
 int aim_oft_getfile_ack(aim_session_t *sess, aim_conn_t *conn);
 int aim_oft_getfile_end(aim_session_t *sess, aim_conn_t *conn);
-
-/* aim_info.c */
-#define AIM_CAPS_BUDDYICON      0x00000001
-#define AIM_CAPS_VOICE          0x00000002
-#define AIM_CAPS_IMIMAGE        0x00000004
-#define AIM_CAPS_CHAT           0x00000008
-#define AIM_CAPS_GETFILE        0x00000010
-#define AIM_CAPS_SENDFILE       0x00000020
-#define AIM_CAPS_GAMES          0x00000040
-#define AIM_CAPS_SAVESTOCKS     0x00000080
-#define AIM_CAPS_SENDBUDDYLIST  0x00000100
-#define AIM_CAPS_GAMES2         0x00000200
-#define AIM_CAPS_ICQ            0x00000400
-#define AIM_CAPS_APINFO         0x00000800
-#define AIM_CAPS_ICQRTF		0x00001000
-#define AIM_CAPS_EMPTY		0x00002000
-#define AIM_CAPS_ICQSERVERRELAY 0x00004000
-#define AIM_CAPS_ICQUNKNOWN     0x00008000
-#define AIM_CAPS_TRILLIANCRYPT  0x00010000
-#define AIM_CAPS_UTF8           0x00020000
-#define AIM_CAPS_INTEROP        0x00040000
-#define AIM_CAPS_ICHAT          0x00080000
-#define AIM_CAPS_LAST           0x00100000
-
-int aim_0002_000b(aim_session_t *sess, aim_conn_t *conn, const char *sn);
 
 #define AIM_SENDMEMBLOCK_FLAG_ISREQUEST  0
 #define AIM_SENDMEMBLOCK_FLAG_ISHASH     1
@@ -922,7 +724,6 @@ struct aim_icbmparameters {
 int aim_reqicbmparams(aim_session_t *sess);
 int aim_seticbmparam(aim_session_t *sess, struct aim_icbmparameters *params);
 
-
 /* auth.c */
 int aim_sendcookie(aim_session_t *, aim_conn_t *, const guint8 *);
 
@@ -931,13 +732,6 @@ int aim_admin_reqconfirm(aim_session_t *sess, aim_conn_t *conn);
 int aim_admin_getinfo(aim_session_t *sess, aim_conn_t *conn, guint16 info);
 int aim_admin_setemail(aim_session_t *sess, aim_conn_t *conn, const char *newemail);
 int aim_admin_setnick(aim_session_t *sess, aim_conn_t *conn, const char *newnick);
-
-/* aim_buddylist.c */
-int aim_add_buddy(aim_session_t *, aim_conn_t *, const char *);
-int aim_remove_buddy(aim_session_t *, aim_conn_t *, const char *);
-
-/* aim_search.c */
-int aim_usersearch_address(aim_session_t *, aim_conn_t *, const char *);
 
 /* These apply to exchanges as well. */
 #define AIM_CHATROOM_FLAG_EVILABLE 0x0001
@@ -969,136 +763,6 @@ int aim_chat_invite(aim_session_t *sess, aim_conn_t *conn, const char *sn, const
 
 int aim_chatnav_createroom(aim_session_t *sess, aim_conn_t *conn, const char *name, guint16 exchange);
 int aim_chat_leaveroom(aim_session_t *sess, const char *name);
-
-
-#define AIM_SSI_TYPE_BUDDY         0x0000
-#define AIM_SSI_TYPE_GROUP         0x0001
-#define AIM_SSI_TYPE_PERMIT        0x0002
-#define AIM_SSI_TYPE_DENY          0x0003
-#define AIM_SSI_TYPE_PDINFO        0x0004
-#define AIM_SSI_TYPE_PRESENCEPREFS 0x0005
-
-struct aim_ssi_item {
-	char *name;
-	guint16 gid;
-	guint16 bid;
-	guint16 type;
-	void *data;
-	struct aim_ssi_item *next;
-};
-
-/* These build the actual SNACs and queue them to be sent */
-int aim_ssi_reqrights(aim_session_t *sess, aim_conn_t *conn);
-int aim_ssi_reqdata(aim_session_t *sess, aim_conn_t *conn, time_t localstamp, guint16 localrev);
-int aim_ssi_reqalldata(aim_session_t *sess, aim_conn_t *conn);
-int aim_ssi_enable(aim_session_t *sess, aim_conn_t *conn);
-int aim_ssi_addmoddel(aim_session_t *sess, aim_conn_t *conn, struct aim_ssi_item **items, unsigned int num, guint16 subtype);
-int aim_ssi_modbegin(aim_session_t *sess, aim_conn_t *conn);
-int aim_ssi_modend(aim_session_t *sess, aim_conn_t *conn);
-
-/* These handle the local variables */
-struct aim_ssi_item *aim_ssi_itemlist_find(struct aim_ssi_item *list, guint16 gid, guint16 bid);
-struct aim_ssi_item *aim_ssi_itemlist_finditem(struct aim_ssi_item *list, char *gn, char *sn, guint16 type);
-struct aim_ssi_item *aim_ssi_itemlist_findparent(struct aim_ssi_item *list, char *sn);
-int aim_ssi_getpermdeny(struct aim_ssi_item *list);
-guint32 aim_ssi_getpresence(struct aim_ssi_item *list);
-
-/* Send packets */
-int aim_ssi_cleanlist(aim_session_t *sess, aim_conn_t *conn);
-int aim_ssi_addbuddies(aim_session_t *sess, aim_conn_t *conn, char *gn, char **sn, unsigned int num, unsigned int flags);
-int aim_ssi_addmastergroup(aim_session_t *sess, aim_conn_t *conn);
-int aim_ssi_addgroups(aim_session_t *sess, aim_conn_t *conn, char **gn, unsigned int num);
-int aim_ssi_addpord(aim_session_t *sess, aim_conn_t *conn, char **sn, unsigned int num, guint16 type);
-int aim_ssi_movebuddy(aim_session_t *sess, aim_conn_t *conn, char *oldgn, char *newgn, char *sn);
-int aim_ssi_delbuddies(aim_session_t *sess, aim_conn_t *conn, char *gn, char **sn, unsigned int num);
-int aim_ssi_delmastergroup(aim_session_t *sess, aim_conn_t *conn);
-int aim_ssi_delgroups(aim_session_t *sess, aim_conn_t *conn, char **gn, unsigned int num);
-int aim_ssi_deletelist(aim_session_t *sess, aim_conn_t *conn);
-int aim_ssi_delpord(aim_session_t *sess, aim_conn_t *conn, char **sn, unsigned int num, guint16 type);
-int aim_ssi_setpermdeny(aim_session_t *sess, aim_conn_t *conn, guint8 permdeny, guint32 vismask);
-int aim_ssi_setpresence(aim_session_t *sess, aim_conn_t *conn, guint32 presence);
-int aim_ssi_auth_request(aim_session_t *sess, aim_conn_t *conn, char *uin, char *reason);
-int aim_ssi_auth_reply(aim_session_t *sess, aim_conn_t *conn, char *uin, int yesno, char *reason);
-
-struct aim_icq_offlinemsg {
-	guint32 sender;
-	guint16 year;
-	guint8 month, day, hour, minute;
-	guint16 type;
-	char *msg;
-};
-
-struct aim_icq_simpleinfo {
-	guint32 uin;
-	char *nick;
-	char *first;
-	char *last;
-	char *email;
-};
-
-struct aim_icq_info {
-        gushort reqid;
-
-        /* simple */
-        guint32 uin;
-
-        /* general and "home" information (0x00c8) */
-        char *nick;
-        char *first;
-        char *last;
-        char *email;
-        char *homecity;
-        char *homestate;
-        char *homephone;
-        char *homefax;
-        char *homeaddr;
-        char *mobile;
-        char *homezip;
-        gushort homecountry;
-/*      guchar timezone;
-        guchar hideemail; */
-
-        /* personal (0x00dc) */
-        guchar age;
-        guchar unknown;
-        guchar gender;
-        char *personalwebpage;
-        gushort birthyear;
-        guchar birthmonth;
-        guchar birthday;
-        guchar language1;
-        guchar language2;
-        guchar language3;
-
-        /* work (0x00d2) */
-        char *workcity;
-        char *workstate;
-        char *workphone;
-        char *workfax;
-        char *workaddr;
-        char *workzip;
-        gushort workcountry;
-        char *workcompany;
-        char *workdivision;
-        char *workposition;
-        char *workwebpage;
-
-        /* additional personal information (0x00e6) */
-        char *info;
-
-        /* email (0x00eb) */
-        gushort numaddresses;
-        char **email2;
-
-        /* we keep track of these in a linked list because we're 1337 */
-        struct aim_icq_info *next;
-};
-
-
-int aim_icq_reqofflinemsgs(aim_session_t *sess);
-int aim_icq_ackofflinemsgs(aim_session_t *sess);
-int aim_icq_getallinfo(aim_session_t *sess, const char *uin);
-int aim_icq_getsimpleinfo(aim_session_t *sess, const char *uin);
 
 /* aim_util.c */
 /*
@@ -1162,5 +826,96 @@ int aim_sncmp(const char *a, const char *b);
 
 #include <aim_internal.h>
 
-#endif /* __AIM_H__ */
+/*
+ * SNAC Families.
+ */
+#define AIM_CB_FAM_ACK 0x0000
+#define AIM_CB_FAM_GEN 0x0001
+#define AIM_CB_FAM_SPECIAL 0xffff /* Internal libfaim use */
 
+/*
+ * SNAC Family: Ack.
+ * 
+ * Not really a family, but treating it as one really
+ * helps it fit into the libfaim callback structure better.
+ *
+ */
+#define AIM_CB_ACK_ACK 0x0001
+
+/*
+ * SNAC Family: General.
+ */ 
+#define AIM_CB_GEN_ERROR 0x0001
+#define AIM_CB_GEN_CLIENTREADY 0x0002
+#define AIM_CB_GEN_SERVERREADY 0x0003
+#define AIM_CB_GEN_SERVICEREQ 0x0004
+#define AIM_CB_GEN_REDIRECT 0x0005
+#define AIM_CB_GEN_RATEINFOREQ 0x0006
+#define AIM_CB_GEN_RATEINFO 0x0007
+#define AIM_CB_GEN_RATEINFOACK 0x0008
+#define AIM_CB_GEN_RATECHANGE 0x000a
+#define AIM_CB_GEN_SERVERPAUSE 0x000b
+#define AIM_CB_GEN_SERVERRESUME 0x000d
+#define AIM_CB_GEN_REQSELFINFO 0x000e
+#define AIM_CB_GEN_SELFINFO 0x000f
+#define AIM_CB_GEN_EVIL 0x0010
+#define AIM_CB_GEN_SETIDLE 0x0011
+#define AIM_CB_GEN_MIGRATIONREQ 0x0012
+#define AIM_CB_GEN_MOTD 0x0013
+#define AIM_CB_GEN_SETPRIVFLAGS 0x0014
+#define AIM_CB_GEN_WELLKNOWNURL 0x0015
+#define AIM_CB_GEN_NOP 0x0016
+#define AIM_CB_GEN_DEFAULT 0xffff
+
+/*
+ * SNAC Family: Advertisement Services
+ */ 
+#define AIM_CB_ADS_ERROR 0x0001
+#define AIM_CB_ADS_DEFAULT 0xffff
+
+/*
+ * OFT Services
+ *
+ * See non-SNAC note below.
+ */
+#define AIM_CB_OFT_DIRECTIMCONNECTREQ 0x0001/* connect request -- actually an OSCAR CAP*/
+#define AIM_CB_OFT_DIRECTIMINCOMING 0x0002
+#define AIM_CB_OFT_DIRECTIMDISCONNECT 0x0003
+#define AIM_CB_OFT_DIRECTIMTYPING 0x0004
+#define AIM_CB_OFT_DIRECTIMINITIATE 0x0005
+
+#define AIM_CB_OFT_GETFILECONNECTREQ 0x0006 /* connect request -- actually an OSCAR CAP*/
+#define AIM_CB_OFT_GETFILELISTINGREQ 0x0007 /* OFT listing.txt request */
+#define AIM_CB_OFT_GETFILEFILEREQ 0x0008    /* received file request */
+#define AIM_CB_OFT_GETFILEFILESEND 0x0009   /* received file request confirm -- send data */
+#define AIM_CB_OFT_GETFILECOMPLETE 0x000a   /* received file send complete*/
+#define AIM_CB_OFT_GETFILEINITIATE 0x000b   /* request for file get acknowledge */
+#define AIM_CB_OFT_GETFILEDISCONNECT 0x000c   /* OFT connection disconnected.*/
+#define AIM_CB_OFT_GETFILELISTING 0x000d   /* OFT listing.txt received.*/
+#define AIM_CB_OFT_GETFILERECEIVE 0x000e   /* OFT file incoming.*/
+#define AIM_CB_OFT_GETFILELISTINGRXCONFIRM 0x000f
+#define AIM_CB_OFT_GETFILESTATE4 0x0010
+
+#define AIM_CB_OFT_SENDFILEDISCONNECT 0x0020   /* OFT connection disconnected.*/
+
+
+
+/*
+ * SNAC Family: Internal Messages
+ *
+ * This isn't truely a SNAC family either, but using
+ * these, we can integrated non-SNAC services into
+ * the SNAC-centered libfaim callback structure.
+ *
+ */ 
+#define AIM_CB_SPECIAL_AUTHSUCCESS 0x0001
+#define AIM_CB_SPECIAL_AUTHOTHER 0x0002
+#define AIM_CB_SPECIAL_CONNERR 0x0003
+#define AIM_CB_SPECIAL_CONNCOMPLETE 0x0004
+#define AIM_CB_SPECIAL_FLAPVER 0x0005
+#define AIM_CB_SPECIAL_CONNINITDONE 0x0006
+#define AIM_CB_SPECIAL_IMAGETRANSFER 0x007
+#define AIM_CB_SPECIAL_UNKNOWN 0xffff
+#define AIM_CB_SPECIAL_DEFAULT AIM_CB_SPECIAL_UNKNOWN
+
+#endif /* __AIM_H__ */

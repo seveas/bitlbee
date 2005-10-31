@@ -252,7 +252,10 @@ int bitlbee_load( irc_t *irc, char* password )
 	
 	fscanf( fp, "%32[^\n]s", s );
 	if( setpass( irc, password, s ) < 0 )
+	{
+		fclose( fp );
 		return( -1 );
+	}
 	
 	/* Do this now. If the user runs with AuthMode = Registered, the
 	   account command will not work otherwise. */
@@ -262,7 +265,7 @@ int bitlbee_load( irc_t *irc, char* password )
 	{
 		fgetc( fp );
 		line = deobfucrypt( irc, s );
-		root_command_string( irc, ru, line );
+		root_command_string( irc, ru, line, 0 );
 		g_free( line );
 	}
 	fclose( fp );
@@ -280,7 +283,7 @@ int bitlbee_load( irc_t *irc, char* password )
 	if( set_getint( irc, "auto_connect" ) )
 	{
 		strcpy( s, "account on" );	/* Can't do this directly because r_c_s alters the string */
-		root_command_string( irc, ru, s );
+		root_command_string( irc, ru, s, 0 );
 	}
 	
 	return( 1 );
@@ -336,7 +339,11 @@ int bitlbee_save( irc_t *irc )
 			return( 0 );
 		}
 	}
-	fclose( fp );
+	if( fclose( fp ) != 0 )
+	{
+		irc_usermsg( irc, "fclose() reported an error. Disk full?" );
+		return( 0 );
+	}
   
 	g_snprintf( new_path, 512, "%s%s%s", global.conf->configdir, irc->nick, ".nicks" );
 	if( unlink( new_path ) != 0 )
@@ -419,7 +426,11 @@ int bitlbee_save( irc_t *irc )
 		}
 		g_free( line );
 	}
-	fclose( fp );
+	if( fclose( fp ) != 0 )
+	{
+		irc_usermsg( irc, "fclose() reported an error. Disk full?" );
+		return( 0 );
+	}
 	
  	g_snprintf( new_path, 512, "%s%s%s", global.conf->configdir, irc->nick, ".accounts" );
  	if( unlink( new_path ) != 0 )
@@ -451,7 +462,7 @@ void bitlbee_shutdown( gpointer data )
 	g_main_quit( global.loop );
 }
 
-int root_command_string( irc_t *irc, user_t *u, char *command )
+int root_command_string( irc_t *irc, user_t *u, char *command, int flags )
 {
 	char *cmd[IRC_MAX_ARGS];
 	char *s;

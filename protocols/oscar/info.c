@@ -7,6 +7,7 @@
  */
 
 #include <aim.h>
+#include "info.h"
 
 struct aim_priv_inforeq {
 	char sn[MAXSNLEN+1];
@@ -168,6 +169,13 @@ static const struct {
 	 {0x09, 0x46, 0x13, 0x48, 0x4c, 0x7f, 0x11, 0xd1,
 	  0x82, 0x22, 0x44, 0x45, 0x53, 0x54, 0x00, 0x00}},
 
+    /*
+     * Client supports channel 2 extended, TLV(0x2711) based messages.
+     * Currently used only by ICQ clients. ICQ clients and clones use this GUID
+     * as message format sign. Trillian client use another GUID in channel 2
+     * messages to implement its own message format (trillian doesn't use
+     * TLV(x2711) in SecureIM channel 2 messages!).
+     */
 	{AIM_CAPS_ICQSERVERRELAY,
 	 {0x09, 0x46, 0x13, 0x49, 0x4c, 0x7f, 0x11, 0xd1,
 	  0x82, 0x22, 0x44, 0x45, 0x53, 0x54, 0x00, 0x00}},
@@ -220,7 +228,7 @@ static const struct {
 	{AIM_CAPS_ICHAT,
 	 {0x09, 0x46, 0x00, 0x00, 0x4c, 0x7f, 0x11, 0xd1, 
 	  0x82, 0x22, 0x44, 0x45, 0x53, 0x54, 0x00, 0x00}},
-	
+
 	{AIM_CAPS_LAST}
 };
 
@@ -614,8 +622,10 @@ static int userinfo(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, aim
 {
 	aim_userinfo_t userinfo;
 	char *text_encoding = NULL, *text = NULL;
+	guint16 text_length = 0;
 	aim_rxcallback_t userfunc;
 	aim_tlvlist_t *tlvlist;
+	aim_tlv_t *tlv;
 	aim_snac_t *origsnac = NULL;
 	struct aim_priv_inforeq *inforeq;
 	int ret = 0;
@@ -649,10 +659,18 @@ static int userinfo(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, aim
 	 */
 	if (inforeq->infotype == AIM_GETINFO_GENERALINFO) {
 		text_encoding = aim_gettlv_str(tlvlist, 0x0001, 1);
-		text = aim_gettlv_str(tlvlist, 0x0002, 1);
+		if((tlv = aim_gettlv(tlvlist, 0x0002, 1))) {
+			text = g_new0(char, tlv->length);
+			memcpy(text, tlv->value, tlv->length);
+			text_length = tlv->length;
+		}
 	} else if (inforeq->infotype == AIM_GETINFO_AWAYMESSAGE) {
 		text_encoding = aim_gettlv_str(tlvlist, 0x0003, 1);
-		text = aim_gettlv_str(tlvlist, 0x0004, 1);
+		if((tlv = aim_gettlv(tlvlist, 0x0004, 1))) {
+			text = g_new0(char, tlv->length);
+			memcpy(text, tlv->value, tlv->length);
+			text_length = tlv->length;
+		}
 	} else if (inforeq->infotype == AIM_GETINFO_CAPABILITIES) {
 		aim_tlv_t *ct;
 
@@ -667,7 +685,7 @@ static int userinfo(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, aim
 	}
 
 	if ((userfunc = aim_callhandler(sess, rx->conn, snac->family, snac->subtype)))
-		ret = userfunc(sess, rx, &userinfo, inforeq->infotype, text_encoding, text);
+		ret = userfunc(sess, rx, &userinfo, inforeq->infotype, text_encoding, text, text_length);
 
 	g_free(text_encoding);
 	g_free(text);

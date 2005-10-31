@@ -120,12 +120,12 @@ irc_t *irc_new( int fd )
 	set_add( irc, "default_target", "root", NULL );
 	set_add( irc, "display_namechanges", "false", set_eval_bool );
 	set_add( irc, "handle_unknown", "root", NULL );
-	set_add( irc, "html", "nostrip", NULL );
+	/* set_add( irc, "html", "nostrip", NULL ); */
 	set_add( irc, "lcnicks", "true", set_eval_bool );
 	set_add( irc, "ops", "both", set_eval_ops );
 	set_add( irc, "private", "true", set_eval_bool );
 	set_add( irc, "query_order", "lifo", NULL );
-	set_add( irc, "save_on_quit", "1", set_eval_bool );
+	set_add( irc, "save_on_quit", "true", set_eval_bool );
 	set_add( irc, "to_char", ": ", set_eval_to_char );
 	set_add( irc, "typing_notice", "false", set_eval_bool );
 	
@@ -289,7 +289,8 @@ int irc_process( irc_t *irc )
 	return 1;	
 }
 
-char **irc_tokenize( char *buffer ) {
+char **irc_tokenize( char *buffer )
+{
 	int i, j;
 	char **lines;
 
@@ -462,7 +463,11 @@ int irc_exec( irc_t *irc, char **cmd )
 		return( 1 );
 	}
 	
-	if( !irc->user || !irc->nick ) return( 1 );
+	if( !irc->user || !irc->nick )
+	{
+		irc_reply( irc, 451, ":Register first" );
+		return( 1 );
+	}
 	
 	if( g_strcasecmp( cmd[0], "PING" ) == 0 )
 	{
@@ -576,13 +581,21 @@ int irc_exec( irc_t *irc, char **cmd )
 		else
 			irc_reply( irc, 461, "%s :Need more parameters", cmd[0] );
 	}
-	else if( g_strcasecmp( cmd[0], "PRIVMSG" ) == 0 )
+	else if( g_strcasecmp( cmd[0], "PRIVMSG" ) == 0 || g_strcasecmp( cmd[0], "NOTICE" ) == 0 )
 	{
-		if( !( cmd[1] && cmd[2] ) )
+		if( !cmd[1] )
 		{
 			irc_reply( irc, 461, "%s :Need more parameters", cmd[0] );
+		} 
+		else if ( !cmd[2] ) 
+		{
+			irc_reply( irc, 412, ":No text to send" );
 		}
-		else
+		else if ( irc->nick && g_strcasecmp( cmd[1], irc->nick ) == 0 ) 
+		{
+			irc_write( irc, "PRIVMSG %s :%s", cmd[1], cmd[2] ); 
+		}
+		else 
 		{
 			if( g_strcasecmp( cmd[1], irc->channel ) == 0 )
 			{
@@ -620,7 +633,7 @@ int irc_exec( irc_t *irc, char **cmd )
 			{
 				irc->is_private = 1;
 			}
-			irc_send( irc, cmd[1], cmd[2] );
+			irc_send( irc, cmd[1], cmd[2], (g_strcasecmp( cmd[0], "NOTICE") == 0) ? IM_FLAG_AWAY : 0 );
 		}
 	}
 	else if( g_strcasecmp( cmd[0], "QUIT" ) == 0 )
@@ -635,12 +648,17 @@ int irc_exec( irc_t *irc, char **cmd )
 	}
 	else if( g_strcasecmp( cmd[0], "USERHOST" ) == 0 )
 	{
+		user_t *u;
+		
+		if( !cmd[1] )
+		{
+			irc_reply( irc, 461, "%s :Need more parameters", cmd[0] );
+		}
 		/* [TV] Usable USERHOST-implementation according to
 			RFC1459. Without this, mIRC shows an error
 			while connecting, and the used way of rejecting
 			breaks standards.
 		*/
-		user_t *u;
 		
 		for( i = 1; cmd[i]; i ++ )
 			if( ( u = user_find( irc, cmd[i] ) ) )
@@ -1289,7 +1307,7 @@ void irc_invite( irc_t *irc, char *nick, char *channel )
 	irc_reply( irc, 482, "%s :Invite impossible; User/Channel non-existent or incompatible", channel );
 }
 
-int irc_send( irc_t *irc, char *nick, char *s )
+int irc_send( irc_t *irc, char *nick, char *s, int flags )
 {
 	struct conversation *c = NULL;
 	user_t *u = NULL;
@@ -1377,7 +1395,7 @@ int irc_send( irc_t *irc, char *nick, char *s )
 		}
 		
 		if( u->send_handler )
-			return( u->send_handler( irc, u, s ) );
+			return( u->send_handler( irc, u, s, flags ) );
 	}
 	else if( c && c->gc && c->gc->prpl )
 	{
@@ -1392,27 +1410,36 @@ gboolean buddy_send_handler_delayed( gpointer data )
 	user_t *u = data;
 	
 	u->sendbuf[u->sendbuf_len-2] = 0; /* Cut off the last newline */
-	serv_send_im( u->gc->irc, u, u->sendbuf );
+	serv_send_im( u->gc->irc, u, u->sendbuf, u->sendbuf_flags );
 	
 	g_free( u->sendbuf );
 	u->sendbuf = NULL;
 	u->sendbuf_len = 0;
 	u->sendbuf_timer = 0;
+	u->sendbuf_flags = 0;
 	
 	return( FALSE );
 }
 
-int buddy_send_handler( irc_t *irc, user_t *u, char *msg )
+int buddy_send_handler( irc_t *irc, user_t *u, char *msg, int flags )
 {
 	if( !u || !u->gc ) return( 0 );
 	
 	if( set_getint( irc, "buddy_sendbuffer" ) && set_getint( irc, "buddy_sendbuffer_delay" ) > 0 )
 	{
+		if( u->sendbuf_len > 0 && u->sendbuf_flags != flags)
+		{
+			//Flush the buffer
+			g_source_remove( u->sendbuf_timer );
+			buddy_send_handler_delayed( u );
+		}
+
 		if( u->sendbuf_len == 0 )
 		{
 			u->sendbuf_len = strlen( msg ) + 2;
 			u->sendbuf = g_new (char, u->sendbuf_len );
 			u->sendbuf[0] = 0;
+			u->sendbuf_flags = flags;
 		}
 		else
 		{
@@ -1432,7 +1459,7 @@ int buddy_send_handler( irc_t *irc, user_t *u, char *msg )
 	}
 	else
 	{
-		return( serv_send_im( irc, u, msg ) );
+		return( serv_send_im( irc, u, msg, flags ) );
 	}
 }
 

@@ -150,7 +150,7 @@ int aim_request_login(aim_session_t *sess, aim_conn_t *conn, const char *sn)
  */
 static int goddamnicq2(aim_session_t *sess, aim_conn_t *conn, const char *sn, const char *password)
 {
-	static const char clientstr[] = {"ICQ Inc. - Product of ICQ (TM) 2000b.4.65.1.3281.85"};
+	static const char clientstr[] = {"ICQ Inc. - Product of ICQ (TM) 2001b.5.17.1.3642.85"};
 	static const char lang[] = {"en"};
 	static const char country[] = {"us"};
 	aim_frame_t *fr;
@@ -172,10 +172,10 @@ static int goddamnicq2(aim_session_t *sess, aim_conn_t *conn, const char *sn, co
 	aim_addtlvtochain_raw(&tl, 0x0002, strlen(password), password_encoded);
 	aim_addtlvtochain_raw(&tl, 0x0003, strlen(clientstr), (guint8 *)clientstr);
 	aim_addtlvtochain16(&tl, 0x0016, 0x010a); /* cliend ID */
-	aim_addtlvtochain16(&tl, 0x0017, 0x0004); /* major version */
-	aim_addtlvtochain16(&tl, 0x0018, 0x0041); /* minor version */
+	aim_addtlvtochain16(&tl, 0x0017, 0x0005); /* major version */
+	aim_addtlvtochain16(&tl, 0x0018, 0x0011); /* minor version */
 	aim_addtlvtochain16(&tl, 0x0019, 0x0001); /* point version */
-	aim_addtlvtochain16(&tl, 0x001a, 0x0cd1); /* build */
+	aim_addtlvtochain16(&tl, 0x001a, 0x0e3a); /* build */
 	aim_addtlvtochain32(&tl, 0x0014, 0x00000055); /* distribution chan */
 	aim_addtlvtochain_raw(&tl, 0x000f, strlen(lang), (guint8 *)lang);
 	aim_addtlvtochain_raw(&tl, 0x000e, strlen(country), (guint8 *)country);

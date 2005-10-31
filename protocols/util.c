@@ -280,8 +280,7 @@ static htmlentity_t ent[] =
 	{ "lt",     '<' },
 	{ "gt",     '>' },
 	{ "amp",    '&' },
-	{ "quot",  '\'' },
-	{ "dquot",  '"' },
+	{ "quot",   '"' },
 	{ "aacute", 'á' },
 	{ "eacute", 'é' },
 	{ "iacute", 'é' },
@@ -325,6 +324,8 @@ void strip_html( char *in )
 			
 			if( *in )
 			{
+				if( g_strncasecmp( cs+1, "br", 2) == 0 )
+					*(s++) = '\n';
 				in ++;
 			}
 			else
@@ -365,7 +366,47 @@ void strip_html( char *in )
 	
 	strcpy( start, out );
 	g_free( out );
-} 
+}
+
+char *escape_html( const char *html )
+{
+	const char *c = html;
+	GString *ret;
+	char *str;
+	
+	if( html == NULL )
+		return( NULL );
+	if( g_strncasecmp( html, "<html>", 6 ) == 0 )
+		return( g_strdup( html ) );
+	
+	ret = g_string_new( "" );
+	
+	while( *c )
+	{
+		switch( *c )
+		{
+			case '&':
+				ret = g_string_append( ret, "&amp;" );
+				break;
+			case '<':
+				ret = g_string_append( ret, "&lt;" );
+				break;
+			case '>':
+				ret = g_string_append( ret, "&gt;" );
+				break;
+			case '"':
+				ret = g_string_append( ret, "&quot;" );
+				break;
+			default:
+				ret = g_string_append_c( ret, *c );
+		}
+		c ++;
+	}
+	
+	str = ret->str;
+	g_string_free( ret, FALSE );
+	return( str );
+}
 
 void info_string_append(GString *str, char *newline, char *name, char *value)
 {

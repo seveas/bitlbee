@@ -565,16 +565,27 @@ static void gjab_start(gjconn gjc)
 {
 	struct aim_user *user;
 	int port = -1, ssl = 0;
+	char *server = NULL, *s;
 
 	if (!gjc || gjc->state != JCONN_STATE_OFF)
 		return;
 
 	user = GJ_GC(gjc)->user;
 	if (*user->proto_opt[0]) {
-		if (isdigit(user->proto_opt[0][0]))
-			sscanf(user->proto_opt[0], "%d", &port);
+		/* If there's a dot, assume there's a hostname in the beginning */
+		if (strchr(user->proto_opt[0], '.')) {
+			server = g_strdup(user->proto_opt[0]);
+			if ((s = strchr(server, ':')))
+				*s = 0;
+		}
 		
-		if (strstr(user->proto_opt[0], "ssl"))
+		/* After the hostname, there can be a port number */
+		s = strchr(user->proto_opt[0], ':');
+		if (s && isdigit(s[1]))
+			sscanf(s + 1, "%d", &port);
+		
+		/* And if there's the string ssl, the user wants an SSL-connection */
+		if (strstr(user->proto_opt[0], ":ssl") || g_strcasecmp(user->proto_opt[0], "ssl") == 0)
 			ssl = 1;
 	}
 	
@@ -582,6 +593,9 @@ static void gjab_start(gjconn gjc)
 		port = DEFAULT_PORT;
 	else if (port == -1 && ssl)
 		port = DEFAULT_PORT_SSL;
+	
+	if (server == NULL)
+		server = g_strdup(gjc->user->server);
 
 	gjc->parser = XML_ParserCreate(NULL);
 	XML_SetUserData(gjc->parser, (void *)gjc);
@@ -589,13 +603,15 @@ static void gjab_start(gjconn gjc)
 	XML_SetCharacterDataHandler(gjc->parser, charData);
 	
 	if (ssl) {
-		if ((gjc->ssl = ssl_connect(gjc->user->server, port, gjab_connected_ssl, GJ_GC(gjc))))
+		if ((gjc->ssl = ssl_connect(server, port, gjab_connected_ssl, GJ_GC(gjc))))
 			gjc->fd = ssl_getfd(gjc->ssl);
 		else
 			gjc->fd = -1;
 	} else {
-		gjc->fd = proxy_connect(gjc->user->server, port, gjab_connected, GJ_GC(gjc));
+		gjc->fd = proxy_connect(server, port, gjab_connected, GJ_GC(gjc));
 	}
+	
+	g_free(server);
 	
 	if (!user->gc || (gjc->fd < 0)) {
 		STATE_EVT(JCONN_STATE_OFF)
@@ -1303,7 +1319,7 @@ static void jabber_handleauthresp(gjconn gjc, jpacket p)
 			errmsg = xmlnode_get_data(xerr);
 			if (xmlnode_get_attrib(xerr, "code")) {
 				errcode = atoi(xmlnode_get_attrib(xerr, "code"));
-				g_snprintf(msg, sizeof(msg), "Error %d: %s", errcode, errmsg);
+				g_snprintf(msg, sizeof(msg), "Error %d: %s", errcode, errmsg ? errmsg : "Unknown error");
 			} else
 				g_snprintf(msg, sizeof(msg), "%s", errmsg);
 			hide_login_progress(GJ_GC(gjc), msg);

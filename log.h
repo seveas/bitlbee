@@ -56,6 +56,4 @@ void log_link(int level, int output);
 void log_message(int level, char *message, ...);
 void log_error(char *functionname);
 
-char *my_vasprintf(const char *fmt, va_list ap);
-
 #endif

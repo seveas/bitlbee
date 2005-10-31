@@ -8,6 +8,7 @@
  */
 
 #include <aim.h>
+#include "chatnav.h"
 
 /*
  * conn must be a chatnav connection!

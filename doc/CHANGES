@@ -1,3 +1,24 @@
+Version 0.93:
+- &quot; is now correctly converted to " instead of '.
+- Code cleanup in OSCAR module.
+- Some changes for better RFC-compliancy.
+- It's now possible to specify an alternate Jabber server.
+- bitlbee_save() now also checks the return value of fclose(), which might
+  solve more problems with lost account data.
+- Fixed a file descriptor leak in bitlbee.c.
+- Signedness fixes (mainly to keep GCC4 happy).
+- Away messages are now sent correctly to most ICQ clients.
+- BitlBee knows now which connection sends HTML, so it will strip HTML
+  automatically, "set html strip" is no longer necessary. Also, outgoing HTML
+  is escaped correctly.
+- info-command works for AIM-connections too now.
+- /notices to users will be sent as auto-away replies.
+- Messages about a connection now also mention a handle, for people who have
+  multiple accounts in use of the same protocol.
+- Examples are back in help.txt.
+
+Finished 31 Oct 2005
+
 Version 0.92:
 - Fixed some formatting issues with the help.txt XSL-sheet.
 - Moved the polling of the IRC connections to glib instead of a separate

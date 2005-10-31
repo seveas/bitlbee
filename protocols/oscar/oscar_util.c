@@ -7,7 +7,7 @@
 #include <aim.h>
 #include <ctype.h>
 
-faim_shortfunc int aimutil_putstr(u_char *dest, const char *src, int len)
+int aimutil_putstr(u_char *dest, const char *src, int len)
 {
 	memcpy(dest, src, len);
 	return len;

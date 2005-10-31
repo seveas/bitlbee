@@ -4,64 +4,10 @@
 	(C) 2004 Jelmer Vernooij
 -->
 <xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
-	xmlns:exsl="http://exslt.org/common"
-	version="1.1"
-	extension-element-prefixes="exsl">
+	version="1.1">
 
 	<xsl:output method="text" encoding="iso-8859-1" standalone="yes"/>
 	<xsl:strip-space elements="*"/>
-
-	<xsl:template name="format">
-		<xsl:param name="txt" /> 
-		<xsl:param name="width" /> 
-
-		<xsl:if test="$txt">
-			<xsl:variable name="real-width">
-				<xsl:call-template name="tune-width">
-					<xsl:with-param select="$txt" name="txt" /> 
-					<xsl:with-param select="$width" name="width" /> 
-					<xsl:with-param select="$width" name="def" /> 
-				</xsl:call-template>
-			</xsl:variable>
-
-			<xsl:value-of select="substring($txt, 1, $real-width)" /> 
-
-			<xsl:text>
-			</xsl:text> 
-
-			<xsl:call-template name="format">
-				<xsl:with-param select="substring($txt,$real-width + 1)" name="txt" /> 
-				<xsl:with-param select="$width" name="width" /> 
-			</xsl:call-template>
-
-		</xsl:if>
-	</xsl:template>
-
-	<xsl:template name="tune-width">
-		<xsl:param name="txt" /> 
-		<xsl:param name="width" /> 
-		<xsl:param name="def" /> 
-
-		<xsl:choose>
-			<xsl:when test="$width = 0">
-				<xsl:value-of select="$def" /> 
-			</xsl:when>
-			<xsl:otherwise>
-				<xsl:choose>
-					<xsl:when test="substring($txt, $width, 1 ) = ' '">
-						<xsl:value-of select="$width" /> 
-					</xsl:when>
-					<xsl:otherwise>
-						<xsl:call-template name="tune-width">
-							<xsl:with-param select="$txt" name="txt" /> 
-							<xsl:with-param select="$width - 1" name="width" /> 
-							<xsl:with-param select="$def" name="def" /> 
-						</xsl:call-template>
-					</xsl:otherwise>
-				</xsl:choose>
-			</xsl:otherwise>
-		</xsl:choose>
-	</xsl:template>
 
 	<xsl:template match="text()">
 		<xsl:if test="starts-with(.,' ') and preceding-sibling::* and
@@ -81,19 +27,13 @@
 		<xsl:if test="$extraparanewline = '1'">
 			<xsl:text>&#10;</xsl:text>
 		</xsl:if>
-		<!--		<xsl:call-template name="format">
-			<xsl:with-param select="normalize-space(.)" name="txt"/>
-			<xsl:with-param name="width">74</xsl:with-param>
-		</xsl:call-template>-->
-		<!-- FIXME: Process line data -->
-		<!--		<xsl:apply-templates/>-->
 	</xsl:template>
 
 	<xsl:template name="subject">
 		<xsl:message><xsl:text>Processing: </xsl:text><xsl:value-of select="$id"/></xsl:message>
 		<xsl:text>?</xsl:text><xsl:value-of select="$id"/><xsl:text>&#10;</xsl:text>
 
-		<xsl:for-each select="para|variablelist|simplelist|command-list">
+		<xsl:for-each select="para|variablelist|simplelist|command-list|ircexample">
 			<xsl:if test="title != ''">
 				<xsl:value-of select="title"/><xsl:text>&#10;</xsl:text>
 			</xsl:if>
@@ -162,16 +102,15 @@
 	</xsl:template>
 
 	<xsl:template match="ircline">
-		<xsl:text>&lt; </xsl:text><xsl:value-of select="@nick"/><xsl:text>&gt; </xsl:text><xsl:value-of select="."/><xsl:text>&#10;</xsl:text>
+		<xsl:text>_b_&lt;_b_ </xsl:text><xsl:value-of select="@nick"/><xsl:text>_b_&gt;_b_ </xsl:text><xsl:value-of select="."/><xsl:text>&#10;</xsl:text>
 	</xsl:template>
 
 	<xsl:template match="ircaction">
-		<xsl:text> * </xsl:text><xsl:value-of select="@nick"/><xsl:text> </xsl:text><xsl:value-of select="."/><xsl:text>&#10;</xsl:text>
+		<xsl:text> _b_* </xsl:text><xsl:value-of select="@nick"/><xsl:text>_b_ </xsl:text><xsl:value-of select="."/><xsl:text>&#10;</xsl:text>
 	</xsl:template>
 
-
 	<xsl:template match="ircexample">
-		<xsl:apply-templates/>	
+		<xsl:apply-templates/>
 	</xsl:template>
 
 	<xsl:template name="cmd">

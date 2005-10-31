@@ -45,7 +45,6 @@ int chat_modfirst(aim_session_t *sess, aim_module_t *mod);
 int locate_modfirst(aim_session_t *sess, aim_module_t *mod);
 int general_modfirst(aim_session_t *sess, aim_module_t *mod);
 int ssi_modfirst(aim_session_t *sess, aim_module_t *mod);
-int popups_modfirst(aim_session_t *sess, aim_module_t *mod);
 int icq_modfirst(aim_session_t *sess, aim_module_t *mod);
 
 int aim_genericreq_n(aim_session_t *, aim_conn_t *conn, guint16 family, guint16 subtype);
@@ -151,7 +150,6 @@ struct snacgroup {
 	struct snacgroup *next;
 };
 
-#ifdef FAIM_NEED_CONN_INTERNAL
 struct snacpair {
 	guint16 group;
 	guint16 subtype;
@@ -171,7 +169,6 @@ struct rateclass {
 	struct snacpair *members;
 	struct rateclass *next;
 };
-#endif /* FAIM_NEED_CONN_INTERNAL */
 
 /*
  * This is inside every connection.  But it is a void * to anything

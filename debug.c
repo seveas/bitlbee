@@ -23,6 +23,7 @@
   Suite 330, Boston, MA  02111-1307  USA
 */
 
+#define BITLBEE_CORE
 #include "bitlbee.h"
 
 GHashTable *iocounter=NULL;

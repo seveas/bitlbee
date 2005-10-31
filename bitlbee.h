@@ -29,7 +29,7 @@
 #define _GNU_SOURCE /* Stupid GNU :-P */
 
 #define PACKAGE "BitlBee"
-#define BITLBEE_VERSION "0.92"
+#define BITLBEE_VERSION "1.0pre"
 #define VERSION BITLBEE_VERSION
 
 #define MAX_STRING 128
@@ -72,6 +72,10 @@
 #define strcasecmp	__PLEASE_USE_G_STRCASECMP_INSTEAD__
 #undef strncasecmp
 #define strncasecmp	__PLEASE_USE_G_STRNCASECMP_INSTEAD__
+
+#ifndef F_OK
+#define F_OK 0
+#endif
 
 #define _( x ) x
 
@@ -119,7 +123,7 @@ int bitlbee_inetd_init( void );
 gboolean bitlbee_io_current_client_read( GIOChannel *source, GIOCondition condition, gpointer data );
 gboolean bitlbee_io_current_client_write( GIOChannel *source, GIOCondition condition, gpointer data );
 
-int root_command_string( irc_t *irc, user_t *u, char *command );
+int root_command_string( irc_t *irc, user_t *u, char *command, int flags );
 int root_command( irc_t *irc, char *command[] );
 int bitlbee_load( irc_t *irc, char *password );
 int bitlbee_save( irc_t *irc );

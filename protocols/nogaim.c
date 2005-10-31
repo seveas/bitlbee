@@ -253,19 +253,19 @@ void destroy_gaim_conn( struct gaim_connection *gc )
 
 void set_login_progress( struct gaim_connection *gc, int step, char *msg )
 {
-	irc_usermsg( gc->irc, "%s - Logging in: %s", proto_name[gc->protocol], msg );
+	irc_usermsg( gc->irc, "%s(%s) - Logging in: %s", proto_name[gc->protocol], gc->username, msg );
 }
 
 /* Errors *while* logging in */
 void hide_login_progress( struct gaim_connection *gc, char *msg )
 {
-	irc_usermsg( gc->irc, "%s - Login error: %s", proto_name[gc->protocol], msg );
+	irc_usermsg( gc->irc, "%s(%s) - Login error: %s", proto_name[gc->protocol], gc->username, msg );
 }
 
 /* Errors *after* logging in */
 void hide_login_progress_error( struct gaim_connection *gc, char *msg )
 {
-	irc_usermsg( gc->irc, "%s - Logged out: %s", proto_name[gc->protocol], msg );
+	irc_usermsg( gc->irc, "%s(%s) - Logged out: %s", proto_name[gc->protocol], gc->username, msg );
 }
 
 void serv_got_crap( struct gaim_connection *gc, char *format, ... )
@@ -284,7 +284,11 @@ void serv_got_crap( struct gaim_connection *gc, char *format, ... )
 	else
 		msg = text;
 	
-	irc_usermsg( gc->irc, "%s - %s", proto_name[gc->protocol], msg );
+	/* if( g_strcasecmp( set_getstr(gc->irc, "html" ), "strip" ) == 0 ) */
+	if( gc->flags & OPT_CONN_HTML )
+		strip_html( msg );
+	
+	irc_usermsg( gc->irc, "%s(%s) - %s", proto_name[gc->protocol], gc->username, msg );
 }
 
 static gboolean send_keepalive( gpointer d )
@@ -309,7 +313,7 @@ void account_online( struct gaim_connection *gc )
 	
 	u = user_find( gc->irc, gc->irc->nick );
 	
-	irc_usermsg( gc->irc, "%s - Logged in", proto_name[gc->protocol] );
+	irc_usermsg( gc->irc, "%s(%s) - Logged in", proto_name[gc->protocol], gc->username );
 	
 	gc->keepalive = g_timeout_add( 60000, send_keepalive, gc );
 	gc->flags |= OPT_LOGGED_IN;
@@ -356,7 +360,7 @@ void signoff( struct gaim_connection *gc )
 	user_t *t, *u = irc->users;
 	account_t *a;
 	
-	irc_usermsg( gc->irc, "%s - Signing off..", proto_name[gc->protocol] );
+	irc_usermsg( gc->irc, "%s(%s) - Signing off..", proto_name[gc->protocol], gc->username );
 
 	gaim_input_remove( gc->keepalive );
 	gc->keepalive = 0;
@@ -388,7 +392,7 @@ void signoff( struct gaim_connection *gc )
 	else if( !gc->wants_to_die && set_getint( irc, "auto_reconnect" ) )
 	{
 		int delay = set_getint( irc, "auto_reconnect_delay" );
-		irc_usermsg( gc->irc, "%s - Reconnecting in %d seconds..", proto_name[gc->protocol], delay);
+		irc_usermsg( gc->irc, "%s(%s) - Reconnecting in %d seconds..", proto_name[gc->protocol], gc->username, delay);
 		
 		a->reconnect = 1;
 		g_timeout_add( delay * 1000, auto_reconnect, a );
@@ -402,7 +406,7 @@ void signoff( struct gaim_connection *gc )
 
 void do_error_dialog( struct gaim_connection *gc, char *msg, char *title )
 {
-	irc_usermsg( gc->irc, "%s - Error: %s", title, msg );
+	irc_usermsg( gc->irc, "%s(%s) - Error: %s", gc->username, title, msg );
 }
 
 void do_ask_dialog( struct gaim_connection *gc, char *msg, void *data, void *doit, void *dont )
@@ -562,7 +566,7 @@ void serv_got_update( struct gaim_connection *gc, char *handle, int loggedin, in
 		{
 			if( set_getint( gc->irc, "debug" ) || g_strcasecmp( set_getstr( gc->irc, "handle_unknown" ), "ignore" ) != 0 )
 			{
-				irc_usermsg( gc->irc, "serv_got_update() for unknown %s handle %s:", proto_name[gc->protocol], handle );
+				irc_usermsg( gc->irc, "serv_got_update() for handle %s on connection %s(%s):", handle, proto_name[gc->protocol], gc->username );
 				irc_usermsg( gc->irc, "loggedin = %d, type = %d", loggedin, type );
 			}
 			
@@ -643,7 +647,7 @@ void serv_got_im( struct gaim_connection *gc, char *handle, char *msg, guint32 f
 		if( g_strcasecmp( h, "ignore" ) == 0 )
 		{
 			if( set_getint( irc, "debug" ) )
-				irc_usermsg( irc, "Ignoring message from unknown %s handle %s", proto_name[gc->protocol], handle );
+				irc_usermsg( irc, "Ignoring message from unknown handle %s on connection %s(%s)", handle, proto_name[gc->protocol], gc->username );
 			
 			return;
 		}
@@ -665,12 +669,13 @@ void serv_got_im( struct gaim_connection *gc, char *handle, char *msg, guint32 f
 		}
 		else
 		{
-			irc_usermsg( irc, "Message from unknown %s handle %s:", proto_name[gc->protocol], handle );
+			irc_usermsg( irc, "Message from unknown handle %s on connection %s(%s):", handle, proto_name[gc->protocol], gc->username );
 			u = user_find( irc, irc->mynick );
 		}
 	}
 	
-	if( g_strcasecmp( set_getstr( irc, "html" ), "strip" ) == 0 )
+	/* if( g_strcasecmp( set_getstr( irc, "html" ), "strip" ) == 0 ) */
+	if( gc->flags & OPT_CONN_HTML )
 		strip_html( msg );
 
 	if( g_strncasecmp( set_getstr( irc, "charset" ), "none", 4 ) != 0 &&
@@ -769,7 +774,8 @@ void serv_got_chat_in( struct gaim_connection *gc, int id, char *who, int whispe
 	u = user_findhandle( gc, who );
 	for( c = gc->conversations; c && c->id != id; c = c->next );
 	
-	if( g_strcasecmp( set_getstr( gc->irc, "html" ), "strip" ) == 0 )
+	/* if( g_strcasecmp( set_getstr( gc->irc, "html" ), "strip" ) == 0 ) */
+	if( gc->flags & OPT_CONN_HTML )
 		strip_html( msg );
 	
 	if( g_strncasecmp( set_getstr( gc->irc, "charset" ), "none", 4 ) != 0 &&
@@ -829,7 +835,7 @@ void add_chat_buddy( struct conversation *b, char *handle )
 		irc_usermsg( b->gc->irc, "User %s added to conversation %d", handle, b->id );
 	
 	/* It might be yourself! */
-	if( g_strcasecmp( handle, b->gc->user->username ) == 0 )
+	if( handle_cmp ( handle, b->gc->user->username, b->gc->protocol ) == 0 )
 	{
 		u = user_find( b->gc->irc, b->gc->irc->nick );
 		if( !b->joined )
@@ -993,15 +999,21 @@ char *set_eval_away_devoice( irc_t *irc, set_t *set, char *value )
 	return( set_eval_bool( irc, set, value ) );
 }
 
-int serv_send_im( irc_t *irc, user_t *u, char *msg )
+int serv_send_im( irc_t *irc, user_t *u, char *msg, int flags )
 {
 	char buf[8192];
 	
 	if( g_strncasecmp( set_getstr( irc, "charset" ), "none", 4 ) != 0 &&
 	    do_iconv( set_getstr( irc, "charset" ), "UTF-8", msg, buf, 0, 8192 ) != -1 )
 		msg = buf;
+
+	if( u->gc->flags & OPT_CONN_HTML) {
+		char * html = escape_html(msg);
+		strncpy(buf, html, 8192);
+		g_free(html);
+	}
 	
-	return( ((struct gaim_connection *)u->gc)->prpl->send_im( u->gc, u->handle, msg, strlen( msg ), 0 ) );
+	return( ((struct gaim_connection *)u->gc)->prpl->send_im( u->gc, u->handle, msg, strlen( msg ), flags ) );
 }
 
 int serv_send_chat( irc_t *irc, struct gaim_connection *gc, int id, char *msg )
@@ -1011,6 +1023,12 @@ int serv_send_chat( irc_t *irc, struct gaim_connection *gc, int id, char *msg )
 	if( g_strncasecmp( set_getstr( irc, "charset" ), "none", 4 ) != 0 &&
 	    do_iconv( set_getstr( irc, "charset" ), "UTF-8", msg, buf, 0, 8192 ) != -1 )
 		msg = buf;
+
+	if( gc->flags & OPT_CONN_HTML) {
+		char * html = escape_html(msg);
+		strncpy(buf, html, 8192);
+		g_free(html);
+	}
 	
 	return( gc->prpl->chat_send( gc, id, msg ) );
 }

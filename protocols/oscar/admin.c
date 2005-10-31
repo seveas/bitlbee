@@ -1,4 +1,5 @@
 #include <aim.h>
+#include "admin.h"
 
 /* called for both reply and change-reply */
 static int infochange(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, aim_modsnac_t *snac, aim_bstream_t *bs)
@@ -74,7 +75,7 @@ static int snachandler(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, 
 int admin_modfirst(aim_session_t *sess, aim_module_t *mod)
 {
 
-	mod->family = 0x0007;
+	mod->family = AIM_CB_FAM_ADM;
 	mod->version = 0x0001;
 	mod->toolid = AIM_TOOL_NEWWIN;
 	mod->toolversion = 0x0629; 

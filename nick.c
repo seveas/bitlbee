@@ -190,7 +190,7 @@ int nick_ok( char *nick )
 	return( 1 );
 }
 
-int nick_lc( unsigned char *nick )
+int nick_lc( char *nick )
 {
 	static char tab[256] = { 0 };
 	int i;
@@ -213,7 +213,7 @@ int nick_lc( unsigned char *nick )
 	return( 1 );
 }
 
-int nick_uc( unsigned char *nick )
+int nick_uc( char *nick )
 {
 	static char tab[128] = { 0 };
 	int i;

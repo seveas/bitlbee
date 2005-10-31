@@ -2,13 +2,7 @@
 
 static aim_tlv_t *createtlv(void)
 {
-	aim_tlv_t *newtlv;
-
-	if (!(newtlv = (aim_tlv_t *)g_malloc(sizeof(aim_tlv_t))))
-		return NULL;
-	memset(newtlv, 0, sizeof(aim_tlv_t));
-
-	return newtlv;
+	return g_new0(aim_tlv_t, 1);
 }
 
 static void freetlv(aim_tlv_t **oldtlv)
@@ -68,8 +62,7 @@ aim_tlvlist_t *aim_readtlvchain(aim_bstream_t *bs)
 #endif
 		else {
 
-			cur = (aim_tlvlist_t *)g_malloc(sizeof(aim_tlvlist_t));
-			memset(cur, 0, sizeof(aim_tlvlist_t));
+			cur = g_new0(aim_tlvlist_t, 1);
 
 			cur->tlv = createtlv();	
 			cur->tlv->type = type;
@@ -176,9 +169,8 @@ int aim_addtlvtochain_raw(aim_tlvlist_t **list, const guint16 t, const guint16 l
 	if (!list)
 		return 0;
 
-	if (!(newtlv = (aim_tlvlist_t *)g_malloc(sizeof(aim_tlvlist_t))))
+	if (!(newtlv = g_new0(aim_tlvlist_t, 1)))
 		return 0;
-	memset(newtlv, 0x00, sizeof(aim_tlvlist_t));
 
 	if (!(newtlv->tlv = createtlv())) {
 		g_free(newtlv);

@@ -33,8 +33,15 @@
 #include "bitlbee.h"
 #include "proxy.h"
 
-#define FAIM_NEED_TLV
 #include "aim.h"
+#include "icq.h"
+#include "bos.h"
+#include "ssi.h"
+#include "im.h"
+#include "info.h"
+#include "buddylist.h"
+#include "chat.h"
+#include "chatnav.h"
 
 /* constants to identify proto_opts */
 #define USEROPT_AUTH      0
@@ -54,7 +61,7 @@
 /* Don't know if support for UTF8 is really working. For now it's UTF16 here.
    static int gaim_caps = AIM_CAPS_UTF8; */
 
-static int gaim_caps = AIM_CAPS_INTEROP | AIM_CAPS_ICHAT;
+static int gaim_caps = AIM_CAPS_INTEROP | AIM_CAPS_ICHAT | AIM_CAPS_ICQSERVERRELAY;
 static guint8 gaim_features[] = {0x01, 0x01, 0x01, 0x02};
 
 struct oscar_data {
@@ -215,6 +222,7 @@ static int gaim_ssi_parselist    (aim_session_t *, aim_frame_t *, ...);
 static int gaim_ssi_parseack     (aim_session_t *, aim_frame_t *, ...);
 
 static int gaim_icqinfo          (aim_session_t *, aim_frame_t *, ...);
+static int gaim_parseaiminfo     (aim_session_t *, aim_frame_t *, ...);
 
 static char *msgerrreason[] = {
 	"Invalid error",
@@ -392,9 +400,9 @@ static void oscar_login(struct aim_user *user) {
 
 	conn->status |= AIM_CONN_STATUS_INPROGRESS;
 	conn->fd = proxy_connect(user->proto_opt[USEROPT_AUTH][0] ?
-					user->proto_opt[USEROPT_AUTH] : FAIM_LOGIN_SERVER,
+					user->proto_opt[USEROPT_AUTH] : AIM_DEFAULT_LOGIN_SERVER,
 				 user->proto_opt[USEROPT_AUTHPORT][0] ?
-					atoi(user->proto_opt[USEROPT_AUTHPORT]) : FAIM_LOGIN_PORT,
+					atoi(user->proto_opt[USEROPT_AUTHPORT]) : AIM_LOGIN_PORT,
 				 oscar_login_connect, gc);
 	if (conn->fd < 0) {
 		hide_login_progress(gc, _("Couldn't connect to host"));
@@ -479,7 +487,7 @@ static int gaim_parse_auth_resp(aim_session_t *sess, aim_frame_t *fr, ...) {
         struct oscar_data *od = gc->proto_data;
 	user = gc->user;
 	port = user->proto_opt[USEROPT_AUTHPORT][0] ?
-		atoi(user->proto_opt[USEROPT_AUTHPORT]) : FAIM_LOGIN_PORT,
+		atoi(user->proto_opt[USEROPT_AUTHPORT]) : AIM_LOGIN_PORT,
 
 	va_start(ap, fr);
 	info = va_arg(ap, struct aim_authresp_info *);
@@ -548,6 +556,7 @@ static int gaim_parse_auth_resp(aim_session_t *sess, aim_frame_t *fr, ...) {
 	aim_conn_addhandler(sess, bosconn, AIM_CB_FAM_SSI, AIM_CB_SSI_RIGHTSINFO, gaim_ssi_parserights, 0);
 	aim_conn_addhandler(sess, bosconn, AIM_CB_FAM_SSI, AIM_CB_SSI_LIST, gaim_ssi_parselist, 0);
 	aim_conn_addhandler(sess, bosconn, AIM_CB_FAM_SSI, AIM_CB_SSI_SRVACK, gaim_ssi_parseack, 0);
+	aim_conn_addhandler(sess, bosconn, AIM_CB_FAM_LOC, AIM_CB_LOC_USERINFO, gaim_parseaiminfo, 0);
 
 	((struct oscar_data *)gc->proto_data)->conn = bosconn;
 	for (i = 0; i < (int)strlen(info->bosip); i++) {
@@ -854,7 +863,7 @@ static int gaim_handle_redirect(aim_session_t *sess, aim_frame_t *fr, ...) {
 	int port;
 
 	port = user->proto_opt[USEROPT_AUTHPORT][0] ?
-		atoi(user->proto_opt[USEROPT_AUTHPORT]) : FAIM_LOGIN_PORT,
+		atoi(user->proto_opt[USEROPT_AUTHPORT]) : AIM_LOGIN_PORT,
 
 	va_start(ap, fr);
 	redir = va_arg(ap, struct aim_redirect_data *);
@@ -1200,7 +1209,11 @@ static int incomingim_chan4(aim_session_t *sess, aim_conn_t *conn, aim_userinfo_
 
 	return 1;
 }
-
+/*
+int handle_cmp_aim(const char * a, const char * b) {
+	return handle_cmp(a, b, PROTO_TOC);
+}
+*/
 static int gaim_parse_incoming_im(aim_session_t *sess, aim_frame_t *fr, ...) {
 	int channel, ret = 0;
 	aim_userinfo_t *userinfo;
@@ -1209,6 +1222,10 @@ static int gaim_parse_incoming_im(aim_session_t *sess, aim_frame_t *fr, ...) {
 	va_start(ap, fr);
 	channel = va_arg(ap, int);
 	userinfo = va_arg(ap, aim_userinfo_t *);
+
+    if (set_getint(sess->aux_data, "debug")) {
+        serv_got_crap(sess->aux_data, "channel %i called", channel);
+    }
 
 	switch (channel) {
 		case 1: { /* standard message */
@@ -1366,6 +1383,7 @@ static int gaim_parse_locerr(aim_session_t *sess, aim_frame_t *fr, ...) {
 	sprintf(buf, _("User information for %s unavailable: %s"), destn,
 			(reason < msgerrreasonlen) ? msgerrreason[reason] : _("Reason unknown"));
 	do_error_dialog(sess->aux_data, buf, _("Gaim - Error"));
+
 
 	return 1;
 }
@@ -1869,11 +1887,10 @@ static void oscar_get_info(struct gaim_connection *g, char *name) {
 	struct oscar_data *odata = (struct oscar_data *)g->proto_data;
 	if (odata->icq)
 		aim_icq_getallinfo(odata->sess, name);
-	else
-		/* people want the away message on the top, so we get the away message
-		 * first and then get the regular info, since it's too difficult to
-		 * insert in the middle. i hate people. */
+	else {
 		aim_getinfo(odata->sess, odata->conn, name, AIM_GETINFO_AWAYMESSAGE);
+		aim_getinfo(odata->sess, odata->conn, name, AIM_GETINFO_GENERALINFO);
+	}
 }
 
 static void oscar_get_away(struct gaim_connection *g, char *who) {
@@ -1885,14 +1902,24 @@ static void oscar_get_away(struct gaim_connection *g, char *who) {
 				if (budlight->caps & AIM_CAPS_ICQSERVERRELAY)
 					aim_send_im_ch2_geticqmessage(odata->sess, who, (budlight->uc & 0xff80) >> 7);
 	} else
-		aim_getinfo(odata->sess, odata->conn, who, AIM_GETINFO_GENERALINFO);
+		aim_getinfo(odata->sess, odata->conn, who, AIM_GETINFO_AWAYMESSAGE);
 }
 
-static void oscar_set_away_aim(struct gaim_connection *gc, struct oscar_data *od, const char *message)
+static void oscar_set_away_aim(struct gaim_connection *gc, struct oscar_data *od, const char *state, const char *message)
 {
+
+	if (!g_strcasecmp(state, _("Visible"))) {
+		aim_setextstatus(od->sess, od->conn, AIM_ICQ_STATE_NORMAL);
+		return;
+	} else if (!g_strcasecmp(state, _("Invisible"))) {
+		aim_setextstatus(od->sess, od->conn, AIM_ICQ_STATE_INVISIBLE);
+		return;
+	} /* else... */
 
 	if (od->rights.maxawaymsglen == 0)
 		do_error_dialog(gc, "oscar_set_away_aim called before locate rights received", "Protocol Error");
+
+	aim_setextstatus(od->sess, od->conn, AIM_ICQ_STATE_NORMAL);
 
 	if (gc->away)
 		g_free(gc->away);
@@ -1921,36 +1948,56 @@ static void oscar_set_away_aim(struct gaim_connection *gc, struct oscar_data *od
 
 static void oscar_set_away_icq(struct gaim_connection *gc, struct oscar_data *od, const char *state, const char *message)
 {
+    const char *msg = NULL;
+	gboolean no_message = FALSE;
 
-	if (gc->away)
+	/* clean old states */
+    if (gc->away) {
+		g_free(gc->away);
 		gc->away = NULL;
+    }
+	od->sess->aim_icq_state = 0;
 
-	if (!g_strcasecmp(state, "Online"))
-		aim_setextstatus(od->sess, od->conn, AIM_ICQ_STATE_NORMAL, "");
-	else if (!g_strcasecmp(state, "Away")) {
-		aim_setextstatus(od->sess, od->conn, AIM_ICQ_STATE_AWAY, "");
-		gc->away = "";
+	/* if no message, then use an empty message */
+    if (message) {
+        msg = message;
+    } else {
+        msg = "";
+		no_message = TRUE;
+    }
+
+	if (!g_strcasecmp(state, "Online")) {
+		aim_setextstatus(od->sess, od->conn, AIM_ICQ_STATE_NORMAL);
+	} else if (!g_strcasecmp(state, "Away")) {
+		aim_setextstatus(od->sess, od->conn, AIM_ICQ_STATE_AWAY);
+        gc->away = g_strdup(msg);
+		od->sess->aim_icq_state = AIM_MTYPE_AUTOAWAY;
 	} else if (!g_strcasecmp(state, "Do Not Disturb")) {
-		aim_setextstatus(od->sess, od->conn, AIM_ICQ_STATE_AWAY | AIM_ICQ_STATE_DND | AIM_ICQ_STATE_BUSY, "");
-		gc->away = "";
+		aim_setextstatus(od->sess, od->conn, AIM_ICQ_STATE_AWAY | AIM_ICQ_STATE_DND | AIM_ICQ_STATE_BUSY);
+        gc->away = g_strdup(msg);
+		od->sess->aim_icq_state = AIM_MTYPE_AUTODND;
 	} else if (!g_strcasecmp(state, "Not Available")) {
-		aim_setextstatus(od->sess, od->conn, AIM_ICQ_STATE_OUT | AIM_ICQ_STATE_AWAY, "");
-		gc->away = "";
+		aim_setextstatus(od->sess, od->conn, AIM_ICQ_STATE_OUT | AIM_ICQ_STATE_AWAY);
+        gc->away = g_strdup(msg);
+		od->sess->aim_icq_state = AIM_MTYPE_AUTONA;
 	} else if (!g_strcasecmp(state, "Occupied")) {
-		aim_setextstatus(od->sess, od->conn, AIM_ICQ_STATE_AWAY | AIM_ICQ_STATE_BUSY, "");
-		gc->away = "";
+		aim_setextstatus(od->sess, od->conn, AIM_ICQ_STATE_AWAY | AIM_ICQ_STATE_BUSY);
+        gc->away = g_strdup(msg);
+		od->sess->aim_icq_state = AIM_MTYPE_AUTOBUSY;
 	} else if (!g_strcasecmp(state, "Free For Chat")) {
-		aim_setextstatus(od->sess, od->conn, AIM_ICQ_STATE_CHAT, "");
-		gc->away = "";
+		aim_setextstatus(od->sess, od->conn, AIM_ICQ_STATE_CHAT);
+        gc->away = g_strdup(msg);
+		od->sess->aim_icq_state = AIM_MTYPE_AUTOFFC;
 	} else if (!g_strcasecmp(state, "Invisible")) {
-		aim_setextstatus(od->sess, od->conn, AIM_ICQ_STATE_INVISIBLE, "");
-		gc->away = "";
+		aim_setextstatus(od->sess, od->conn, AIM_ICQ_STATE_INVISIBLE);
+        gc->away = g_strdup(msg);
 	} else if (!g_strcasecmp(state, GAIM_AWAY_CUSTOM)) {
-	 	if (message) {
-			aim_setextstatus(od->sess, od->conn, AIM_ICQ_STATE_OUT | AIM_ICQ_STATE_AWAY, "");
-			gc->away = "";
+	 	if (no_message) {
+			aim_setextstatus(od->sess, od->conn, AIM_ICQ_STATE_NORMAL);
 		} else {
-			aim_setextstatus(od->sess, od->conn, AIM_ICQ_STATE_NORMAL, "");
+			aim_setextstatus(od->sess, od->conn, AIM_ICQ_STATE_AWAY);
+            gc->away = g_strdup(msg);
+			od->sess->aim_icq_state = AIM_MTYPE_AUTOAWAY;
 		}
 	}
 
@@ -1961,10 +2008,9 @@ static void oscar_set_away(struct gaim_connection *gc, char *state, char *messag
 {
 	struct oscar_data *od = (struct oscar_data *)gc->proto_data;
 
+    oscar_set_away_aim(gc, od, state, message);
 	if (od->icq)
 		oscar_set_away_icq(gc, od, state, message);
-	else
-		oscar_set_away_aim(gc, od, message);
 
 	return;
 }
@@ -2284,6 +2330,112 @@ static int gaim_icqinfo(aim_session_t *sess, aim_frame_t *fr, ...)
 
         return 1;
 
+}
+
+static char *oscar_encoding_extract(const char *encoding)
+{
+	char *ret = NULL;
+	char *begin, *end;
+
+	g_return_val_if_fail(encoding != NULL, NULL);
+
+	/* Make sure encoding begins with charset= */
+	if (strncmp(encoding, "text/plain; charset=", 20) &&
+		strncmp(encoding, "text/aolrtf; charset=", 21) &&
+		strncmp(encoding, "text/x-aolrtf; charset=", 23))
+	{
+		return NULL;
+	}
+
+	begin = strchr(encoding, '"');
+	end = strrchr(encoding, '"');
+
+	if ((begin == NULL) || (end == NULL) || (begin >= end))
+		return NULL;
+
+	ret = g_strndup(begin+1, (end-1) - begin);
+
+	return ret;
+}
+
+static char *oscar_encoding_to_utf8(char *encoding, char *text, int textlen)
+{
+	char *utf8 = g_new0(char, 8192);
+
+	if ((encoding == NULL) || encoding[0] == '\0') {
+		/*		gaim_debug_info("oscar", "Empty encoding, assuming UTF-8\n");*/
+	} else if (!g_strcasecmp(encoding, "iso-8859-1")) {
+		do_iconv("iso-8859-1", "UTF-8", text, utf8, textlen, 8192);
+	} else if (!g_strcasecmp(encoding, "ISO-8859-1-Windows-3.1-Latin-1")) {
+		do_iconv("Windows-1252", "UTF-8", text, utf8, textlen, 8192);
+	} else if (!g_strcasecmp(encoding, "unicode-2-0")) {
+		do_iconv("UCS-2BE", "UTF-8", text, utf8, textlen, 8192);
+	} else if (g_strcasecmp(encoding, "us-ascii") && strcmp(encoding, "utf-8")) {
+		/*		gaim_debug_warning("oscar", "Unrecognized character encoding \"%s\", "
+		  "attempting to convert to UTF-8 anyway\n", encoding);*/
+		do_iconv(encoding, "UTF-8", text, utf8, textlen, 8192);
+	}
+
+	/*
+	 * If utf8 is still NULL then either the encoding is us-ascii/utf-8 or
+	 * we have been unable to convert the text to utf-8 from the encoding
+	 * that was specified.  So we assume it's UTF-8 and hope for the best.
+	 */
+	if (*utf8 == 0) {
+	    strncpy(utf8, text, textlen);
+	}
+
+	return utf8;
+}
+
+static int gaim_parseaiminfo(aim_session_t *sess, aim_frame_t *fr, ...)
+{
+	struct gaim_connection *gc = sess->aux_data;
+	va_list ap;
+	aim_userinfo_t *userinfo;
+	guint16 infotype;
+	char *text_encoding = NULL, *text = NULL, *extracted_encoding = NULL;
+	guint16 text_length;
+	char *utf8 = NULL;
+
+	va_start(ap, fr);
+	userinfo = va_arg(ap, aim_userinfo_t *);
+	infotype = va_arg(ap, int);
+	text_encoding = va_arg(ap, char*);
+	text = va_arg(ap, char*);
+	text_length = va_arg(ap, int);
+	va_end(ap);
+
+	if(text_encoding)
+		extracted_encoding = oscar_encoding_extract(text_encoding);
+	if(infotype == AIM_GETINFO_GENERALINFO) {
+		/*Display idle time*/
+		char buff[256];
+		struct tm idletime;
+		if(userinfo->idletime) {
+			memset(&idletime, 0, sizeof(struct tm));
+			idletime.tm_mday = (userinfo->idletime / 60) / 24;
+			idletime.tm_hour = (userinfo->idletime / 60) % 24;
+			idletime.tm_min = userinfo->idletime % 60;
+			idletime.tm_sec = 0;
+			strftime(buff, 256, _("%d days %H hours %M minutes"), &idletime);
+			serv_got_crap(gc, "%s: %s", _("Idle Time"), buff);
+		}
+		
+		if(text) {
+			utf8 = oscar_encoding_to_utf8(extracted_encoding, text, text_length);
+			serv_got_crap(gc, "%s\n%s", _("User Info"), utf8);
+		} else {
+			serv_got_crap(gc, _("No user info available."));
+		}
+	} else if(infotype == AIM_GETINFO_AWAYMESSAGE && userinfo->flags & AIM_FLAG_AWAY) {
+		utf8 = oscar_encoding_to_utf8(extracted_encoding, text, text_length);
+		serv_got_crap(gc, "%s\n%s", _("Away Message"), utf8);
+	}
+
+	g_free(utf8);
+   
+	return 1;
 }
 
 static char *oscar_get_status_string( struct gaim_connection *gc, int number )

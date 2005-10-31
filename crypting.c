@@ -70,10 +70,12 @@ void setpassnc (irc_t *irc, char *pass) {
 	
 	if (irc->password) g_free (irc->password);
 	
-	if (pass)
+	if (pass) {
 		irc->password = g_strdup (pass);
-	else
+		irc_usermsg (irc, "Password successfully changed");
+	} else {
 		irc->password = NULL;
+	}
 }
 
 char *passchange (irc_t *irc, void *set, char *value) {

@@ -23,6 +23,7 @@
  */
 
 #include <aim.h>
+#include "ssi.h"
 
 /**
  * Locally add a new item to the given item list.
@@ -40,7 +41,7 @@ static struct aim_ssi_item *aim_ssi_itemlist_add(struct aim_ssi_item **list, str
 	int i;
 	struct aim_ssi_item *cur, *newitem;
 
-	if (!(newitem = (struct aim_ssi_item *)g_malloc(sizeof(struct aim_ssi_item))))
+	if (!(newitem = g_new0(struct aim_ssi_item, 1)))
 		return NULL;
 
 	/* Set the name */
@@ -358,9 +359,9 @@ int aim_ssi_deletelist(aim_session_t *sess, aim_conn_t *conn)
 	for (cur=sess->ssi.items, num=0; cur; cur=cur->next)
 		num++;
 
-	if (!(items = (struct aim_ssi_item **)g_malloc(num*sizeof(struct aim_ssi_item *))))
+	if (!(items = g_new0(struct aim_ssi_item *, num)))
 		return -ENOMEM;
-	memset(items, 0, num*sizeof(struct aim_ssi_item *));
+
 	for (cur=sess->ssi.items, num=0; cur; cur=cur->next) {
 		items[num] = cur;
 		num++;
@@ -443,7 +444,7 @@ int aim_ssi_cleanlist(aim_session_t *sess, aim_conn_t *conn)
 	if (i > 0) {
 		/* Allocate an array of pointers to each of the groups */
 		struct aim_ssi_item **groups;
-		if (!(groups = (struct aim_ssi_item **)g_malloc(i*sizeof(struct aim_ssi_item *))))
+		if (!(groups = g_new0(struct aim_ssi_item *, i)))
 			return -ENOMEM;
 
 		for (cur=sess->ssi.items, i=0; cur; cur=cur->next)
@@ -462,7 +463,7 @@ int aim_ssi_cleanlist(aim_session_t *sess, aim_conn_t *conn)
 	if (i > 0) {
 		/* Allocate an array of pointers to each of the groups */
 		struct aim_ssi_item **groups;
-		if (!(groups = (struct aim_ssi_item **)g_malloc(i*sizeof(struct aim_ssi_item *))))
+		if (!(groups = g_new0(struct aim_ssi_item *, i)))
 			return -ENOMEM;
 
 		for (cur=sess->ssi.items, i=0; cur; cur=cur->next)
@@ -506,7 +507,7 @@ int aim_ssi_addbuddies(aim_session_t *sess, aim_conn_t *conn, char *gn, char **s
 	}
 
 	/* Allocate an array of pointers to each of the new items */
-	if (!(newitems = (struct aim_ssi_item **)g_malloc(num*sizeof(struct aim_ssi_item *))))
+	if (!(newitems = g_new0(struct aim_ssi_item *, num)))
 		return -ENOMEM;
 
 	/* Add items to the local list, and index them in the array */
@@ -601,7 +602,7 @@ int aim_ssi_addgroups(aim_session_t *sess, aim_conn_t *conn, char **gn, unsigned
 	}
 
 	/* Allocate an array of pointers to each of the new items */
-	if (!(newitems = (struct aim_ssi_item **)g_malloc(num*sizeof(struct aim_ssi_item *))))
+	if (!(newitems = g_new0(struct aim_ssi_item *, num)))
 		return -ENOMEM;
 
 	/* Add items to the local list, and index them in the array */
@@ -657,7 +658,7 @@ int aim_ssi_addpord(aim_session_t *sess, aim_conn_t *conn, char **sn, unsigned i
 		return -EINVAL;
 
 	/* Allocate an array of pointers to each of the new items */
-	if (!(newitems = (struct aim_ssi_item **)g_malloc(num*sizeof(struct aim_ssi_item *))))
+	if (!(newitems = g_new0(struct aim_ssi_item *, num)))
 		return -ENOMEM;
 
 	/* Add items to the local list, and index them in the array */
@@ -707,7 +708,7 @@ int aim_ssi_movebuddy(aim_session_t *sess, aim_conn_t *conn, char *oldgn, char *
 		return -ENOMEM;
 
 	/* Allocate an array of pointers to the two groups */
-	if (!(groups = (struct aim_ssi_item **)g_malloc(2*sizeof(struct aim_ssi_item *))))
+	if (!(groups = g_new0(struct aim_ssi_item *, 2)))
 		return -ENOMEM;
 
 	/* Look up the old parent group */
@@ -779,8 +780,7 @@ int aim_ssi_delbuddies(aim_session_t *sess, aim_conn_t *conn, char *gn, char **s
 		return -EINVAL;
 
 	/* Allocate an array of pointers to each of the items to be deleted */
-	delitems = (struct aim_ssi_item **)g_malloc(num*sizeof(struct aim_ssi_item *));
-	memset(delitems, 0, num*sizeof(struct aim_ssi_item *));
+	delitems = g_new0(struct aim_ssi_item *, num);
 
 	/* Make the delitems array a pointer to the aim_ssi_item structs to be deleted */
 	for (i=0; i<num; i++) {
@@ -893,8 +893,7 @@ int aim_ssi_delgroups(aim_session_t *sess, aim_conn_t *conn, char **gn, unsigned
 		return -EINVAL;
 
 	/* Allocate an array of pointers to each of the items to be deleted */
-	delitems = (struct aim_ssi_item **)g_malloc(num*sizeof(struct aim_ssi_item *));
-	memset(delitems, 0, num*sizeof(struct aim_ssi_item *));
+	delitems = g_new0(struct aim_ssi_item *, num);
 
 	/* Make the delitems array a pointer to the aim_ssi_item structs to be deleted */
 	for (i=0; i<num; i++) {
@@ -961,8 +960,7 @@ int aim_ssi_delpord(aim_session_t *sess, aim_conn_t *conn, char **sn, unsigned i
 		return -EINVAL;
 
 	/* Allocate an array of pointers to each of the items to be deleted */
-	delitems = (struct aim_ssi_item **)g_malloc(num*sizeof(struct aim_ssi_item *));
-	memset(delitems, 0, num*sizeof(struct aim_ssi_item *));
+	delitems = g_new0(struct aim_ssi_item *, num);
 
 	/* Make the delitems array a pointer to the aim_ssi_item structs to be deleted */
 	for (i=0; i<num; i++) {
@@ -1226,15 +1224,14 @@ static int parsedata(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, ai
 		guint16 namelen, tbslen;
 
 		if (!sess->ssi.items) {
-			if (!(sess->ssi.items = g_malloc(sizeof(struct aim_ssi_item))))
+			if (!(sess->ssi.items = g_new(struct aim_ssi_item, 1)))
 				return -ENOMEM;
 			cur = sess->ssi.items;
 		} else {
-			if (!(cur->next = g_malloc(sizeof(struct aim_ssi_item))))
+			if (!(cur->next = g_new0(struct aim_ssi_item, 1)))
 				return -ENOMEM;
 			cur = cur->next;
 		}
-		memset(cur, 0, sizeof(struct aim_ssi_item));
 
 		if ((namelen = aimbs_get16(bs)))
 			cur->name = aimbs_getstr(bs, namelen);

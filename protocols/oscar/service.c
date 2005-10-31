@@ -3,7 +3,6 @@
  * this group, as it does some particularly good things (like rate limiting).
  */
 
-#define FAIM_NEED_CONN_INTERNAL
 #include <aim.h>
 
 #include "md5.h"
@@ -236,9 +235,8 @@ static void rc_addpair(struct rateclass *rc, guint16 group, guint16 type)
 {
 	struct snacpair *sp, *sp2;
 
-	if (!(sp = g_malloc(sizeof(struct snacpair))))
+	if (!(sp = g_new0(struct snacpair, 1)))
 		return;
-	memset(sp, 0, sizeof(struct snacpair));
 
 	sp->group = group;
 	sp->subtype = type;
@@ -719,12 +717,14 @@ static int hostversions(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx,
 }
 
 /* 
- * Set Extended Status (group 1, type 0x1e) 
+ * Subtype 0x001e - Extended Status
  *
- * Currently only works if using ICQ.
+ * Sets your ICQ status (available, away, do not disturb, etc.)
  *
+ * These are the same TLVs seen in user info.  You can 
+ * also set 0x0008 and 0x000c.
  */
-int aim_setextstatus(aim_session_t *sess, aim_conn_t *conn, guint32 status, const char *msg)
+int aim_setextstatus(aim_session_t *sess, aim_conn_t *conn, guint32 status)
 {
 	aim_frame_t *fr;
 	aim_snacid_t snacid;
@@ -732,14 +732,13 @@ int aim_setextstatus(aim_session_t *sess, aim_conn_t *conn, guint32 status, cons
 	guint32 data;
 	int tlvlen;
 
-	data = 0x00030000 | status; /* yay for error checking ;^) */
+	data = AIM_ICQ_STATE_WEBAWARE | AIM_ICQ_STATE_HIDEIP | status; /* yay for error checking ;^) */
 
 	tlvlen = aim_addtlvtochain32(&tl, 0x0006, data);
-	tlvlen += aim_addtlvtochain_availmsg(&tl, 0x001d, msg);
 
 	printf("%d\n", tlvlen);
 
-	if (!(fr = aim_tx_new(sess, conn, AIM_FRAMETYPE_FLAP, 0x02, 20 + tlvlen)))
+	if (!(fr = aim_tx_new(sess, conn, AIM_FRAMETYPE_FLAP, 0x02, 10 + 8)))
 		return -ENOMEM;
 
 	snacid = aim_cachesnac(sess, 0x0001, 0x001e, 0x0000, NULL, 0);

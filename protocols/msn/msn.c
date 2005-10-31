@@ -368,7 +368,10 @@ static void msn_rem_deny( struct gaim_connection *gc, char *who )
 
 static int msn_send_typing( struct gaim_connection *gc, char *who, int typing )
 {
-	return( msn_send_im( gc, who, TYPING_NOTIFICATION_MESSAGE, strlen( TYPING_NOTIFICATION_MESSAGE ), 0 ) );
+	if( typing )
+		return( msn_send_im( gc, who, TYPING_NOTIFICATION_MESSAGE, strlen( TYPING_NOTIFICATION_MESSAGE ), 0 ) );
+	else
+		return( 1 );
 }
 
 void msn_init(struct prpl *ret)

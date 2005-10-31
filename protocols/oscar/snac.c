@@ -21,7 +21,7 @@ void aim_initsnachash(aim_session_t *sess)
 {
 	int i;
 
-	for (i = 0; i < FAIM_SNAC_HASH_SIZE; i++)
+	for (i = 0; i < AIM_SNAC_HASH_SIZE; i++)
 		sess->snac_hash[i] = NULL;
 
 	return;
@@ -63,7 +63,7 @@ aim_snacid_t aim_newsnac(aim_session_t *sess, aim_snac_t *newsnac)
 	memcpy(snac, newsnac, sizeof(aim_snac_t));
 	snac->issuetime = time(NULL);
 
-	index = snac->id % FAIM_SNAC_HASH_SIZE;
+	index = snac->id % AIM_SNAC_HASH_SIZE;
 
 	snac->next = (aim_snac_t *)sess->snac_hash[index];
 	sess->snac_hash[index] = (void *)snac;
@@ -83,7 +83,7 @@ aim_snac_t *aim_remsnac(aim_session_t *sess, aim_snacid_t id)
 	aim_snac_t *cur, **prev;
 	int index;
 
-	index = id % FAIM_SNAC_HASH_SIZE;
+	index = id % AIM_SNAC_HASH_SIZE;
 
 	for (prev = (aim_snac_t **)&sess->snac_hash[index]; (cur = *prev); ) {
 		if (cur->id == id) {
@@ -107,7 +107,7 @@ void aim_cleansnacs(aim_session_t *sess, int maxage)
 {
 	int i;
 
-	for (i = 0; i < FAIM_SNAC_HASH_SIZE; i++) {
+	for (i = 0; i < AIM_SNAC_HASH_SIZE; i++) {
 		aim_snac_t *cur, **prev;
 		time_t curtime;
 

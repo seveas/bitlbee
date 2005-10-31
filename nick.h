@@ -37,7 +37,7 @@ void nick_del( irc_t *irc, char *nick );
 void nick_strip( char *nick );
 
 int nick_ok( char *nick );
-int nick_lc( unsigned char *nick );
-int nick_uc( unsigned char *nick );
+int nick_lc( char *nick );
+int nick_uc( char *nick );
 int nick_cmp( char *a, char *b );
 char *nick_dup( char *nick );

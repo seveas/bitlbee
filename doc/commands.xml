@@ -20,8 +20,17 @@
 
 			<description>
 				<para>
-					Adds an account on the given server with the specified protocol, username and password to the account list. Specifying the server is optional and principally only necessary when using oscar.
-					The following protocols are supported at the moment: jabber, msn, yahoo and oscar (For AIM/ICQ. For AIM use server <emphasis>login.oscar.aol.com</emphasis>, for ICQ use server <emphasis>login.icq.com</emphasis>. For Jabber the server is part of the username (e.g. sjoerd@hemminga-online.nl), it should not be passed in any other way in the command. (E.g.: account add jabber sjoerd@hemminga-online.nl funnypass) For the other protocols you don't have to specify a server.)
+					Adds an account on the given server with the specified protocol, username and password to the account list. The server argument is only required for OSCAR.
+				</para>
+
+
+				<para>
+					For Jabber it's optional. You can use it if your Jabber server is not the same as the part after the @ in your handle. Also, you can specify an alternate port number or tell BitlBee to use SSL like this: alternate.server.com:5224:ssl
+				</para>
+
+
+				<para>
+					The following protocols are supported at the moment: jabber, msn, yahoo and oscar (For AIM/ICQ. For AIM use server <emphasis>login.oscar.aol.com</emphasis>, for ICQ use server <emphasis>login.icq.com</emphasis>.
 				</para>
 			</description>
 

@@ -1,4 +1,5 @@
 #include <aim.h>
+#include "buddylist.h"
 
 /*
  * Oncoming Buddy notifications contain a subset of the

@@ -12,6 +12,7 @@
  */
 
 #include <aim.h>
+#include "info.h"
 
 /**
  * aim_cachecookie - appends a cookie to the cookie list

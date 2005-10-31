@@ -20,6 +20,8 @@
  */
 
 #include <aim.h>
+#include "im.h"
+#include "info.h"
 
 /*
  * Takes a msghdr (and a length) and returns a client type
@@ -841,6 +843,77 @@ int aim_send_im_ch2_geticqmessage(aim_session_t *sess, const char *sn, int type)
 	return 0;
 }
 
+/**
+ * answers status message requests
+ * @param sess the oscar session
+ * @param sender the guy whos asking
+ * @param cookie message id which we are answering for
+ * @param message away message
+ * @param state our current away state the way icq requests it (0xE8 for away, 0xE9 occupied, ...)
+ * @return 0 if no error
+ */
+int aim_send_im_ch2_statusmessage(aim_session_t *sess, const char *sender, const guint8 *cookie,
+        const char *message, const guint8 state, const guint16 dc)
+{
+    aim_conn_t *conn;
+    aim_frame_t *fr;
+    aim_snacid_t snacid;
+
+    if (!sess || !(conn = aim_conn_findbygroup(sess, 0x0004)))
+                return -EINVAL;
+        
+    if (!(fr = aim_tx_new(sess, conn, AIM_FRAMETYPE_FLAP, 0x02, 
+					10+8+2+1+strlen(sender)+2+0x1d+0x10+9+strlen(message)+1)))
+                return -ENOMEM;
+
+    snacid = aim_cachesnac(sess, 0x0004, 0x000b, 0x0000, NULL, 0);
+    aim_putsnac(&fr->data, 0x0004, 0x000b, 0x0000, snacid);
+    
+    aimbs_putraw(&fr->data, cookie, 8);
+    
+    aimbs_put16(&fr->data, 0x0002); /* channel */
+    aimbs_put8(&fr->data, strlen(sender));
+    aimbs_putraw(&fr->data, (guint8 *)sender, strlen(sender));
+
+    aimbs_put16(&fr->data, 0x0003); /* reason: channel specific */
+
+    aimbs_putle16(&fr->data, 0x001b); /* length of data SEQ1 */
+    aimbs_putle16(&fr->data, 0x0008); /* protocol version */
+
+    aimbs_putle32(&fr->data, 0x0000); /* no plugin -> 16 times 0x00 */ 
+    aimbs_putle32(&fr->data, 0x0000); 
+    aimbs_putle32(&fr->data, 0x0000); 
+    aimbs_putle32(&fr->data, 0x0000);
+
+    aimbs_putle16(&fr->data, 0x0000); /* unknown */
+    aimbs_putle32(&fr->data, 0x0003); /* client features */
+    aimbs_putle8(&fr->data, 0x00); /* unknown */
+    aimbs_putle16(&fr->data, dc); /* Sequence number?  XXX - This should decrement by 1 with each request */
+    /* end of SEQ1 */
+
+    aimbs_putle16(&fr->data, 0x000e); /* Length of SEQ2 */
+    aimbs_putle16(&fr->data, dc); /* Sequence number? same as above
+                                       * XXX - This should decrement by 1 with each request */
+    aimbs_putle32(&fr->data, 0x00000000); /* Unknown */
+    aimbs_putle32(&fr->data, 0x00000000); /* Unknown */
+    aimbs_putle32(&fr->data, 0x00000000); /* Unknown */
+    /* end of SEQ2 */
+
+    /* now for the real fun */
+    aimbs_putle8(&fr->data, state); /* away state */
+    aimbs_putle8(&fr->data, 0x03); /* msg-flag: 03 for states */
+    aimbs_putle16(&fr->data, 0x0000); /* status code ? */
+    aimbs_putle16(&fr->data, 0x0000); /* priority code */
+    aimbs_putle16(&fr->data, strlen(message) + 1); /* message length + termination */
+    aimbs_putraw(&fr->data, (guint8 *) message, strlen(message) + 1); /* null terminated string */
+    
+    aim_tx_enqueue(sess, fr);
+
+
+    return 0;
+}
+
+
 static int outgoingim(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, aim_modsnac_t *snac, aim_bstream_t *bs)
 {
 	int i, ret = 0;
@@ -1295,99 +1368,6 @@ static int incomingim_ch1(aim_session_t *sess, aim_module_t *mod, aim_frame_t *r
 	return ret;
 }
 
-static void incomingim_ch2_buddylist(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, aim_modsnac_t *snac, aim_userinfo_t *userinfo, struct aim_incomingim_ch2_args *args, aim_bstream_t *servdata)
-{
-
-	/*
-	 * This goes like this...
-	 *
-	 *   group name length
-	 *   group name
-	 *     num of buddies in group
-	 *     buddy name length
-	 *     buddy name
-	 *     buddy name length
-	 *     buddy name
-	 *     ...
-	 *   group name length
-	 *   group name
-	 *     num of buddies in group
-	 *     buddy name length
-	 *     buddy name
-	 *     ...
-	 *   ...
-	 */
-	while (servdata && aim_bstream_empty(servdata)) {
-		guint16 gnlen, numb;
-		int i;
-		char *gn;
-
-		gnlen = aimbs_get16(servdata);
-		gn = aimbs_getstr(servdata, gnlen);
-		numb = aimbs_get16(servdata);
-
-		for (i = 0; i < numb; i++) {
-			guint16 bnlen;
-			char *bn;
-
-			bnlen = aimbs_get16(servdata);
-			bn = aimbs_getstr(servdata, bnlen);
-
-			g_free(bn);
-		}
-
-		g_free(gn);
-	}
-
-	return;
-}
-
-static void incomingim_ch2_buddyicon_free(aim_session_t *sess, struct aim_incomingim_ch2_args *args)
-{
-
-	g_free(args->info.icon.icon);
-
-	return;
-}
-
-static void incomingim_ch2_buddyicon(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, aim_modsnac_t *snac, aim_userinfo_t *userinfo, struct aim_incomingim_ch2_args *args, aim_bstream_t *servdata)
-{
-
-	if (servdata) {
-		args->info.icon.checksum = aimbs_get32(servdata);
-		args->info.icon.length = aimbs_get32(servdata);
-		args->info.icon.timestamp = aimbs_get32(servdata);
-		args->info.icon.icon = aimbs_getraw(servdata, args->info.icon.length);
-	}
-
-	args->destructor = (void *)incomingim_ch2_buddyicon_free;
-
-	return;
-}
-
-static void incomingim_ch2_chat_free(aim_session_t *sess, struct aim_incomingim_ch2_args *args)
-{
-
-	/* XXX aim_chat_roominfo_free() */
-	g_free(args->info.chat.roominfo.name);
-
-	return;
-}
-
-static void incomingim_ch2_chat(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, aim_modsnac_t *snac, aim_userinfo_t *userinfo, struct aim_incomingim_ch2_args *args, aim_bstream_t *servdata)
-{
-
-	/*
-	 * Chat room info.
-	 */
-	if (servdata)
-		aim_chat_readroominfo(servdata, &args->info.chat.roominfo);
-
-	args->destructor = (void *)incomingim_ch2_chat_free;
-
-	return;
-}
-
 static void incomingim_ch2_icqserverrelay_free(aim_session_t *sess, struct aim_incomingim_ch2_args *args)
 {
 
@@ -1403,35 +1383,74 @@ static void incomingim_ch2_icqserverrelay_free(aim_session_t *sess, struct aim_i
  *
  * Note that this is all little-endian.  Cringe.
  *
+ * This cap is used for auto status message replies, too [ft]
+ *
  */
 static void incomingim_ch2_icqserverrelay(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, aim_modsnac_t *snac, aim_userinfo_t *userinfo, struct aim_incomingim_ch2_args *args, aim_bstream_t *servdata)
 {
-	guint16 hdrlen, anslen, msglen;
-	guint16 msgtype;
+	guint16 hdrlen, msglen, dc;
+	guint8 msgtype, msgflags;
+    guint8 *plugin;
+    int i = 0, tmp = 0;
+    struct gaim_connection *gc = sess->aux_data;
+
+    /* at the moment we just can deal with requests, not with cancel or accept */
+    if (args->status != 0) return;
 
 	hdrlen = aimbs_getle16(servdata);
-	aim_bstream_advance(servdata, hdrlen);
+
+    aim_bstream_advance(servdata, 0x02); /* protocol version */
+    plugin = aimbs_getraw(servdata, 0x10); /* following data is a message or 
+                                              something plugin specific */
+    /* as there is no plugin handling, just skip the rest */
+    aim_bstream_advance(servdata, hdrlen - 0x12);
 
 	hdrlen = aimbs_getle16(servdata);
-	aim_bstream_advance(servdata, hdrlen);
+    dc = aimbs_getle16(servdata); /* save the sequence number */
+	aim_bstream_advance(servdata, hdrlen - 0x02);
 
-	msgtype = aimbs_getle16(servdata);
-	
-	anslen = aimbs_getle32(servdata);
-	aim_bstream_advance(servdata, anslen);
+    /* TODO is it a message or something for a plugin? */
+    for (i = 0; i < 0x10; i++) {
+        tmp |= plugin[i];
+    }
 
-	msglen = aimbs_getle16(servdata);
+    if (!tmp) { /* message follows */
+
+        msgtype = aimbs_getle8(servdata);
+        msgflags = aimbs_getle8(servdata);
+
+        aim_bstream_advance(servdata, 0x04); /* status code and priority code */
+
+        msglen = aimbs_getle16(servdata); /* message string length */
 	args->info.rtfmsg.rtfmsg = aimbs_getstr(servdata, msglen);
 
-	args->info.rtfmsg.fgcolor = aimbs_getle32(servdata);
-	args->info.rtfmsg.bgcolor = aimbs_getle32(servdata);
+        switch(msgtype) {
+            case AIM_MTYPE_PLAIN:
 
-	hdrlen = aimbs_getle32(servdata);
-	aim_bstream_advance(servdata, hdrlen);
+                args->info.rtfmsg.fgcolor = aimbs_getle32(servdata);
+                args->info.rtfmsg.bgcolor = aimbs_getle32(servdata);
 
-	/* XXX This is such a hack. */
-	args->reqclass = AIM_CAPS_ICQRTF;
+                hdrlen = aimbs_getle32(servdata);
+                aim_bstream_advance(servdata, hdrlen);
 
+                /* XXX This is such a hack. */
+                args->reqclass = AIM_CAPS_ICQRTF;
+                break;
+
+            case AIM_MTYPE_AUTOAWAY: 
+            case AIM_MTYPE_AUTOBUSY:
+            case AIM_MTYPE_AUTONA:
+            case AIM_MTYPE_AUTODND:
+            case AIM_MTYPE_AUTOFFC:
+	    case 0x9c:	/* ICQ 5 seems to send this */
+                aim_send_im_ch2_statusmessage(sess, userinfo->sn, args->cookie,
+                        gc->away, sess->aim_icq_state, dc);
+                break;
+
+        }
+    } /* message or plugin specific */
+
+    g_free(plugin);
 	args->destructor = (void *)incomingim_ch2_icqserverrelay_free;
 
 	return;
@@ -1595,18 +1614,7 @@ static int incomingim_ch2(aim_session_t *sess, aim_module_t *mod, aim_frame_t *r
 		sdbsptr = &sdbs;
 	}
 
-	/*
-	 * The rest of the handling depends on what type it is.
-	 *
-	 * Not all of them have special handling (yet).
-	 */
-	if (args.reqclass & AIM_CAPS_BUDDYICON)
-		incomingim_ch2_buddyicon(sess, mod, rx, snac, userinfo, &args, sdbsptr);
-	else if (args.reqclass & AIM_CAPS_SENDBUDDYLIST)
-		incomingim_ch2_buddylist(sess, mod, rx, snac, userinfo, &args, sdbsptr);
-	else if (args.reqclass & AIM_CAPS_CHAT)
-		incomingim_ch2_chat(sess, mod, rx, snac, userinfo, &args, sdbsptr);
-	else if (args.reqclass & AIM_CAPS_ICQSERVERRELAY)
+	if (args.reqclass & AIM_CAPS_ICQSERVERRELAY)
 		incomingim_ch2_icqserverrelay(sess, mod, rx, snac, userinfo, &args, sdbsptr);
 
 

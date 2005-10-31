@@ -242,7 +242,6 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 			return( 0 );
 		}
 		
-		
 		md->handler->msglen = atoi( cmd[3] );
 		
 		if( md->handler->msglen <= 0 )

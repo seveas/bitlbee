@@ -42,8 +42,9 @@ typedef struct __USER
  	time_t last_typing_notice;
  	int sendbuf_len;
  	guint sendbuf_timer;
+    	int sendbuf_flags;
 	
-	int (*send_handler) ( irc_t *irc, struct __USER *u, char *msg );
+	int (*send_handler) ( irc_t *irc, struct __USER *u, char *msg, int flags );
 	
 	struct __USER *next;
 } user_t;

@@ -6,7 +6,6 @@
  *
  */
 
-#define FAIM_NEED_CONN_INTERNAL
 #include <aim.h> 
 #include "sock.h"
 
@@ -418,7 +417,7 @@ aim_conn_t *aim_cloneconn(aim_session_t *sess, aim_conn_t *src)
 aim_conn_t *aim_newconn(aim_session_t *sess, int type, const char *dest)
 {
 	aim_conn_t *connstruct;
-	guint16 port = FAIM_LOGIN_PORT;
+	guint16 port = AIM_LOGIN_PORT;
 	char *host;
 	int i;
 

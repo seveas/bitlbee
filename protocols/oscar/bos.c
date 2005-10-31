@@ -1,4 +1,5 @@
 #include <aim.h>
+#include "bos.h"
 
 /* Request BOS rights (group 9, type 2) */
 int aim_bos_reqrights(aim_session_t *sess, aim_conn_t *conn)

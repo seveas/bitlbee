@@ -102,7 +102,7 @@ void log_message(int level, char *message, ... ) {
 	char *msgstring;
 
 	va_start(ap, message);
-	msgstring=my_vasprintf(message, ap);
+	msgstring = g_strdup_vprintf(message, ap);
 	va_end(ap);
 
 	if(level==LOGLVL_INFO)
@@ -173,27 +173,3 @@ static void log_console(int level, char *message) {
 #endif
 	return;
 }
-
-/* From the printf manpage with changes. Let's just hope SCO doesn't 
- * sue me now. ;) 
- */
-char *my_vasprintf(const char *fmt, va_list ap) {
-	/* Guess we need no more than 100 bytes. */
-	int n, size = 100;
-	char *p;
-	p = g_new(char, size);
-	while (1) {
-		/* Try to print in the allocated space. */
-		n = vsnprintf (p, size, fmt, ap);
-		/* If that worked, return the string. */
-		if (n > -1 && n < size)
-			return p;
-		/* Else try again with more space. */
-		if (n > -1)    /* glibc 2.1 */
-			size = n+1; /* precisely what is needed */
-		else           /* glibc 2.0 */
-			size *= 2;  /* twice the old size */
-		p=g_renew (char, p, size);
-	}
-}
-

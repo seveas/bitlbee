@@ -128,7 +128,7 @@ int cmd_register( irc_t *irc, char **cmd )
 	if( checkie == -2 )
 	{
 		setpassnc( irc, cmd[1] );
-		root_command_string( irc, user_find( irc, irc->mynick ), "save" );
+		root_command_string( irc, user_find( irc, irc->mynick ), "save", 0 );
 		irc->status = USTATUS_IDENTIFIED;
 	}
 	else

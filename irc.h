@@ -137,11 +137,11 @@ void irc_invite( irc_t *irc, char *nick, char *channel );
 void irc_whois( irc_t *irc, char *nick );
 int irc_away( irc_t *irc, char *away );
 
-int irc_send( irc_t *irc, char *nick, char *s );
+int irc_send( irc_t *irc, char *nick, char *s, int flags );
 int irc_privmsg( irc_t *irc, user_t *u, char *type, char *to, char *prefix, char *msg );
 int irc_msgfrom( irc_t *irc, char *nick, char *msg );
 int irc_noticefrom( irc_t *irc, char *nick, char *msg );
 
-int buddy_send_handler( irc_t *irc, user_t *u, char *msg );
+int buddy_send_handler( irc_t *irc, user_t *u, char *msg, int flags );
 
 #endif

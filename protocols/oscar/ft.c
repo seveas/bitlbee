@@ -8,7 +8,7 @@
 #endif
 #include <aim.h>
 #include <glib.h>
-
+#include "ft.h"
 
 #ifndef _WIN32
 #include <netdb.h>
@@ -465,9 +465,8 @@ aim_conn_t *aim_directim_connect(aim_session_t *sess, const char *sn, const char
 	if (!sess || !sn)
 		return NULL;
 
-	if (!(intdata = g_malloc(sizeof(struct aim_directim_intdata))))
+	if (!(intdata = g_new0(struct aim_directim_intdata, 1)))
 		return NULL;
-	memset(intdata, 0, sizeof(struct aim_directim_intdata));
 
 	memcpy(intdata->cookie, cookie, 8);
 	strncpy(intdata->sn, sn, sizeof(intdata->sn));

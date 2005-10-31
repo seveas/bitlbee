@@ -7,6 +7,7 @@
 
 #include <aim.h> 
 #include <glib.h>
+#include "info.h"
 
 /* Stored in the ->priv of chat connections */
 struct chatconnpriv {
@@ -710,5 +711,3 @@ int chat_modfirst(aim_session_t *sess, aim_module_t *mod)
 
 	return 0;
 }
-
-

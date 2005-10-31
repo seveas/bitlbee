@@ -73,7 +73,7 @@ uninstall-etc:
 
 tar:
 	fakeroot debian/rules clean || make distclean
-	x=`pwd | sed -e 's/\/.*\///'`; \
+	x=$$(basename $$(pwd)); \
 	cd ..; \
 	tar czf $$x.tar.gz --exclude=debian --exclude=CVS $$x
 

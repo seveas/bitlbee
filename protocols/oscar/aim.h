@@ -472,8 +472,8 @@ int aim_puttlv_raw(guint8 *buf, const guint16 t, const guint16 l, const guint8 *
 /* TLV list handling. */
 aim_tlvlist_t *aim_readtlvchain(aim_bstream_t *bs);
 void aim_freetlvchain(aim_tlvlist_t **list);
-aim_tlv_t *aim_gettlv(aim_tlvlist_t *, guint16 t, const int n);
-char *aim_gettlv_str(aim_tlvlist_t *, const guint16 t, const int n);
+aim_tlv_t *aim_gettlv(aim_tlvlist_t *list, guint16 t, const int n);
+char *aim_gettlv_str(aim_tlvlist_t *list, const guint16 t, const int n);
 guint8 aim_gettlv8(aim_tlvlist_t *list, const guint16 type, const int num);
 guint16 aim_gettlv16(aim_tlvlist_t *list, const guint16 t, const int n);
 guint32 aim_gettlv32(aim_tlvlist_t *list, const guint16 t, const int n);

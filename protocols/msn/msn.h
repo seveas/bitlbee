@@ -49,7 +49,6 @@
 
 #define MSN_TYPING_HEADERS "MIME-Version: 1.0\r\n" \
                            "Content-Type: text/x-msmsgscontrol\r\n" \
-                           "User-Agent: BitlBee " BITLBEE_VERSION "\r\n" \
                            "TypingUser: %s\r\n" \
                            "\r\n\r\n"
 

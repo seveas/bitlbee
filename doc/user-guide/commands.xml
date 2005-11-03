@@ -5,7 +5,7 @@
 
 	<bitlbee-command name="account">
 		<short-description>IM-account list maintenance</short-description>
-		<syntax>account <emphasis>&lt;</emphasis>action<emphasis>&gt; [&lt;</emphasis>arguments<emphasis>&gt;]</emphasis></syntax>
+		<syntax>account &lt;action&gt; [&lt;arguments&gt;]</syntax>
 
 		<description>
 
@@ -16,32 +16,74 @@
 		</description>
 
 		<bitlbee-command name="add">
-			<syntax>account add <emphasis>&lt;</emphasis>protocol<emphasis>&gt; &lt;</emphasis>username<emphasis>&gt; &lt;</emphasis>password<emphasis>&gt; [&lt;</emphasis>server<emphasis>&gt;]</emphasis></syntax>
+			<syntax>account add &lt;protocol&gt; &lt;username&gt; &lt;password&gt; [&lt;server&gt;]</syntax>
 
 			<description>
 				<para>
-					Adds an account on the given server with the specified protocol, username and password to the account list. The server argument is only required for OSCAR.
-				</para>
-
-
-				<para>
-					For Jabber it's optional. You can use it if your Jabber server is not the same as the part after the @ in your handle. Also, you can specify an alternate port number or tell BitlBee to use SSL like this: alternate.server.com:5224:ssl
-				</para>
-
-
-				<para>
-					The following protocols are supported at the moment: jabber, msn, yahoo and oscar (For AIM/ICQ. For AIM use server <emphasis>login.oscar.aol.com</emphasis>, for ICQ use server <emphasis>login.icq.com</emphasis>.
+					Adds an account on the given server with the specified protocol, username and password to the account list. Supported protocols right now are: Jabber, MSN, OSCAR (AIM/ICQ) and Yahoo. For more information about adding an account, see <emphasis>help account add &lt;protocol&gt;</emphasis>.
 				</para>
 			</description>
+			
+			<bitlbee-command name="jabber">
+				<syntax>account add jabber &lt;handle&gt; &lt;password&gt; [&lt;servertag&gt;]</syntax>
 
-			<ircexample>
-				<ircline nick="wilmer">account add oscar 72696705 hobbelmeeuw login.icq.com</ircline>
-				<ircline nick="root">Account successfully added</ircline>
-			</ircexample>
+				<description>
+					<para>
+						Note that the servertag argument is optional. You only have to use it if the part after the @ in your handle isn't the hostname of your Jabber server, or if you want to use SSL/connect to a non-standard port number. The format is simple: [&lt;servername&gt;[:&lt;portnumber&gt;][:ssl]]. For example, this is how you can connect to Google Talk:
+					</para>
+				</description>
+
+				<ircexample>
+					<ircline nick="wilmer">account add jabber example@gmail.com hobbelmeeuw talk.google.com:5223:ssl</ircline>
+					<ircline nick="root">Account successfully added</ircline>
+				</ircexample>
+
+				<description>
+					<para>
+						Note that Google talk is SSL-only, but officially reachable over both port 5222 and 5223. However, for some people only port 5222 works, for some people only 5223. This is something you'll have to try out.
+					</para>
+				</description>
+			</bitlbee-command>
+
+			<bitlbee-command name="msn">
+				<syntax>account add msn &lt;handle&gt; &lt;password&gt;</syntax>
+
+				<description>
+					<para>
+						For MSN connections there are no special arguments.
+					</para>
+				</description>
+			</bitlbee-command>
+			
+			<bitlbee-command name="oscar">
+				<syntax>account add oscar &lt;handle&gt; &lt;password&gt; [&lt;servername&gt;]</syntax>
+
+				<description>
+					<para>
+						Specifying a server is required for OSCAR, since OSCAR can be used for both ICQ- and AIM-connections. Although these days it's supposed to be possible to connect to ICQ via AIM-servers and vice versa, we like to stick with this separation for now. For ICQ connections, the servername is <emphasis>login.icq.com</emphasis>, for AIM connections it's <emphasis>login.oscar.aol.com</emphasis>.
+					</para>
+				</description>
+
+				<ircexample>
+					<ircline nick="wilmer">account add oscar 72696705 hobbelmeeuw login.icq.com</ircline>
+					<ircline nick="root">Account successfully added</ircline>
+				</ircexample>
+			</bitlbee-command>
+
+			<bitlbee-command name="yahoo">
+				<syntax>account add yahoo &lt;handle&gt; &lt;password&gt;</syntax>
+
+				<description>
+					<para>
+						For Yahoo! connections there are no special arguments.
+					</para>
+				</description>
+			</bitlbee-command>
+
 		</bitlbee-command>
 
 		<bitlbee-command name="del">
-			<syntax>account del <emphasis>&lt;</emphasis>id<emphasis>&gt;</emphasis></syntax>
+			<syntax>account del &lt;account id&gt;</syntax>
 
 			<description>
 				<para>
@@ -56,7 +98,7 @@
 		</bitlbee-command>
 
 		<bitlbee-command name="on">
-			<syntax>account on <emphasis>[&lt;</emphasis>id<emphasis>&gt;]</emphasis></syntax>
+			<syntax>account on [&lt;account id&gt;]</syntax>
 
 			<description>
 				<para>
@@ -64,14 +106,14 @@
 				</para>
 
 				<para>
-					The account ID can be a number (see <emphasis>account list</emphasis>), the protocol name or (part of) the screenname, as long as it matches only one connection. Without any account number, BitlBee will just try to restore any lost connection.
+					The account ID can be a number (see <emphasis>account list</emphasis>), the protocol name or (part of) the screenname, as long as it matches only one connection.
 				</para>
 			</description>
 
 		</bitlbee-command>
 
 		<bitlbee-command name="off">
-			<syntax>account off <emphasis>[&lt;</emphasis>id<emphasis>&gt;]</emphasis></syntax>
+			<syntax>account off [&lt;account id&gt;]</syntax>
 
 			<description>
 				<para>
@@ -97,7 +139,7 @@
 
 	<bitlbee-command name="add">
 		<short-description>Add a buddy to your contact list</short-description>
-		<syntax>add <emphasis>&lt;</emphasis>connection<emphasis>&gt;</emphasis> <emphasis>&lt;</emphasis>handle<emphasis>&gt;</emphasis> <emphasis>[&lt;</emphasis>nick<emphasis>&gt;]</emphasis></syntax>
+		<syntax>add &lt;connection&gt; &lt;handle&gt; [&lt;nick&gt;]</syntax>
 
 		<description>
 			<para>
@@ -117,12 +159,12 @@
 
 	<bitlbee-command name="info">
 		<short-description>Request user information</short-description>
-		<syntax>info <emphasis>&lt;</emphasis>connection<emphasis>&gt;</emphasis> <emphasis>&lt;</emphasis>handle<emphasis>&gt;</emphasis></syntax>
-		<syntax>info <emphasis>&lt;</emphasis>nick<emphasis>&gt;</emphasis></syntax>
+		<syntax>info &lt;connection&gt; &lt;handle&gt;</syntax>
+		<syntax>info &lt;nick&gt;</syntax>
 
 		<description>
 			<para>
-				Requests IM-network-specific information about the specified user. The amount of information you'll get differs per protocol. For some protocols (ATM Jabber and MSN) it'll give you an URL which you can visit with a normal web browser to get the information.
+				Requests IM-network-specific information about the specified user. The amount of information you'll get differs per protocol. For some protocols (ATM Yahoo! and MSN) it'll give you an URL which you can visit with a normal web browser to get the information.
 			</para>
 		</description>
 
@@ -135,7 +177,7 @@
 
 	<bitlbee-command name="remove">
 		<short-description>Remove a buddy from your contact list</short-description>
-		<syntax>remove <emphasis>&lt;</emphasis>nick<emphasis>&gt;</emphasis></syntax>
+		<syntax>remove &lt;nick&gt;</syntax>
 
 		<description>
 			<para>
@@ -145,15 +187,15 @@
 
 		<ircexample>
 			<ircline nick="ctrlsoft">remove gryp</ircline>
-			<ircaction nick="gryp" hostmask="gryp@jabber.jabber.org">has quit <emphasis>[</emphasis>Leaving...<emphasis>]</emphasis></ircaction>
+			<ircaction nick="gryp" hostmask="gryp@jabber.jabber.org">has quit <emphasis>[Leaving...]</emphasis></ircaction>
 		</ircexample>
 
 	</bitlbee-command>
 
 	<bitlbee-command name="block">
 		<short-description>Block someone</short-description>
-		<syntax>block <emphasis>&lt;</emphasis>nick<emphasis>&gt;</emphasis></syntax>
-		<syntax>block <emphasis>&lt;</emphasis>connection<emphasis>&gt; &lt;</emphasis>handle<emphasis>&gt;</emphasis></syntax>
+		<syntax>block &lt;nick&gt;</syntax>
+		<syntax>block &lt;connection&gt; &lt;handle&gt;</syntax>
 
 		<description>
 			<para>
@@ -164,8 +206,8 @@
 
 	<bitlbee-command name="allow">
 		<short-description>Unblock someone</short-description>
-		<syntax>allow <emphasis>&lt;</emphasis>nick<emphasis>&gt;</emphasis></syntax>
-		<syntax>allow <emphasis>&lt;</emphasis>connection<emphasis>&gt; &lt;</emphasis>handle<emphasis>&gt;</emphasis></syntax>
+		<syntax>allow &lt;nick&gt;</syntax>
+		<syntax>allow &lt;connection&gt; &lt;handle&gt;</syntax>
 
 		<description>
 			<para>
@@ -176,7 +218,7 @@
 
 	<bitlbee-command name="set">
 		<short-description>Miscellaneous settings</short-description>
-		<syntax>set <emphasis>[&lt;</emphasis>variable<emphasis>&gt;]</emphasis> <emphasis>[&lt;</emphasis>value<emphasis>&gt;]</emphasis></syntax>
+		<syntax>set [&lt;variable&gt; [&lt;value&gt;]]</syntax>
 
 		<description>
 
@@ -188,17 +230,24 @@
 				To get more help information about a setting, try:
 			</para>
 
-			<ircexample>
-				<ircline nick="ctrlsoft">help set private</ircline>
-			</ircexample>
-
 		</description>
+
+		<ircexample>
+			<ircline nick="ctrlsoft">help set private</ircline>
+		</ircexample>
+
 	</bitlbee-command>
 
 	<bitlbee-command name="help">
-		<syntax>help</syntax>
-		
 		<short-description>BitlBee help system</short-description>
+
+		<syntax>help [subject]</syntax>
+
+		<description>
+			<para>
+				This command gives you the help information you're reading right now. If you don't give any arguments, it'll give a short help index.
+			</para>
+		</description>
 	</bitlbee-command>
 
 	<bitlbee-command name="save">
@@ -481,7 +530,7 @@
 
 	<bitlbee-command name="rename">
 		<short-description>Rename (renick) a buddy</short-description>
-		<syntax>rename <emphasis>&lt;</emphasis>oldnick<emphasis>&gt; &lt;</emphasis>newnick<emphasis>&gt;</emphasis></syntax>
+		<syntax>rename &lt;oldnick&gt; &lt;newnick&gt;</syntax>
 
 		<description>
 			<para>
@@ -498,7 +547,7 @@
 
 	<bitlbee-command name="yes">
 		<short-description>Accept a request</short-description>
-		<syntax>yes <emphasis>[&lt;</emphasis>number<emphasis>&gt;]</emphasis></syntax>
+		<syntax>yes [&lt;number&gt;]</syntax>
 
 		<description>
 			<para>
@@ -514,7 +563,7 @@
 
 	<bitlbee-command name="no">
 		<short-description>Deny a request</short-description>
-		<syntax>no <emphasis>[&lt;</emphasis>number<emphasis>&gt;]</emphasis></syntax>
+		<syntax>no [&lt;number&gt;]</syntax>
 
 		<description>
 			<para>
@@ -541,7 +590,7 @@
 
 	<bitlbee-command name="register">
 		<short-description>Register yourself</short-description>
-		<syntax>register <emphasis>&lt;</emphasis>password<emphasis>&gt;</emphasis></syntax>
+		<syntax>register &lt;password&gt;</syntax>
 
 		<description>
 			<para>
@@ -560,7 +609,7 @@
 	</bitlbee-command>
 
 	<bitlbee-command name="identify">
-		<syntax>identify <emphasis>&lt;</emphasis>password<emphasis>&gt;</emphasis></syntax>
+		<syntax>identify &lt;password&gt;</syntax>
 		<short-description>Identify yourself with your password</short-description>
 
 		<description>
@@ -569,13 +618,13 @@
 			</para>
 
 			<para>
-				Once you're registered, you can change your password using <emphasis>set password &lt;</emphasis>password<emphasis>&gt;</emphasis> (as always, without the brackets..).
+				Once you're registered, you can change your password using <emphasis>set password &lt;password&gt;</emphasis>.
 			</para>
 		</description>
 	</bitlbee-command>
 
 	<bitlbee-command name="drop">
-		<syntax>drop <emphasis>&lt;</emphasis>password<emphasis>&gt;</emphasis></syntax>
+		<syntax>drop &lt;password&gt;</syntax>
 		<short-description>Drop your account</short-description>
 
 		<description>
@@ -586,7 +635,7 @@
 	</bitlbee-command>
 
 	<bitlbee-command name="blist">
-		<syntax>blist <emphasis>[</emphasis>all<emphasis>|</emphasis>online<emphasis>|</emphasis>offline<emphasis>|</emphasis>away<emphasis>]</emphasis></syntax>
+		<syntax>blist [all|online|offline|away]</syntax>
 		<short-description>List all the buddies in your contact list</short-description>
 
 		<description>
@@ -599,13 +648,12 @@
 
 	<bitlbee-command name="nick">
 		<short-description>Change friendly name, nick</short-description>
-		<syntax>nick <emphasis>&lt;</emphasis>connection<emphasis>&gt;</emphasis> <emphasis>[&lt;</emphasis>new nick<emphasis>&gt;]</emphasis></syntax>
+		<syntax>nick &lt;connection&gt; [&lt;new nick&gt;]</syntax>
 		<syntax>nick</syntax>
 
 		<description>
 			<para>
-				This command allows to set the friendly name of an im account. If no new name is specified the command will report the current name.
-				When the name contains spaces, don't forget to quote the whole nick in double quotes. Currently this command is only supported by the MSN protocol.
+				This command allows to set the friendly name of an im account. If no new name is specified the command will report the current name. When the name contains spaces, don't forget to quote the whole nick in double quotes. Currently this command is only supported by the MSN protocol.
 			</para>
 		</description>
 
@@ -618,7 +666,7 @@
 
 	<bitlbee-command name="import_buddies">
 		<short-description>Copy local buddy list to server (normally only needed when upgrading)</short-description>
-		<syntax>import_buddies <emphasis>&lt;</emphasis>connection<emphasis>&gt; [</emphasis>clear<emphasis>]</emphasis></syntax>
+		<syntax>import_buddies &lt;connection&gt; [clear]</syntax>
 
 		<description>
 			<para>
@@ -634,7 +682,7 @@
 			</para>
 
 			<para>
-				After giving this command, you have to wait for a while before all the adds are handled, because of ICQ's rate limiting. If your buddy list is very large and the ICQ server starts complaining, you might have to reconnect and give this command again.
+				After giving this command, you have to wait for a while before all the adds are handled, because of ICQ's rate limiting. If your buddy list is very large and the ICQ server starts complaining, you might have to reconnect and enter this command again.
 			</para>
 		</description>
 

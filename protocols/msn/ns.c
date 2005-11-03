@@ -97,7 +97,7 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 	struct msn_data *md = gc->proto_data;
 	char buf[1024];
 	
-	if( !num_parts )
+	if( num_parts == 0 )
 	{
 		/* Hrrm... Empty command...? Ignore? */
 		return( 1 );
@@ -524,7 +524,7 @@ static int msn_ns_command( gpointer data, char **cmd, int num_parts )
 	}
 	else if( strcmp( cmd[0], "IPG" ) == 0 )
 	{
-		do_error_dialog(gc, "Received IPG command, we don't handle them yet.", "MSN" );
+		do_error_dialog( gc, "Received IPG command, we don't handle them yet.", "MSN" );
 		
 		md->handler->msglen = atoi( cmd[1] );
 		

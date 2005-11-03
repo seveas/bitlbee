@@ -593,7 +593,7 @@ int irc_exec( irc_t *irc, char **cmd )
 		}
 		else if ( irc->nick && g_strcasecmp( cmd[1], irc->nick ) == 0 ) 
 		{
-			irc_write( irc, "PRIVMSG %s :%s", cmd[1], cmd[2] ); 
+			irc_write( irc, ":%s!%s@%s PRIVMSG %s :%s", irc->nick, irc->user, irc->host, cmd[1], cmd[2] ); 
 		}
 		else 
 		{
@@ -633,7 +633,7 @@ int irc_exec( irc_t *irc, char **cmd )
 			{
 				irc->is_private = 1;
 			}
-			irc_send( irc, cmd[1], cmd[2], (g_strcasecmp( cmd[0], "NOTICE") == 0) ? IM_FLAG_AWAY : 0 );
+			irc_send( irc, cmd[1], cmd[2], ( g_strcasecmp( cmd[0], "NOTICE" ) == 0 ) ? IM_FLAG_AWAY : 0 );
 		}
 	}
 	else if( g_strcasecmp( cmd[0], "QUIT" ) == 0 )

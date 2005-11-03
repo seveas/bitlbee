@@ -22,6 +22,7 @@ yahoo=1
 debug=0
 strip=1
 flood=0
+ipv6=1
 ssl=auto
 
 arch=`uname -s`
@@ -54,6 +55,7 @@ Option		Description				Default
 --strip=0/1	Disable/enable binary stripping		$strip
 
 --flood=0/1	Flood protection			$flood
+--ipv6=0/1	IPv6 socket support			$ipv6
 
 --ssl=...	SSL library to use (gnutls, nss, openssl, bogus, auto)
 							$ssl
@@ -100,15 +102,18 @@ cat<<EOF>config.h
 #define VARDIR "$datadir"
 #define ARCH "$arch"
 #define CPU "$cpu"
-#define IPV6
 EOF
+
+if [ "$ipv6" = "1" ]; then
+	echo '#define IPV6' >> config.h
+fi
 
 if [ "$debug" = "1" ]; then
 	echo 'CFLAGS=-g' >> Makefile.settings
 	echo 'DEBUG=1' >> Makefile.settings
 	echo '#define DEBUG' >> config.h
 else
-	echo 'CFLAGS=-O3' >> Makefile.settings;
+	echo 'CFLAGS=-O3' >> Makefile.settings
 fi
 
 echo CFLAGS+=-I`pwd` -I`pwd`/protocols -I. >> Makefile.settings
@@ -150,9 +155,9 @@ else
 	exit 1;
 fi
 
-if [ -e /usr/include/iconv.h ]; then
+if [ -r /usr/include/iconv.h ]; then
 	:;
-elif [ -e /usr/local/include/iconv.h ]; then
+elif [ -r /usr/local/include/iconv.h ]; then
 	echo CFLAGS+=-I/usr/local/include >> Makefile.settings;
 else
 	echo
@@ -332,27 +337,30 @@ echo
 echo Architecture: $arch
 case "$arch" in
 Linux )
-	echo 'Linux is our primary development platform, BitlBee should work well.'
+	echo 'Linux.'
+;;
+GNU/* )
+	echo 'Debian with non-Linux kernel?'
 ;;
 *BSD )
-	echo 'Although our primary development system is Linux, BitlBee should run without problems on most BSD systems.'
+	echo '*BSD.'
 	echo 'EFLAGS+=-liconv' >> Makefile.settings;
 ;;
 SunOS )
-	echo 'Solaris does not work with stripping enabled, so we will disable that.'
+	echo 'Solaris.'
 	echo 'EFLAGS+=-lresolv -lnsl -lsocket' >> Makefile.settings
 	echo 'STRIP=\# skip strip' >> Makefile.settings
 	echo 'EFLAGS+=-liconv' >> Makefile.settings;
 ;;
 Darwin )
-	echo 'Darwin/Mac OS X. This should work well, please read the docs for more information.'
+	echo 'Darwin/Mac OS X.'
 	echo 'EFLAGS+=-liconv' >> Makefile.settings;
 ;;
 IRIX )
-	echo 'IRIX should not be a problem. There were some positive testing reports.'
+	echo 'IRIX.'
 ;;
 CYGWIN* )
-	echo 'Cygwin is tested and functioning, but not officially supported.'
+	echo 'Cygwin is not officially supported.'
 ;;
 * )
 	echo 'We haven'\''t tested BitlBee on many platforms yet, yours is untested. YMMV. Please report any problems to <wilmer@gaast.net>.'

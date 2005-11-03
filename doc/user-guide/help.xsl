@@ -71,6 +71,7 @@
 		<xsl:for-each select="../bitlbee-command">
 			<xsl:text> * _b_</xsl:text><xsl:value-of select="@name"/><xsl:text>_b_ - </xsl:text><xsl:value-of select="short-description"/><xsl:text>&#10;</xsl:text>
 		</xsl:for-each>
+		<xsl:text>&#10;</xsl:text>
 	</xsl:template>
 
 	<xsl:template match="preface|chapter|sect1|sect2">
@@ -93,24 +94,27 @@
 		<xsl:for-each select="varlistentry">
 			<xsl:text> _b_</xsl:text><xsl:value-of select="term"/><xsl:text>_b_ - </xsl:text><xsl:value-of select="listitem/para"/><xsl:text>&#10;</xsl:text>
 		</xsl:for-each>
+		<xsl:text>&#10;</xsl:text>
 	</xsl:template>
 
 	<xsl:template match="simplelist">
 		<xsl:for-each select="member">
 			<xsl:text> - </xsl:text><xsl:apply-templates/><xsl:text>&#10;</xsl:text>
 		</xsl:for-each>
+		<xsl:text>&#10;</xsl:text>
 	</xsl:template>
 
 	<xsl:template match="ircline">
-		<xsl:text>_b_&lt;_b_ </xsl:text><xsl:value-of select="@nick"/><xsl:text>_b_&gt;_b_ </xsl:text><xsl:value-of select="."/><xsl:text>&#10;</xsl:text>
+		<xsl:text>_b_&lt;</xsl:text><xsl:value-of select="@nick"/><xsl:text>&gt;_b_ </xsl:text><xsl:value-of select="."/><xsl:text>&#10;</xsl:text>
 	</xsl:template>
 
 	<xsl:template match="ircaction">
-		<xsl:text> _b_* </xsl:text><xsl:value-of select="@nick"/><xsl:text>_b_ </xsl:text><xsl:value-of select="."/><xsl:text>&#10;</xsl:text>
+		<xsl:text>_b_* </xsl:text><xsl:value-of select="@nick"/><xsl:text>_b_ </xsl:text><xsl:value-of select="."/><xsl:text>&#10;</xsl:text>
 	</xsl:template>
 
 	<xsl:template match="ircexample">
 		<xsl:apply-templates/>
+		<xsl:text>&#10;</xsl:text>
 	</xsl:template>
 
 	<xsl:template name="cmd">

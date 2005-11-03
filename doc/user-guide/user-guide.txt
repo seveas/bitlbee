@@ -107,7 +107,7 @@ Table of Contents
     Groupchat channel names
     Away states
 
-Chapter 1. Installation
+Chapter 1. Installation
 
 Table of Contents
 
@@ -191,7 +191,7 @@ To make 'nobody' owner of this directory, run chown nobody /var/lib/bitlbee.
 Because things like passwords are saved in this directory, it's probably a good
 idea to make this directory owner-read-/writable only.
 
-Chapter 2. Usage
+Chapter 2. Usage
 
 Table of Contents
 
@@ -222,7 +222,7 @@ done with either /msg <nick> <text> or /query <nick>.
 To keep the number of open query windows limited, you can also talk to people
 in the control channel, like <nick>: <text>.
 
-Chapter 3. Support
+Chapter 3. Support
 
 Table of Contents
 
@@ -255,7 +255,7 @@ Mailinglists
 
 BitlBee doesn't have any mailinglists.
 
-Chapter 4. Quickstart
+Chapter 4. Quickstart
 
 Table of Contents
 
@@ -298,9 +298,9 @@ QuickStart, you would:
 
 Other available IM protocols are jabber, msn, and yahoo. Oscar is the protocol
 used by ICQ and AOL. For oscar, you need to specify the IM-server as a fourth
-argument (for jabber, msn and yahoo there is no fourth argument). For AOL
-Instant Messenger, the server name is login.oscar.aol.com. For ICQ, the server
-name is login.icq.com.
+argument (for msn and yahoo there is no fourth argument). For AOL Instant
+Messenger, the server name is login.oscar.aol.com. For ICQ, the server name is
+login.icq.com.
 
 When you are finished adding your account(s) use the account on command to
 enable all your accounts, type help quickstart3 to continue.
@@ -345,8 +345,8 @@ user is not online you will not see them join until they log on.
 
 Lets say you accidentally added r2d3@example.com rather than r2d2@example.com,
 or maybe you just want to remove a user from your list because you never talk
-to them. To remove a name you will want to use the remove command: remove <nick
->
+to them. To remove a name you will want to use the remove command: remove
+<nick>
 
 When finished, type help quickstart5 to continue.
 
@@ -388,7 +388,7 @@ If you're still looking for something, please visit us in #bitlbee on the OFTC
 network (you can connect via irc.bitlbee.org), or mail us your problem/
 suggestion. Good luck and enjoy the Bee!
 
-Chapter 5. Bitlbee commands
+Chapter 5. Bitlbee commands
 
 Table of Contents
 
@@ -442,7 +442,7 @@ import_buddies - Copy local buddy list to server (normally only needed when
 
 account - IM-account list maintenance
 
-Syntax: 
+Syntax: 
 
 account <action> [<arguments>]
 
@@ -451,29 +451,70 @@ information.
 
 account add
 
-Syntax: 
+Syntax: 
 
 account add <protocol> <username> <password> [<server>]
 
 Adds an account on the given server with the specified protocol, username and
-password to the account list. The server argument is only required for OSCAR.
+password to the account list. Supported protocols right now are: Jabber, MSN,
+OSCAR (AIM/ICQ) and Yahoo. For more information about adding an account, see
+help account add <protocol>.
 
-For Jabber it's optional. You can use it if your Jabber server is not the same
-as the part after the @ in your handle. Also, you can specify an alternate port
-number or tell BitlBee to use SSL like this: alternate.server.com:5224:ssl
+account add jabber
 
-The following protocols are supported at the moment: jabber, msn, yahoo and
-oscar (For AIM/ICQ. For AIM use server login.oscar.aol.com, for ICQ use server
-login.icq.com.
+Syntax: 
+
+account add jabber <handle> <password> [<servertag>]
+
+Note that the servertag argument is optional. You only have to use it if the
+part after the @ in your handle isn't the hostname of your Jabber server, or if
+you want to use SSL/connect to a non-standard port number. The format is
+simple: [<servername>[:<portnumber>][:ssl]]. For example, this is how you can
+connect to Google Talk:
+
+Note that Google talk is SSL-only, but officially reachable over both port 5222
+and 5223. However, for some people only port 5222 works, for some people only
+5223. This is something you'll have to try out.
+
+< wilmer> account add jabber example@gmail.com hobbelmeeuw talk.google.com:5223:ssl
+< root> Account successfully added
+
+account add msn
+
+Syntax: 
+
+account add msn <handle> <password>
+
+For MSN connections there are no special arguments.
+
+account add oscar
+
+Syntax: 
+
+account add oscar <handle> <password> [<servername>]
+
+Specifying a server is required for OSCAR, since OSCAR can be used for both
+ICQ- and AIM-connections. Although these days it's supposed to be possible to
+connect to ICQ via AIM-servers and vice versa, we like to stick with this
+separation for now. For ICQ connections, the servername is login.icq.com, for
+AIM connections it's login.oscar.aol.com.
 
 < wilmer> account add oscar 72696705 hobbelmeeuw login.icq.com
 < root> Account successfully added
 
+account add yahoo
+
+Syntax: 
+
+account add yahoo <handle> <password>
+
+For Yahoo! connections there are no special arguments.
+
 account del
 
-Syntax: 
+Syntax: 
 
-account del <id>
+account del <account id>
 
 This commands deletes an account from your account list. You should signoff the
 account before deleting it.
@@ -483,23 +524,22 @@ of) the screenname, as long as it matches only one connection.
 
 account on
 
-Syntax: 
+Syntax: 
 
-account on [<id>]
+account on [<account id>]
 
 This command will try to log into the specified account. If no account is
 specified, BitlBee will log into all the accounts. (Including accounts awaiting
 a reconnection)
 
 The account ID can be a number (see account list), the protocol name or (part
-of) the screenname, as long as it matches only one connection. Without any
-account number, BitlBee will just try to restore any lost connection.
+of) the screenname, as long as it matches only one connection.
 
 account off
 
-Syntax: 
+Syntax: 
 
-account off [<id>]
+account off [<account id>]
 
 This command disconnects the connection for the specified account. If no
 account is specified, BitlBee will deactivate all active accounts. (Including
@@ -510,7 +550,7 @@ of) the screenname, as long as it matches only one connection.
 
 account list
 
-Syntax: 
+Syntax: 
 
 account list
 
@@ -519,9 +559,9 @@ the numbers you'll need for most account commands.
 
 add - Add a buddy to your contact list
 
-Syntax: 
+Syntax: 
 
-add <connection><handle>[<nick>]
+add <connection> <handle> [<nick>]
 
 Adds the given buddy at the specified connection to your buddy list. The
 account ID can be a number (see account list), the protocol name or (part of)
@@ -536,13 +576,13 @@ be more convenient.
 
 info - Request user information
 
-Syntax: 
+Syntax: 
 
-info <connection><handle>
+info <connection> <handle>
 info <nick>
 
 Requests IM-network-specific information about the specified user. The amount
-of information you'll get differs per protocol. For some protocols (ATM Jabber
+of information you'll get differs per protocol. For some protocols (ATM Yahoo!
 and MSN) it'll give you an URL which you can visit with a normal web browser to
 get the information.
 
@@ -551,7 +591,7 @@ get the information.
 
 remove - Remove a buddy from your contact list
 
-Syntax: 
+Syntax: 
 
 remove <nick>
 
@@ -562,7 +602,7 @@ Removes the specified nick from your buddy list.
 
 block - Block someone
 
-Syntax: 
+Syntax: 
 
 block <nick>
 block <connection> <handle>
@@ -573,7 +613,7 @@ handle.
 
 allow - Unblock someone
 
-Syntax: 
+Syntax: 
 
 allow <nick>
 allow <connection> <handle>
@@ -583,9 +623,9 @@ connection.
 
 set - Miscellaneous settings
 
-Syntax: 
+Syntax: 
 
-set [<variable>][<value>]
+set [<variable> [<value>]]
 
 Without any arguments, this command lists all the set variables. You can also
 specify a single argument, a variable name, to get that variable's value. To
@@ -593,15 +633,20 @@ change this value, specify the new value as the second argument.
 
 To get more help information about a setting, try:
 
+< ctrlsoft> help set private
+
 help - BitlBee help system
 
-Syntax: 
+Syntax: 
 
-help
+help [subject]
+
+This command gives you the help information you're reading right now. If you
+don't give any arguments, it'll give a short help index.
 
 save - Save your account data
 
-Syntax: 
+Syntax: 
 
 save
 
@@ -802,7 +847,7 @@ case as it intended by your peer.
 
 rename - Rename (renick) a buddy
 
-Syntax: 
+Syntax: 
 
 rename <oldnick> <newnick>
 
@@ -814,7 +859,7 @@ you got a lot of people with stupid account names (or hard ICQ numbers).
 
 yes - Accept a request
 
-Syntax: 
+Syntax: 
 
 yes [<number>]
 
@@ -827,7 +872,7 @@ questions.
 
 no - Deny a request
 
-Syntax: 
+Syntax: 
 
 no [<number>]
 
@@ -840,7 +885,7 @@ questions.
 
 qlist - List all the unanswered questions root asked
 
-Syntax: 
+Syntax: 
 
 qlist
 
@@ -848,7 +893,7 @@ This gives you a list of all the unanswered questions from root.
 
 register - Register yourself
 
-Syntax: 
+Syntax: 
 
 register <password>
 
@@ -865,7 +910,7 @@ To identify yourself in later sessions, you can use the identify command.
 
 identify - Identify yourself with your password
 
-Syntax: 
+Syntax: 
 
 identify <password>
 
@@ -874,12 +919,12 @@ prevent other users from just logging in as you and getting this information,
 you'll have to identify yourself with your password. You can register this
 password using the register command.
 
-Once you're registered, you can change your password using set password <
-password> (as always, without the brackets..).
+Once you're registered, you can change your password using set password
+<password>.
 
 drop - Drop your account
 
-Syntax: 
+Syntax: 
 
 drop <password>
 
@@ -889,7 +934,7 @@ your NickServ password to make this command work.
 
 blist - List all the buddies in your contact list
 
-Syntax: 
+Syntax: 
 
 blist [all|online|offline|away]
 
@@ -898,9 +943,9 @@ complete list (including the offline users) you can use the all argument.
 
 nick - Change friendly name, nick
 
-Syntax: 
+Syntax: 
 
-nick <connection>[<new nick>]
+nick <connection> [<new nick>]
 nick
 
 This command allows to set the friendly name of an im account. If no new name
@@ -914,7 +959,7 @@ command is only supported by the MSN protocol.
 import_buddies - Copy local buddy list to server (normally only needed when
 upgrading)
 
-Syntax: 
+Syntax: 
 
 import_buddies <connection> [clear]
 
@@ -933,10 +978,10 @@ you can pass clear as a second argument.
 
 After giving this command, you have to wait for a while before all the adds are
 handled, because of ICQ's rate limiting. If your buddy list is very large and
-the ICQ server starts complaining, you might have to reconnect and give this
+the ICQ server starts complaining, you might have to reconnect and enter this
 command again.
 
-Chapter 6. Misc Stuff
+Chapter 6. Misc Stuff
 
 Table of Contents
 
@@ -1100,13 +1145,14 @@ Since version 0.8x, BitlBee supports groupchats on the MSN and Yahoo! networks.
 This text will try to explain you how they work.
 
 As soon as someone invites you into a groupchat, you will be force-joined or
-invited into a new virtual channel with all the people in there. You can leave
-the channel at any time, just like you would close the window in regular IM
-clients. Please note that root-commands don't work in groupchat channels, they
-only work in the control channel (or to root directly).
+invited (depending on the protocol) into a new virtual channel with all the
+people in there. You can leave the channel at any time, just like you would
+close the window in regular IM clients. Please note that root-commands don't
+work in groupchat channels, they only work in the control channel (or to root
+directly).
 
-You can also create your own groupchats, if you really think they work better
-than regular IRC channels... Read more about this with help groupchats2.
+Of course you can also create your own groupchats. Type help groupchats2 to see
+how.
 
 Creating groupchats
 
@@ -1115,26 +1161,25 @@ channel #jim_msn. BitlBee will refuse to join you to the channel with that
 name, but it will create a new virtual channel with root, you and jim_msn in
 it.
 
-Now you'll think "Dude, this is just a channel with two people in it, that's
-not what I want!". Yes, I know. But just try to invite some other people to the
-channel. (I guess you already know about your client's /invite command?) Please
-do keep in mind that all the people have to be on the same network and contact
-list! You can't invite Yahoo! buddies into a MSN groupchat.
+Of course a channel with only two people isn't really exciting yet. So the next
+step is to invite some other people to the channel. For this, you can use the /
+invite command of your IRC client. Please do keep in mind that all the people
+have to be on the same network and contact list! You can't invite Yahoo!
+buddies into an MSN groupchat.
 
 This is all you'll probably need to know. If you have any problems, please read
 help groupchats3.
 
 Groupchat channel names
 
-About the virtual channel names (#chat_xxx): Please just learn to live with
-them. Channels don't have (useful) names on most IM-networks, so we just had to
-find an algorithm which generates 'unique' names. You can't rename them, and I
-think that'd not be too useful anyway...
+Obviously the (numbered) channel names don't make a lot of sense. Problem is
+that groupchats usually don't have names at all in the IM-world, while IRC
+insists on a name. So BitlBee just generates something random, just don't pay
+attention to it. :-)
 
-If BitlBee fails to create the channel (root should tell you about it), there
-might not be an available 'switchbox' to the person you chose. Just send the
-person an ordinary message then, and the switchbox will be created. You can
-retry the join then.
+Please also note that BitlBee doesn't support groupchats for all protocols yet.
+BitlBee will tell you so. Support for other protocols will hopefully come
+later.
 
 Away states
 

@@ -10,11 +10,11 @@ The center of BitlBee is the control channel, <emphasis>#bitlbee</emphasis>. Two
 </para>
 
 <para>
-You need register so that all your IM settings (passwords, contacts, etc) can be saved on the BitlBee server. It's important that you pick a good password so no one else can access your account. Register with this password using the <emphasis>register</emphasis> command: <emphasis>register &lt;</emphasis>password<emphasis>&gt;</emphasis> (without the brackets!).
+You need register so that all your IM settings (passwords, contacts, etc) can be saved on the BitlBee server. It's important that you pick a good password so no one else can access your account. Register with this password using the <emphasis>register</emphasis> command: <emphasis>register &lt;password&gt;</emphasis> (without the brackets!).
 </para>
 
 <para>
-Be sure to remember your password. The next time you connect to the BitlBee server you will need to <emphasis>identify &lt;</emphasis>password<emphasis>&gt;</emphasis> so that you will be recognised and logged in to all the IM services automatically.
+Be sure to remember your password. The next time you connect to the BitlBee server you will need to <emphasis>identify &lt;password&gt;</emphasis> so that you will be recognised and logged in to all the IM services automatically.
 </para>
 
 <para>
@@ -29,7 +29,7 @@ When finished, type <emphasis>help quickstart2</emphasis> to continue.
 </para>
 
 <para>
-To add an account to the account list you will need to use the <emphasis>account add</emphasis> command: <emphasis>account add &lt;</emphasis>protocol<emphasis>&gt; &lt;</emphasis>username<emphasis>&gt; &lt;</emphasis>password<emphasis>&gt; [&lt;</emphasis>server<emphasis>&gt;]</emphasis>.
+To add an account to the account list you will need to use the <emphasis>account add</emphasis> command: <emphasis>account add &lt;protocol&gt; &lt;username&gt; &lt;password&gt; [&lt;server&gt;]</emphasis>.
 </para>
 
 <para>
@@ -42,7 +42,7 @@ For instance, suppose you have an ICQ account with UIN <emphasis>72696705</empha
 </ircexample>
 
 <para>
-Other available IM protocols are jabber, msn, and yahoo. Oscar is the protocol used by ICQ and AOL. For oscar, you need to specify the IM-server as a fourth argument (for jabber, msn and yahoo there is no fourth argument). For AOL Instant Messenger, the server name is <emphasis>login.oscar.aol.com</emphasis>. For ICQ, the server name is <emphasis>login.icq.com</emphasis>.
+Other available IM protocols are jabber, msn, and yahoo. Oscar is the protocol used by ICQ and AOL. For oscar, you need to specify the IM-server as a fourth argument (for msn and yahoo there is no fourth argument). For AOL Instant Messenger, the server name is <emphasis>login.oscar.aol.com</emphasis>. For ICQ, the server name is <emphasis>login.icq.com</emphasis>.
 </para>
 
 <para>
@@ -68,7 +68,7 @@ BitlBee will convert names into irc-friendly form (for instance: tux@example.com
 </para>
 
 <para>
-It would be easy to get these two mixed up, so BitlBee has a <emphasis>rename</emphasis> command to change the nickname into something more suitable: <emphasis>rename &lt;</emphasis>oldnick<emphasis>&gt; &lt;</emphasis>newnick<emphasis>&gt;</emphasis>
+It would be easy to get these two mixed up, so BitlBee has a <emphasis>rename</emphasis> command to change the nickname into something more suitable: <emphasis>rename &lt;oldnick&gt; &lt;newnick&gt;</emphasis>
 </para>
 
 <ircexample>
@@ -91,7 +91,7 @@ When finished, type <emphasis>help quickstart4</emphasis> to continue.
 </para>
 
 <para>
-Now you might want to add some contacts, to do this we will use the <emphasis>add</emphasis> command. It needs two arguments: a connection ID (which can be a number (try <emphasis>account list</emphasis>), protocol name or (part of) the screenname) and the user's handle. It is used in the following way: <emphasis>add &lt;</emphasis>connection<emphasis>&gt; &lt;</emphasis>handle<emphasis>&gt;</emphasis>
+Now you might want to add some contacts, to do this we will use the <emphasis>add</emphasis> command. It needs two arguments: a connection ID (which can be a number (try <emphasis>account list</emphasis>), protocol name or (part of) the screenname) and the user's handle. It is used in the following way: <emphasis>add &lt;connection&gt; &lt;handle&gt;</emphasis>
 </para>
 
 <ircexample>
@@ -104,7 +104,7 @@ In this case r2d2 is online, since he/she joins the channel immediately. If the 
 </para>
 
 <para>
-Lets say you accidentally added r2d3@example.com rather than r2d2@example.com, or maybe you just want to remove a user from your list because you never talk to them. To remove a name you will want to use the <emphasis>remove</emphasis> command: <emphasis>remove &lt;</emphasis>nick<emphasis>&gt;</emphasis>
+Lets say you accidentally added r2d3@example.com rather than r2d2@example.com, or maybe you just want to remove a user from your list because you never talk to them. To remove a name you will want to use the <emphasis>remove</emphasis> command: <emphasis>remove &lt;nick&gt;</emphasis>
 </para>
 
 <para>

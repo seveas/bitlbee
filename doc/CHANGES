@@ -1,3 +1,17 @@
+Version 0.99:
+- Fixed memory initialization bug in OSCAR module that caused crashes on
+  closing the connection.
+- Most likely fixed the bug that caused BitlBee to use 100% CPU time in
+  some situations.
+- Outgoing MSN typing notifications are now understood correctly by the
+  orignal MS Mac/Windows clients (again).
+- Added "account add $protocol" to the documentation, got rid of a lot
+  of over-markup (i.e. overuse of bold-tags), reviewed some other parts.
+- Small changes to help.xsl to fix small flaws in the help.txt formatting.
+- Messaging yourself now doesn't make irssi or mIRC crash anymore.
+
+Finished 3 Nov 2005
+
 Version 0.93:
 - &quot; is now correctly converted to " instead of '.
 - Code cleanup in OSCAR module.

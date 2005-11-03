@@ -126,13 +126,19 @@ gboolean bitlbee_io_current_client_read( GIOChannel *source, GIOCondition condit
 	
 	count_io_event(source, "main");
 
-	if (condition & G_IO_ERR || condition & G_IO_HUP ) {
+	if( condition & G_IO_ERR || condition & G_IO_HUP )
+	{
 		irc_free( irc );
 		return FALSE;
 	}
-
+	
 	st = read( irc->fd, line, sizeof( line ) - 1 );
-	if( st <= 0 )
+	if( st == 0 )
+	{
+		irc_free( irc );
+		return FALSE;
+	}
+	else if( st < 0 )
 	{
 		if( sockerr_again() )
 		{
@@ -144,6 +150,7 @@ gboolean bitlbee_io_current_client_read( GIOChannel *source, GIOCondition condit
 			return FALSE;
 		}
 	}
+	
 	line[st] = '\0';
 	if( irc->readbuffer == NULL ) 
 	{

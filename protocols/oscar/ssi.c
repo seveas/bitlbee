@@ -1224,7 +1224,7 @@ static int parsedata(aim_session_t *sess, aim_module_t *mod, aim_frame_t *rx, ai
 		guint16 namelen, tbslen;
 
 		if (!sess->ssi.items) {
-			if (!(sess->ssi.items = g_new(struct aim_ssi_item, 1)))
+			if (!(sess->ssi.items = g_new0(struct aim_ssi_item, 1)))
 				return -ENOMEM;
 			cur = sess->ssi.items;
 		} else {

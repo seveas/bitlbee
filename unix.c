@@ -97,7 +97,7 @@ int main( int argc, char *argv[] )
 	/* Workaround against runaway problems. Bah, this is really dirty,
 	   but in the end not really different from the <=0.91 situation,
 	   which makes it an acceptable temporary "solution". */
-	g_timeout_add( 0, bitlbee_dirty_workaround, NULL );
+	// g_timeout_add( 0, bitlbee_dirty_workaround, NULL );
 	
 	g_main_run( global.loop );
 	

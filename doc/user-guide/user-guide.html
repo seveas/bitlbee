@@ -12,12 +12,12 @@
          Web site</a> or by writing to: Free Software Foundation, 
          Inc., 59 Temple Place - Suite 330, Boston, MA 02111-1307, 
          USA.
-       </p></div></div></div><hr></div><div class="toc"><p><b>Table of Contents</b></p><dl><dt><span class="chapter"><a href="#Installation">1. Installation</a></span></dt><dd><dl><dt><span class="sect1"><a href="#id2453350">Downloading the package</a></span></dt><dt><span class="sect1"><a href="#id2453379">Compiling</a></span></dt><dt><span class="sect1"><a href="#id2451907">Configuration</a></span></dt></dl></dd><dt><span class="chapter"><a href="#Usage">2. Usage</a></span></dt><dd><dl><dt><span class="sect1"><a href="#id2452016">Connecting to the server</a></span></dt><dt><span class="sect1"><a href="#id2452030">The #bitlbee control channel</a></span></dt><dt><span class="sect1"><a href="#id2452049">Talking to people</a></span></dt></dl></dd><dt><span class="chapter"><a href="#Support">3. Support</a></span></dt><dd><dl><dt><span class="sect1"><a href="#id2451425">BitlBee is beta software</a></span></dt><dt><span class="sect1"><a href="#id2451439">Support channels</a></span></dt><dd><dl><dt><span class="sect2"><a href="#id2451445">The World Wide Web</a></span></dt><dt><span class="sect2"><a href="#id2451462">IRC</a></span></dt><dt><span class="sect2"><a href="#id2451473">Mailinglists</a></span></dt></dl></dd></dl></dd><dt><span class="chapter"><a href="#quickstart">4. Quickstart</a></span></dt><dd><dl><dt><span class="sect1"><a href="#quickstart2">Add and Connect To your IM Account(s)</a></span></dt><dt><span class="sect1"><a href="#quickstart3">Managing Contact Lists: Rename</a></span></dt><dt><span class="sect1"><a href="#quickstart4">Step Four: Managing Contact Lists: Add and Remove.</a></span></dt><dt><span class="sect1"><a href="#quickstart5">Chatting</a></span></dt><dt><span class="sect1"><a href="#quickstart6">Further Resources</a></span></dt></dl></dd><dt><span class="chapter"><a href="#commands">5. Bitlbee commands</a></span></dt><dd><dl><dt><span class="sect1"><a href="#cmd_account">account - IM-account list maintenance</a></span></dt><dd><dl><dt><span class="sect2"><a href="#cmd_account_add">account add</a></span></dt><dt><span class="sect2"><a href="#cmd_account_del">account del</a></span></dt><dt><span class="sect2"><a href="#cmd_account_on">account on</a></span></dt><dt><span class="sect2"><a href="#cmd_account_off">account off</a></span></dt><dt><span class="sect2"><a href="#cmd_account_list">account list</a></span></dt></dl></dd><dt><span class="sect1"><a href="#cmd_add">add - Add a buddy to your contact list</a></span></dt><dt><span class="sect1"><a href="#cmd_info">info - Request user information</a></span></dt><dt><span class="sect1"><a href="#cmd_remove">remove - Remove a buddy from your contact list</a></span></dt><dt><span class="sect1"><a href="#cmd_block">block - Block someone</a></span></dt><dt><span class="sect1"><a href="#cmd_allow">allow - Unblock someone</a></span></dt><dt><span class="sect1"><a href="#cmd_set">set - Miscellaneous settings</a></span></dt><dt><span class="sect1"><a href="#cmd_help">help - BitlBee help system</a></span></dt><dt><span class="sect1"><a href="#cmd_save">save - Save your account data</a></span></dt><dt><span class="sect1"><a href="#set_charset">charset</a></span></dt><dt><span class="sect1"><a href="#set_private">private</a></span></dt><dt><span class="sect1"><a href="#set_save_on_quit">save_on_quit</a></span></dt><dt><span class="sect1"><a href="#set_html">html</a></span></dt><dt><span class="sect1"><a href="#set_debug">debug</a></span></dt><dt><span class="sect1"><a href="#set_to_char">to_char</a></span></dt><dt><span class="sect1"><a href="#set_typing_notice">typing_notice</a></span></dt><dt><span class="sect1"><a href="#set_ops">ops</a></span></dt><dt><span class="sect1"><a href="#set_away_devoice">away_devoice</a></span></dt><dt><span class="sect1"><a href="#set_handle_unknown">handle_unknown</a></span></dt><dt><span class="sect1"><a href="#set_auto_connect">auto_connect</a></span></dt><dt><span class="sect1"><a href="#set_auto_reconnect">auto_reconnect</a></span></dt><dt><span class="sect1"><a href="#set_auto_reconnect_delay">auto_reconnect_delay</a></span></dt><dt><span class="sect1"><a href="#set_buddy_sendbuffer">buddy_sendbuffer</a></span></dt><dt><span class="sect1"><a href="#set_buddy_sendbuffer_delay">buddy_sendbuffer_delay</a></span></dt><dt><span class="sect1"><a href="#set_default_target">default_target</a></span></dt><dt><span class="sect1"><a href="#set_display_namechanges">display_namechanges</a></span></dt><dt><span class="sect1"><a href="#set_password">password</a></span></dt><dt><span class="sect1"><a href="#set_query_order">query_order</a></span></dt><dt><span class="sect1"><a href="#set_lcnicks">lcnicks</a></span></dt><dt><span class="sect1"><a href="#cmd_rename">rename - Rename (renick) a buddy</a></span></dt><dt><span class="sect1"><a href="#cmd_yes">yes - Accept a request</a></span></dt><dt><span class="sect1"><a href="#cmd_no">no - Deny a request</a></span></dt><dt><span class="sect1"><a href="#cmd_qlist">qlist - List all the unanswered questions root asked</a></span></dt><dt><span class="sect1"><a href="#cmd_register">register - Register yourself</a></span></dt><dt><span class="sect1"><a href="#cmd_identify">identify - Identify yourself with your password</a></span></dt><dt><span class="sect1"><a href="#cmd_drop">drop - Drop your account</a></span></dt><dt><span class="sect1"><a href="#cmd_blist">blist - List all the buddies in your contact list</a></span></dt><dt><span class="sect1"><a href="#cmd_nick">nick - Change friendly name, nick</a></span></dt><dt><span class="sect1"><a href="#cmd_import_buddies">import_buddies - Copy local buddy list to server (normally only needed when upgrading)</a></span></dt></dl></dd><dt><span class="chapter"><a href="#misc">6. Misc Stuff</a></span></dt><dd><dl><dt><span class="sect1"><a href="#smileys">Smileys</a></span></dt><dt><span class="sect1"><a href="#groupchats">Groupchats</a></span></dt><dt><span class="sect1"><a href="#groupchats2">Creating groupchats</a></span></dt><dt><span class="sect1"><a href="#groupchats3">Groupchat channel names</a></span></dt><dt><span class="sect1"><a href="#away">Away states</a></span></dt></dl></dd></dl></div><div class="chapter" lang="en"><div class="titlepage"><div><div><h2 class="title"><a name="Installation"></a>Chapter 1. Installation</h2></div></div></div><div class="toc"><p><b>Table of Contents</b></p><dl><dt><span class="sect1"><a href="#id2453350">Downloading the package</a></span></dt><dt><span class="sect1"><a href="#id2453379">Compiling</a></span></dt><dt><span class="sect1"><a href="#id2451907">Configuration</a></span></dt></dl></div><div class="sect1" lang="en"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="id2453350"></a>Downloading the package</h2></div></div></div><p>
+       </p></div></div></div><hr></div><div class="toc"><p><b>Table of Contents</b></p><dl><dt><span class="chapter"><a href="#Installation">1. Installation</a></span></dt><dd><dl><dt><span class="sect1"><a href="#id4683446">Downloading the package</a></span></dt><dt><span class="sect1"><a href="#id4683474">Compiling</a></span></dt><dt><span class="sect1"><a href="#id4683726">Configuration</a></span></dt></dl></dd><dt><span class="chapter"><a href="#Usage">2. Usage</a></span></dt><dd><dl><dt><span class="sect1"><a href="#id4683835">Connecting to the server</a></span></dt><dt><span class="sect1"><a href="#id4683848">The #bitlbee control channel</a></span></dt><dt><span class="sect1"><a href="#id4683867">Talking to people</a></span></dt></dl></dd><dt><span class="chapter"><a href="#Support">3. Support</a></span></dt><dd><dl><dt><span class="sect1"><a href="#id4683912">BitlBee is beta software</a></span></dt><dt><span class="sect1"><a href="#id4683926">Support channels</a></span></dt><dd><dl><dt><span class="sect2"><a href="#id4683931">The World Wide Web</a></span></dt><dt><span class="sect2"><a href="#id4683948">IRC</a></span></dt><dt><span class="sect2"><a href="#id4683960">Mailinglists</a></span></dt></dl></dd></dl></dd><dt><span class="chapter"><a href="#quickstart">4. Quickstart</a></span></dt><dd><dl><dt><span class="sect1"><a href="#quickstart2">Add and Connect To your IM Account(s)</a></span></dt><dt><span class="sect1"><a href="#quickstart3">Managing Contact Lists: Rename</a></span></dt><dt><span class="sect1"><a href="#quickstart4">Step Four: Managing Contact Lists: Add and Remove.</a></span></dt><dt><span class="sect1"><a href="#quickstart5">Chatting</a></span></dt><dt><span class="sect1"><a href="#quickstart6">Further Resources</a></span></dt></dl></dd><dt><span class="chapter"><a href="#commands">5. Bitlbee commands</a></span></dt><dd><dl><dt><span class="sect1"><a href="#cmd_account">account - IM-account list maintenance</a></span></dt><dd><dl><dt><span class="sect2"><a href="#cmd_account_add">account add</a></span></dt><dt><span class="sect2"><a href="#cmd_account_del">account del</a></span></dt><dt><span class="sect2"><a href="#cmd_account_on">account on</a></span></dt><dt><span class="sect2"><a href="#cmd_account_off">account off</a></span></dt><dt><span class="sect2"><a href="#cmd_account_list">account list</a></span></dt></dl></dd><dt><span class="sect1"><a href="#cmd_add">add - Add a buddy to your contact list</a></span></dt><dt><span class="sect1"><a href="#cmd_info">info - Request user information</a></span></dt><dt><span class="sect1"><a href="#cmd_remove">remove - Remove a buddy from your contact list</a></span></dt><dt><span class="sect1"><a href="#cmd_block">block - Block someone</a></span></dt><dt><span class="sect1"><a href="#cmd_allow">allow - Unblock someone</a></span></dt><dt><span class="sect1"><a href="#cmd_set">set - Miscellaneous settings</a></span></dt><dt><span class="sect1"><a href="#cmd_help">help - BitlBee help system</a></span></dt><dt><span class="sect1"><a href="#cmd_save">save - Save your account data</a></span></dt><dt><span class="sect1"><a href="#set_charset">charset</a></span></dt><dt><span class="sect1"><a href="#set_private">private</a></span></dt><dt><span class="sect1"><a href="#set_save_on_quit">save_on_quit</a></span></dt><dt><span class="sect1"><a href="#set_html">html</a></span></dt><dt><span class="sect1"><a href="#set_debug">debug</a></span></dt><dt><span class="sect1"><a href="#set_to_char">to_char</a></span></dt><dt><span class="sect1"><a href="#set_typing_notice">typing_notice</a></span></dt><dt><span class="sect1"><a href="#set_ops">ops</a></span></dt><dt><span class="sect1"><a href="#set_away_devoice">away_devoice</a></span></dt><dt><span class="sect1"><a href="#set_handle_unknown">handle_unknown</a></span></dt><dt><span class="sect1"><a href="#set_auto_connect">auto_connect</a></span></dt><dt><span class="sect1"><a href="#set_auto_reconnect">auto_reconnect</a></span></dt><dt><span class="sect1"><a href="#set_auto_reconnect_delay">auto_reconnect_delay</a></span></dt><dt><span class="sect1"><a href="#set_buddy_sendbuffer">buddy_sendbuffer</a></span></dt><dt><span class="sect1"><a href="#set_buddy_sendbuffer_delay">buddy_sendbuffer_delay</a></span></dt><dt><span class="sect1"><a href="#set_default_target">default_target</a></span></dt><dt><span class="sect1"><a href="#set_display_namechanges">display_namechanges</a></span></dt><dt><span class="sect1"><a href="#set_password">password</a></span></dt><dt><span class="sect1"><a href="#set_query_order">query_order</a></span></dt><dt><span class="sect1"><a href="#set_lcnicks">lcnicks</a></span></dt><dt><span class="sect1"><a href="#cmd_rename">rename - Rename (renick) a buddy</a></span></dt><dt><span class="sect1"><a href="#cmd_yes">yes - Accept a request</a></span></dt><dt><span class="sect1"><a href="#cmd_no">no - Deny a request</a></span></dt><dt><span class="sect1"><a href="#cmd_qlist">qlist - List all the unanswered questions root asked</a></span></dt><dt><span class="sect1"><a href="#cmd_register">register - Register yourself</a></span></dt><dt><span class="sect1"><a href="#cmd_identify">identify - Identify yourself with your password</a></span></dt><dt><span class="sect1"><a href="#cmd_drop">drop - Drop your account</a></span></dt><dt><span class="sect1"><a href="#cmd_blist">blist - List all the buddies in your contact list</a></span></dt><dt><span class="sect1"><a href="#cmd_nick">nick - Change friendly name, nick</a></span></dt><dt><span class="sect1"><a href="#cmd_import_buddies">import_buddies - Copy local buddy list to server (normally only needed when upgrading)</a></span></dt></dl></dd><dt><span class="chapter"><a href="#misc">6. Misc Stuff</a></span></dt><dd><dl><dt><span class="sect1"><a href="#smileys">Smileys</a></span></dt><dt><span class="sect1"><a href="#groupchats">Groupchats</a></span></dt><dt><span class="sect1"><a href="#groupchats2">Creating groupchats</a></span></dt><dt><span class="sect1"><a href="#groupchats3">Groupchat channel names</a></span></dt><dt><span class="sect1"><a href="#away">Away states</a></span></dt></dl></dd></dl></div><div class="chapter" lang="en"><div class="titlepage"><div><div><h2 class="title"><a name="Installation"></a>Chapter 1. Installation</h2></div></div></div><div class="toc"><p><b>Table of Contents</b></p><dl><dt><span class="sect1"><a href="#id4683446">Downloading the package</a></span></dt><dt><span class="sect1"><a href="#id4683474">Compiling</a></span></dt><dt><span class="sect1"><a href="#id4683726">Configuration</a></span></dt></dl></div><div class="sect1" lang="en"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="id4683446"></a>Downloading the package</h2></div></div></div><p>
 The latest BitlBee release is always available from <a href="http://www.bitlbee.org/" target="_top">http://www.bitlbee.org/</a>.
 Download the package with your favorite program and unpack it: <span><strong class="command">tar
 xvfz bitlbee-&lt;version&gt;.tar.gz</strong></span> where &lt;version&gt; is to be
 replaced by the version number of the BitlBee you downloaded (e.g. 0.91).
-</p></div><div class="sect1" lang="en"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="id2453379"></a>Compiling</h2></div></div></div><p>
+</p></div><div class="sect1" lang="en"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="id4683474"></a>Compiling</h2></div></div></div><p>
 BitlBee's build system has to be configured before compiling. The
 <code class="filename">configure</code> script will do this for you. Just run
 it, it'll set up with nice and hopefully well-working defaults. If you
@@ -49,7 +49,7 @@ If you want BitlBee to use OpenSSL, you have to explicitly specify that.
 After running <code class="filename">configure</code>, you should run
 <span><strong class="command">make</strong></span>. After that, run <span><strong class="command">make install</strong></span> as 
 root.
-</p></div><div class="sect1" lang="en"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="id2451907"></a>Configuration</h2></div></div></div><p>
+</p></div><div class="sect1" lang="en"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="id4683726"></a>Configuration</h2></div></div></div><p>
 By default, BitlBee runs as the user nobody. You might want 
 to run it as a seperate user (some computers run named or apache as nobody). 
 </p><p>
@@ -77,55 +77,55 @@ directory has to be owned by the user that runs bitlbee. To make
 'nobody' owner of this directory, run <span><strong class="command">chown nobody /var/lib/bitlbee</strong></span>.
 Because things like passwords are saved in this directory, it's probably
 a good idea to make this directory owner-read-/writable only.
-</p></div></div><div class="chapter" lang="en"><div class="titlepage"><div><div><h2 class="title"><a name="Usage"></a>Chapter 2. Usage</h2></div></div></div><div class="toc"><p><b>Table of Contents</b></p><dl><dt><span class="sect1"><a href="#id2452016">Connecting to the server</a></span></dt><dt><span class="sect1"><a href="#id2452030">The #bitlbee control channel</a></span></dt><dt><span class="sect1"><a href="#id2452049">Talking to people</a></span></dt></dl></div><div class="sect1" lang="en"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="id2452016"></a>Connecting to the server</h2></div></div></div><p>
+</p></div></div><div class="chapter" lang="en"><div class="titlepage"><div><div><h2 class="title"><a name="Usage"></a>Chapter 2. Usage</h2></div></div></div><div class="toc"><p><b>Table of Contents</b></p><dl><dt><span class="sect1"><a href="#id4683835">Connecting to the server</a></span></dt><dt><span class="sect1"><a href="#id4683848">The #bitlbee control channel</a></span></dt><dt><span class="sect1"><a href="#id4683867">Talking to people</a></span></dt></dl></div><div class="sect1" lang="en"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="id4683835"></a>Connecting to the server</h2></div></div></div><p>
 Since BitlBee acts just like any other irc daemon, you can connect to 
 it with your favorite irc client. Launch it and connect to localhost port 6667
 (or whatever host/port you are running bitlbee on).
-</p></div><div class="sect1" lang="en"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="id2452030"></a>The #bitlbee control channel</h2></div></div></div><p>
+</p></div><div class="sect1" lang="en"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="id4683848"></a>The #bitlbee control channel</h2></div></div></div><p>
 Once you are connected to the BitlBee server, you are automatically joined
 to #bitlbee on that server. This channel acts like the 'buddy list' you have
 on the various other chat networks.
 </p><p>
 The user 'root' always hangs around in #bitlbee and acts as your interface 
 to bitlbee. All commands you give on #bitlbee are 'answered' by root.
-</p></div><div class="sect1" lang="en"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="id2452049"></a>Talking to people</h2></div></div></div><p>
+</p></div><div class="sect1" lang="en"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="id4683867"></a>Talking to people</h2></div></div></div><p>
 You can talk to by starting a query with them. In most irc clients, 
 this can be done with either <span><strong class="command">/msg &lt;nick&gt; &lt;text&gt;</strong></span>
 or <span><strong class="command">/query &lt;nick&gt;</strong></span>.
 </p><p>
 To keep the number of open query windows limited, you can also talk to people
 in the control channel, like <span><strong class="command">&lt;nick&gt;: &lt;text&gt;</strong></span>.
-</p></div></div><div class="chapter" lang="en"><div class="titlepage"><div><div><h2 class="title"><a name="Support"></a>Chapter 3. Support</h2></div></div></div><div class="toc"><p><b>Table of Contents</b></p><dl><dt><span class="sect1"><a href="#id2451425">BitlBee is beta software</a></span></dt><dt><span class="sect1"><a href="#id2451439">Support channels</a></span></dt><dd><dl><dt><span class="sect2"><a href="#id2451445">The World Wide Web</a></span></dt><dt><span class="sect2"><a href="#id2451462">IRC</a></span></dt><dt><span class="sect2"><a href="#id2451473">Mailinglists</a></span></dt></dl></dd></dl></div><div class="sect1" lang="en"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="id2451425"></a>BitlBee is beta software</h2></div></div></div><p>
+</p></div></div><div class="chapter" lang="en"><div class="titlepage"><div><div><h2 class="title"><a name="Support"></a>Chapter 3. Support</h2></div></div></div><div class="toc"><p><b>Table of Contents</b></p><dl><dt><span class="sect1"><a href="#id4683912">BitlBee is beta software</a></span></dt><dt><span class="sect1"><a href="#id4683926">Support channels</a></span></dt><dd><dl><dt><span class="sect2"><a href="#id4683931">The World Wide Web</a></span></dt><dt><span class="sect2"><a href="#id4683948">IRC</a></span></dt><dt><span class="sect2"><a href="#id4683960">Mailinglists</a></span></dt></dl></dd></dl></div><div class="sect1" lang="en"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="id4683912"></a>BitlBee is beta software</h2></div></div></div><p>
 Although BitlBee has quite some functionality it is still beta. That means it 
 can crash at any time, corrupt your data or whatever. Don't use it in 
 any production environment and don't rely on it.
-</p></div><div class="sect1" lang="en"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="id2451439"></a>Support channels</h2></div></div></div><div class="sect2" lang="en"><div class="titlepage"><div><div><h3 class="title"><a name="id2451445"></a>The World Wide Web</h3></div></div></div><p><a href="http://www.bitlbee.org/" target="_top">http://www.bitlbee.org/</a> 
+</p></div><div class="sect1" lang="en"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="id4683926"></a>Support channels</h2></div></div></div><div class="sect2" lang="en"><div class="titlepage"><div><div><h3 class="title"><a name="id4683931"></a>The World Wide Web</h3></div></div></div><p><a href="http://www.bitlbee.org/" target="_top">http://www.bitlbee.org/</a> 
 is the homepage of bitlbee and contains the most recent news on bitlbee and 
 the latest releases.
-</p></div><div class="sect2" lang="en"><div class="titlepage"><div><div><h3 class="title"><a name="id2451462"></a>IRC</h3></div></div></div><p>
+</p></div><div class="sect2" lang="en"><div class="titlepage"><div><div><h3 class="title"><a name="id4683948"></a>IRC</h3></div></div></div><p>
 BitlBee is discussed on #bitlbee on the OFTC IRC network (server: irc.oftc.net).
-</p></div><div class="sect2" lang="en"><div class="titlepage"><div><div><h3 class="title"><a name="id2451473"></a>Mailinglists</h3></div></div></div><p>
+</p></div><div class="sect2" lang="en"><div class="titlepage"><div><div><h3 class="title"><a name="id4683960"></a>Mailinglists</h3></div></div></div><p>
 BitlBee doesn't have any mailinglists.
 </p></div></div></div><div class="chapter" lang="en"><div class="titlepage"><div><div><h2 class="title"><a name="quickstart"></a>Chapter 4. Quickstart</h2></div></div></div><div class="toc"><p><b>Table of Contents</b></p><dl><dt><span class="sect1"><a href="#quickstart2">Add and Connect To your IM Account(s)</a></span></dt><dt><span class="sect1"><a href="#quickstart3">Managing Contact Lists: Rename</a></span></dt><dt><span class="sect1"><a href="#quickstart4">Step Four: Managing Contact Lists: Add and Remove.</a></span></dt><dt><span class="sect1"><a href="#quickstart5">Chatting</a></span></dt><dt><span class="sect1"><a href="#quickstart6">Further Resources</a></span></dt></dl></div><p>
 Welcome to BitlBee, your IRC gateway to ICQ, MSN, AOL, Jabber and Yahoo Instant Messaging Systems.
 </p><p>
 The center of BitlBee is the control channel, <span class="emphasis"><em>#bitlbee</em></span>. Two users will always be there, <span class="emphasis"><em>you</em></span> (where "you" is the nickname you are using) and the system user, <span class="emphasis"><em>root</em></span>.
 </p><p>
-You need register so that all your IM settings (passwords, contacts, etc) can be saved on the BitlBee server. It's important that you pick a good password so no one else can access your account. Register with this password using the <span class="emphasis"><em>register</em></span> command: <span class="emphasis"><em>register &lt;</em></span>password<span class="emphasis"><em>&gt;</em></span> (without the brackets!).
+You need register so that all your IM settings (passwords, contacts, etc) can be saved on the BitlBee server. It's important that you pick a good password so no one else can access your account. Register with this password using the <span class="emphasis"><em>register</em></span> command: <span class="emphasis"><em>register &lt;password&gt;</em></span> (without the brackets!).
 </p><p>
-Be sure to remember your password. The next time you connect to the BitlBee server you will need to <span class="emphasis"><em>identify &lt;</em></span>password<span class="emphasis"><em>&gt;</em></span> so that you will be recognised and logged in to all the IM services automatically.
+Be sure to remember your password. The next time you connect to the BitlBee server you will need to <span class="emphasis"><em>identify &lt;password&gt;</em></span> so that you will be recognised and logged in to all the IM services automatically.
 </p><p>
 When finished, type <span class="emphasis"><em>help quickstart2</em></span> to continue.
 </p><div class="sect1" lang="en"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="quickstart2"></a>Add and Connect To your IM Account(s)</h2></div></div></div><p>
         <span class="emphasis"><em>Step Two: Add and Connect To your IM Account(s).</em></span>
       </p><p>
-To add an account to the account list you will need to use the <span class="emphasis"><em>account add</em></span> command: <span class="emphasis"><em>account add &lt;</em></span>protocol<span class="emphasis"><em>&gt; &lt;</em></span>username<span class="emphasis"><em>&gt; &lt;</em></span>password<span class="emphasis"><em>&gt; [&lt;</em></span>server<span class="emphasis"><em>&gt;]</em></span>.
+To add an account to the account list you will need to use the <span class="emphasis"><em>account add</em></span> command: <span class="emphasis"><em>account add &lt;protocol&gt; &lt;username&gt; &lt;password&gt; [&lt;server&gt;]</em></span>.
 </p><p>
 For instance, suppose you have an ICQ account with UIN <span class="emphasis"><em>72696705</em></span> with password <span class="emphasis"><em>QuickStart</em></span>, you would:
 </p><pre class="screen"><code class="prompt">&lt; you&gt; </code><strong class="userinput"><code>account add oscar 72696705 QuickStart login.icq.com</code></strong>
 <code class="prompt">&lt; root&gt; </code><strong class="userinput"><code>Account successfully added</code></strong>
 </pre><p>
-Other available IM protocols are jabber, msn, and yahoo. Oscar is the protocol used by ICQ and AOL. For oscar, you need to specify the IM-server as a fourth argument (for jabber, msn and yahoo there is no fourth argument). For AOL Instant Messenger, the server name is <span class="emphasis"><em>login.oscar.aol.com</em></span>. For ICQ, the server name is <span class="emphasis"><em>login.icq.com</em></span>.
+Other available IM protocols are jabber, msn, and yahoo. Oscar is the protocol used by ICQ and AOL. For oscar, you need to specify the IM-server as a fourth argument (for msn and yahoo there is no fourth argument). For AOL Instant Messenger, the server name is <span class="emphasis"><em>login.oscar.aol.com</em></span>. For ICQ, the server name is <span class="emphasis"><em>login.icq.com</em></span>.
 </p><p>
 When you are finished adding your account(s) use the <span class="emphasis"><em>account on</em></span> command to enable all your accounts, type <span class="emphasis"><em>help quickstart3</em></span> to continue.
 </p></div><div class="sect1" lang="en"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="quickstart3"></a>Managing Contact Lists: Rename</h2></div></div></div><p>
@@ -135,7 +135,7 @@ For most protocols (currently MSN, Jabber, Yahoo and AOL) BitlBee can download t
 </p><p>
 BitlBee will convert names into irc-friendly form (for instance: tux@example.com will be given the nickname tux). If you have more than one person who would have the same name by this logic (for instance: tux@example.com and tux@bitlbee.org) the second one to log on will be tux_. The same is true if you have a tux log on to AOL and a tux log on from Yahoo.
 </p><p>
-It would be easy to get these two mixed up, so BitlBee has a <span class="emphasis"><em>rename</em></span> command to change the nickname into something more suitable: <span class="emphasis"><em>rename &lt;</em></span>oldnick<span class="emphasis"><em>&gt; &lt;</em></span>newnick<span class="emphasis"><em>&gt;</em></span></p><pre class="screen"><code class="prompt">&lt; you&gt; </code><strong class="userinput"><code>rename tux_ bitlbeetux</code></strong>
+It would be easy to get these two mixed up, so BitlBee has a <span class="emphasis"><em>rename</em></span> command to change the nickname into something more suitable: <span class="emphasis"><em>rename &lt;oldnick&gt; &lt;newnick&gt;</em></span></p><pre class="screen"><code class="prompt">&lt; you&gt; </code><strong class="userinput"><code>rename tux_ bitlbeetux</code></strong>
  * tux_is now known as bitlbeetux
 <code class="prompt">&lt; root&gt; </code><strong class="userinput"><code>Nick successfully changed</code></strong>
 </pre><p>
@@ -143,12 +143,12 @@ When finished, type <span class="emphasis"><em>help quickstart4</em></span> to c
 </p></div><div class="sect1" lang="en"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="quickstart4"></a>Step Four: Managing Contact Lists: Add and Remove.</h2></div></div></div><p>
         <span class="emphasis"><em>Step Four: Managing Contact Lists: Add and Remove.</em></span>
       </p><p>
-Now you might want to add some contacts, to do this we will use the <span class="emphasis"><em>add</em></span> command. It needs two arguments: a connection ID (which can be a number (try <span class="emphasis"><em>account list</em></span>), protocol name or (part of) the screenname) and the user's handle. It is used in the following way: <span class="emphasis"><em>add &lt;</em></span>connection<span class="emphasis"><em>&gt; &lt;</em></span>handle<span class="emphasis"><em>&gt;</em></span></p><pre class="screen"><code class="prompt">&lt; you&gt; </code><strong class="userinput"><code>add 0 r2d2@example.com</code></strong>
+Now you might want to add some contacts, to do this we will use the <span class="emphasis"><em>add</em></span> command. It needs two arguments: a connection ID (which can be a number (try <span class="emphasis"><em>account list</em></span>), protocol name or (part of) the screenname) and the user's handle. It is used in the following way: <span class="emphasis"><em>add &lt;connection&gt; &lt;handle&gt;</em></span></p><pre class="screen"><code class="prompt">&lt; you&gt; </code><strong class="userinput"><code>add 0 r2d2@example.com</code></strong>
  * r2d2has joined #bitlbee
 </pre><p>
 In this case r2d2 is online, since he/she joins the channel immediately. If the user is not online you will not see them join until they log on.
 </p><p>
-Lets say you accidentally added r2d3@example.com rather than r2d2@example.com, or maybe you just want to remove a user from your list because you never talk to them. To remove a name you will want to use the <span class="emphasis"><em>remove</em></span> command: <span class="emphasis"><em>remove &lt;</em></span>nick<span class="emphasis"><em>&gt;</em></span></p><p>
+Lets say you accidentally added r2d3@example.com rather than r2d2@example.com, or maybe you just want to remove a user from your list because you never talk to them. To remove a name you will want to use the <span class="emphasis"><em>remove</em></span> command: <span class="emphasis"><em>remove &lt;nick&gt;</em></span></p><p>
 When finished, type <span class="emphasis"><em>help quickstart5</em></span> to continue.
 </p></div><div class="sect1" lang="en"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="quickstart5"></a>Chatting</h2></div></div></div><p>
         <span class="emphasis"><em>Step Five: Chatting.</em></span>
@@ -177,29 +177,49 @@ If you're still looking for something, please visit us in #bitlbee on the OFTC n
             </p><pre class="programlisting">account add &lt;protocol&gt; &lt;username&gt; &lt;password&gt; [&lt;server&gt;]
 </pre><p>
           </p><p>
-					Adds an account on the given server with the specified protocol, username and password to the account list. The server argument is only required for OSCAR.
-				</p><p>
-					For Jabber it's optional. You can use it if your Jabber server is not the same as the part after the @ in your handle. Also, you can specify an alternate port number or tell BitlBee to use SSL like this: alternate.server.com:5224:ssl
-				</p><p>
-					The following protocols are supported at the moment: jabber, msn, yahoo and oscar (For AIM/ICQ. For AIM use server <span class="emphasis"><em>login.oscar.aol.com</em></span>, for ICQ use server <span class="emphasis"><em>login.icq.com</em></span>.
-				</p><pre class="screen"><code class="prompt">&lt; wilmer&gt; </code><strong class="userinput"><code>account add oscar 72696705 hobbelmeeuw login.icq.com</code></strong>
+					Adds an account on the given server with the specified protocol, username and password to the account list. Supported protocols right now are: Jabber, MSN, OSCAR (AIM/ICQ) and Yahoo. For more information about adding an account, see <span class="emphasis"><em>help account add &lt;protocol&gt;</em></span>.
+				</p><div class="sect2" lang="en"><div class="titlepage"><div><div><h3 class="title"><a name="cmd_account_add_jabber"></a>account add jabber</h3></div></div></div><p><b>Syntax: </b>
+              </p><pre class="programlisting">account add jabber &lt;handle&gt; &lt;password&gt; [&lt;servertag&gt;]
+</pre><p>
+            </p><p>
+						Note that the servertag argument is optional. You only have to use it if the part after the @ in your handle isn't the hostname of your Jabber server, or if you want to use SSL/connect to a non-standard port number. The format is simple: [&lt;servername&gt;[:&lt;portnumber&gt;][:ssl]]. For example, this is how you can connect to Google Talk:
+					</p><p>
+						Note that Google talk is SSL-only, but officially reachable over both port 5222 and 5223. However, for some people only port 5222 works, for some people only 5223. This is something you'll have to try out.
+					</p><pre class="screen"><code class="prompt">&lt; wilmer&gt; </code><strong class="userinput"><code>account add jabber example@gmail.com hobbelmeeuw talk.google.com:5223:ssl</code></strong>
 <code class="prompt">&lt; root&gt; </code><strong class="userinput"><code>Account successfully added</code></strong>
-</pre></div><div class="sect2" lang="en"><div class="titlepage"><div><div><h3 class="title"><a name="cmd_account_del"></a>account del</h3></div></div></div><p><b>Syntax: </b>
-            </p><pre class="programlisting">account del &lt;id&gt;
+</pre></div><div class="sect2" lang="en"><div class="titlepage"><div><div><h3 class="title"><a name="cmd_account_add_msn"></a>account add msn</h3></div></div></div><p><b>Syntax: </b>
+              </p><pre class="programlisting">account add msn &lt;handle&gt; &lt;password&gt;
+</pre><p>
+            </p><p>
+						For MSN connections there are no special arguments.
+					</p></div><div class="sect2" lang="en"><div class="titlepage"><div><div><h3 class="title"><a name="cmd_account_add_oscar"></a>account add oscar</h3></div></div></div><p><b>Syntax: </b>
+              </p><pre class="programlisting">account add oscar &lt;handle&gt; &lt;password&gt; [&lt;servername&gt;]
+</pre><p>
+            </p><p>
+						Specifying a server is required for OSCAR, since OSCAR can be used for both ICQ- and AIM-connections. Although these days it's supposed to be possible to connect to ICQ via AIM-servers and vice versa, we like to stick with this separation for now. For ICQ connections, the servername is <span class="emphasis"><em>login.icq.com</em></span>, for AIM connections it's <span class="emphasis"><em>login.oscar.aol.com</em></span>.
+					</p><pre class="screen"><code class="prompt">&lt; wilmer&gt; </code><strong class="userinput"><code>account add oscar 72696705 hobbelmeeuw login.icq.com</code></strong>
+<code class="prompt">&lt; root&gt; </code><strong class="userinput"><code>Account successfully added</code></strong>
+</pre></div><div class="sect2" lang="en"><div class="titlepage"><div><div><h3 class="title"><a name="cmd_account_add_yahoo"></a>account add yahoo</h3></div></div></div><p><b>Syntax: </b>
+              </p><pre class="programlisting">account add yahoo &lt;handle&gt; &lt;password&gt;
+</pre><p>
+            </p><p>
+						For Yahoo! connections there are no special arguments.
+					</p></div></div><div class="sect2" lang="en"><div class="titlepage"><div><div><h3 class="title"><a name="cmd_account_del"></a>account del</h3></div></div></div><p><b>Syntax: </b>
+            </p><pre class="programlisting">account del &lt;account id&gt;
 </pre><p>
           </p><p>
 					This commands deletes an account from your account list. You should signoff the account before deleting it.
 				</p><p>
 					The account ID can be a number (see <span class="emphasis"><em>account list</em></span>), the protocol name or (part of) the screenname, as long as it matches only one connection.
 				</p></div><div class="sect2" lang="en"><div class="titlepage"><div><div><h3 class="title"><a name="cmd_account_on"></a>account on</h3></div></div></div><p><b>Syntax: </b>
-            </p><pre class="programlisting">account on [&lt;id&gt;]
+            </p><pre class="programlisting">account on [&lt;account id&gt;]
 </pre><p>
           </p><p>
 					This command will try to log into the specified account. If no account is specified, BitlBee will log into all the accounts. (Including accounts awaiting a reconnection)
 				</p><p>
-					The account ID can be a number (see <span class="emphasis"><em>account list</em></span>), the protocol name or (part of) the screenname, as long as it matches only one connection. Without any account number, BitlBee will just try to restore any lost connection.
+					The account ID can be a number (see <span class="emphasis"><em>account list</em></span>), the protocol name or (part of) the screenname, as long as it matches only one connection.
 				</p></div><div class="sect2" lang="en"><div class="titlepage"><div><div><h3 class="title"><a name="cmd_account_off"></a>account off</h3></div></div></div><p><b>Syntax: </b>
-            </p><pre class="programlisting">account off [&lt;id&gt;]
+            </p><pre class="programlisting">account off [&lt;account id&gt;]
 </pre><p>
           </p><p>
 					This command disconnects the connection for the specified account. If no account is specified, BitlBee will deactivate all active accounts. (Including accounts awaiting a reconnection)
@@ -211,7 +231,7 @@ If you're still looking for something, please visit us in #bitlbee on the OFTC n
           </p><p>
 					This command gives you a list of all the accounts known by BitlBee, including the numbers you'll need for most account commands.
 				</p></div></div><div class="sect1" lang="en"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="cmd_add"></a>add - Add a buddy to your contact list</h2></div></div></div><p><b>Syntax: </b>
-          </p><pre class="programlisting">add &lt;connection&gt;&lt;handle&gt;[&lt;nick&gt;]
+          </p><pre class="programlisting">add &lt;connection&gt; &lt;handle&gt; [&lt;nick&gt;]
 </pre><p>
         </p><p>
 				Adds the given buddy at the specified connection to your buddy list. The account ID can be a number (see <span class="emphasis"><em>account list</em></span>), the protocol name or (part of) the screenname, as long as it matches only one connection.
@@ -220,11 +240,11 @@ If you're still looking for something, please visit us in #bitlbee on the OFTC n
 			</p><pre class="screen"><code class="prompt">&lt; ctrlsoft&gt; </code><strong class="userinput"><code>add 3 gryp@jabber.org grijp</code></strong>
  * grijphas joined #bitlbee
 </pre></div><div class="sect1" lang="en"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="cmd_info"></a>info - Request user information</h2></div></div></div><p><b>Syntax: </b>
-          </p><pre class="programlisting">info &lt;connection&gt;&lt;handle&gt;
+          </p><pre class="programlisting">info &lt;connection&gt; &lt;handle&gt;
 info &lt;nick&gt;
 </pre><p>
         </p><p>
-				Requests IM-network-specific information about the specified user. The amount of information you'll get differs per protocol. For some protocols (ATM Jabber and MSN) it'll give you an URL which you can visit with a normal web browser to get the information.
+				Requests IM-network-specific information about the specified user. The amount of information you'll get differs per protocol. For some protocols (ATM Yahoo! and MSN) it'll give you an URL which you can visit with a normal web browser to get the information.
 			</p><pre class="screen"><code class="prompt">&lt; ctrlsoft&gt; </code><strong class="userinput"><code>info 0 72696705</code></strong>
 <code class="prompt">&lt; root&gt; </code><strong class="userinput"><code>User info - UIN: 72696705 Nick: Lintux First/Last name: Wilmer van der Gaast E-mail: lintux@lintux.cx</code></strong>
 </pre></div><div class="sect1" lang="en"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="cmd_remove"></a>remove - Remove a buddy from your contact list</h2></div></div></div><p><b>Syntax: </b>
@@ -247,16 +267,19 @@ allow &lt;connection&gt; &lt;handle&gt;
         </p><p>
 				Reverse of block. Unignores the specified user or user handle on specified connection.
 			</p></div><div class="sect1" lang="en"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="cmd_set"></a>set - Miscellaneous settings</h2></div></div></div><p><b>Syntax: </b>
-          </p><pre class="programlisting">set [&lt;variable&gt;][&lt;value&gt;]
+          </p><pre class="programlisting">set [&lt;variable&gt; [&lt;value&gt;]]
 </pre><p>
         </p><p>
 				Without any arguments, this command lists all the set variables. You can also specify a single argument, a variable name, to get that variable's value. To change this value, specify the new value as the second argument.
 			</p><p>
 				To get more help information about a setting, try:
-			</p></div><div class="sect1" lang="en"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="cmd_help"></a>help - BitlBee help system</h2></div></div></div><p><b>Syntax: </b>
-          </p><pre class="programlisting">help
+			</p><pre class="screen"><code class="prompt">&lt; ctrlsoft&gt; </code><strong class="userinput"><code>help set private</code></strong>
+</pre></div><div class="sect1" lang="en"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="cmd_help"></a>help - BitlBee help system</h2></div></div></div><p><b>Syntax: </b>
+          </p><pre class="programlisting">help [subject]
 </pre><p>
-        </p></div><div class="sect1" lang="en"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="cmd_save"></a>save - Save your account data</h2></div></div></div><p><b>Syntax: </b>
+        </p><p>
+				This command gives you the help information you're reading right now. If you don't give any arguments, it'll give a short help index.
+			</p></div><div class="sect1" lang="en"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="cmd_save"></a>save - Save your account data</h2></div></div></div><p><b>Syntax: </b>
           </p><pre class="programlisting">save
 </pre><p>
         </p><p>
@@ -362,7 +385,7 @@ allow &lt;connection&gt; &lt;handle&gt;
         </p><p>
 				BitlBee saves all your settings (contacts, accounts, passwords) on-server. To prevent other users from just logging in as you and getting this information, you'll have to identify yourself with your password. You can register this password using the <span class="emphasis"><em>register</em></span> command.
 			</p><p>
-				Once you're registered, you can change your password using <span class="emphasis"><em>set password &lt;</em></span>password<span class="emphasis"><em>&gt;</em></span> (as always, without the brackets..).
+				Once you're registered, you can change your password using <span class="emphasis"><em>set password &lt;password&gt;</em></span>.
 			</p></div><div class="sect1" lang="en"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="cmd_drop"></a>drop - Drop your account</h2></div></div></div><p><b>Syntax: </b>
           </p><pre class="programlisting">drop &lt;password&gt;
 </pre><p>
@@ -374,12 +397,11 @@ allow &lt;connection&gt; &lt;handle&gt;
         </p><p>
 				You can get a better readable buddy list using the <span class="emphasis"><em>blist</em></span> command. If you want a complete list (including the offline users) you can use the <span class="emphasis"><em>all</em></span> argument.
 			</p></div><div class="sect1" lang="en"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="cmd_nick"></a>nick - Change friendly name, nick</h2></div></div></div><p><b>Syntax: </b>
-          </p><pre class="programlisting">nick &lt;connection&gt;[&lt;new nick&gt;]
+          </p><pre class="programlisting">nick &lt;connection&gt; [&lt;new nick&gt;]
 nick
 </pre><p>
         </p><p>
-				This command allows to set the friendly name of an im account. If no new name is specified the command will report the current name.
-				When the name contains spaces, don't forget to quote the whole nick in double quotes. Currently this command is only supported by the MSN protocol.
+				This command allows to set the friendly name of an im account. If no new name is specified the command will report the current name. When the name contains spaces, don't forget to quote the whole nick in double quotes. Currently this command is only supported by the MSN protocol.
 			</p><pre class="screen"><code class="prompt">&lt; wouter&gt; </code><strong class="userinput"><code>nick 1 "Wouter Paesen"</code></strong>
 <code class="prompt">&lt; root&gt; </code><strong class="userinput"><code>Setting your name on connection 1 to `Wouter Paesen'</code></strong>
 </pre></div><div class="sect1" lang="en"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="cmd_import_buddies"></a>import_buddies - Copy local buddy list to server (normally only needed when upgrading)</h2></div></div></div><p><b>Syntax: </b>
@@ -392,7 +414,7 @@ nick
 			</p><p>
 				The only argument this command needs is your ICQ account identification. If your serverside buddy list contains some old buddies you don't want anymore, you can pass <span class="emphasis"><em>clear</em></span> as a second argument.
 			</p><p>
-				After giving this command, you have to wait for a while before all the adds are handled, because of ICQ's rate limiting. If your buddy list is very large and the ICQ server starts complaining, you might have to reconnect and give this command again.
+				After giving this command, you have to wait for a while before all the adds are handled, because of ICQ's rate limiting. If your buddy list is very large and the ICQ server starts complaining, you might have to reconnect and enter this command again.
 			</p></div></div><div class="chapter" lang="en"><div class="titlepage"><div><div><h2 class="title"><a name="misc"></a>Chapter 6. Misc Stuff</h2></div></div></div><div class="toc"><p><b>Table of Contents</b></p><dl><dt><span class="sect1"><a href="#smileys">Smileys</a></span></dt><dt><span class="sect1"><a href="#groupchats">Groupchats</a></span></dt><dt><span class="sect1"><a href="#groupchats2">Creating groupchats</a></span></dt><dt><span class="sect1"><a href="#groupchats3">Groupchat channel names</a></span></dt><dt><span class="sect1"><a href="#away">Away states</a></span></dt></dl></div><div class="sect1" lang="en"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="smileys"></a>Smileys</h2></div></div></div><p>
 All MSN smileys (except one) are case insensitive and work without the nose too.
 </p><div class="variablelist"><dl><dt><span class="term">(Y)</span></dt><dd><p>Thumbs up</p></dd><dt><span class="term">(N)</span></dt><dd><p>Thumbs down</p></dd><dt><span class="term">(B)</span></dt><dd><p>Beer mug</p></dd><dt><span class="term">(D)</span></dt><dd><p>Martini glass</p></dd><dt><span class="term">(X)</span></dt><dd><p>Girl</p></dd><dt><span class="term">(Z)</span></dt><dd><p>Boy</p></dd><dt><span class="term">(6)</span></dt><dd><p>Devil smiley</p></dd><dt><span class="term">:-[</span></dt><dd><p>Vampire bat</p></dd><dt><span class="term">(})</span></dt><dd><p>Right hug</p></dd><dt><span class="term">({)</span></dt><dd><p>Left hug</p></dd><dt><span class="term">(M)</span></dt><dd><p>MSN Messenger or Windows Messenger icon (think a BitlBee logo here ;)</p></dd><dt><span class="term">:-S</span></dt><dd><p>Crooked smiley (Confused smiley)</p></dd><dt><span class="term">:-$</span></dt><dd><p>Embarrassed smiley</p></dd><dt><span class="term">(H)</span></dt><dd><p>Smiley with sunglasses</p></dd><dt><span class="term">:-@</span></dt><dd><p>Angry smiley</p></dd><dt><span class="term">(A)</span></dt><dd><p>Angel smiley</p></dd><dt><span class="term">(L)</span></dt><dd><p>Red heart (Love)</p></dd><dt><span class="term">(U)</span></dt><dd><p>Broken heart</p></dd><dt><span class="term">(K)</span></dt><dd><p>Red lips (Kiss)</p></dd><dt><span class="term">(G)</span></dt><dd><p>Gift with bow</p></dd><dt><span class="term">(F)</span></dt><dd><p>Red rose</p></dd><dt><span class="term">(W)</span></dt><dd><p>Wilted rose</p></dd><dt><span class="term">(P)</span></dt><dd><p>Camera</p></dd><dt><span class="term">(~)</span></dt><dd><p>Film strip</p></dd><dt><span class="term">(T)</span></dt><dd><p>Telephone receiver</p></dd><dt><span class="term">(@)</span></dt><dd><p>Cat face</p></dd><dt><span class="term">(&amp;)</span></dt><dd><p>Dog's head</p></dd><dt><span class="term">(C)</span></dt><dd><p>Coffee cup</p></dd><dt><span class="term">(I)</span></dt><dd><p>Light bulb</p></dd><dt><span class="term">(S)</span></dt><dd><p>Half-moon (Case sensitive!)</p></dd><dt><span class="term">(*)</span></dt><dd><p>Star</p></dd><dt><span class="term">(8)</span></dt><dd><p>Musical eighth note</p></dd><dt><span class="term">(E)</span></dt><dd><p>Envelope</p></dd><dt><span class="term">(^)</span></dt><dd><p>Birthday cake</p></dd><dt><span class="term">(O)</span></dt><dd><p>Clock</p></dd></dl></div><p>
@@ -400,19 +422,19 @@ This list was extracted from <a href="http://help.msn.com/!data/en_us/data/messe
 </p></div><div class="sect1" lang="en"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="groupchats"></a>Groupchats</h2></div></div></div><p>
 Since version 0.8x, BitlBee supports groupchats on the MSN and Yahoo! networks. This text will try to explain you how they work.
 </p><p>
-As soon as someone invites you into a groupchat, you will be force-joined or invited into a new virtual channel with all the people in there. You can leave the channel at any time, just like you would close the window in regular IM clients. Please note that root-commands don't work in groupchat channels, they only work in the control channel (or to root directly).
+As soon as someone invites you into a groupchat, you will be force-joined or invited (depending on the protocol) into a new virtual channel with all the people in there. You can leave the channel at any time, just like you would close the window in regular IM clients. Please note that root-commands don't work in groupchat channels, they only work in the control channel (or to root directly).
 </p><p>
-You can also create your own groupchats, if you really think they work better than regular IRC channels... Read more about this with <span class="emphasis"><em>help groupchats2</em></span>.
+Of course you can also create your own groupchats. Type <span class="emphasis"><em>help groupchats2</em></span> to see how.
 </p></div><div class="sect1" lang="en"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="groupchats2"></a>Creating groupchats</h2></div></div></div><p>
 If you want to start a groupchat with the person <span class="emphasis"><em>jim_msn</em></span> in it, just join the channel <span class="emphasis"><em>#jim_msn</em></span>. BitlBee will refuse to join you to the channel with that name, but it will create a new virtual channel with root, you and jim_msn in it.
 </p><p>
-Now you'll think "Dude, this is just a channel with two people in it, that's not what I want!". Yes, I know. But just try to invite some other people to the channel. (I guess you already know about your client's <span class="emphasis"><em>/invite</em></span> command?) Please do keep in mind that all the people have to be on the same network and contact list! You can't invite Yahoo! buddies into a MSN groupchat.
+Of course a channel with only two people isn't really exciting yet. So the next step is to invite some other people to the channel. For this, you can use the <span class="emphasis"><em>/invite</em></span> command of your IRC client. Please do keep in mind that all the people have to be on the same network and contact list! You can't invite Yahoo! buddies into an MSN groupchat.
 </p><p>
 This is all you'll probably need to know. If you have any problems, please read <span class="emphasis"><em>help groupchats3</em></span>.
 </p></div><div class="sect1" lang="en"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="groupchats3"></a>Groupchat channel names</h2></div></div></div><p>
-About the virtual channel names (<span class="emphasis"><em>#chat_xxx</em></span>): Please just learn to live with them. Channels don't have (useful) names on most IM-networks, so we just had to find an algorithm which generates 'unique' names. You can't rename them, and I think that'd not be too useful anyway...
+Obviously the (numbered) channel names don't make a lot of sense. Problem is that groupchats usually don't have names at all in the IM-world, while IRC insists on a name. So BitlBee just generates something random, just don't pay attention to it. :-)
 </p><p>
-If BitlBee fails to create the channel (root should tell you about it), there might not be an available 'switchbox' to the person you chose. Just send the person an ordinary message then, and the switchbox will be created. You can retry the join then.
+Please also note that BitlBee doesn't support groupchats for all protocols yet. BitlBee will tell you so. Support for other protocols will hopefully come later.
 </p></div><div class="sect1" lang="en"><div class="titlepage"><div><div><h2 class="title" style="clear: both"><a name="away"></a>Away states</h2></div></div></div><p>
 As you might've expected, you can just use the <span class="emphasis"><em>/away</em></span> command in your IRC client to set an away-state. BitlBee supports most away-states supported by the protocols.
 </p><p>

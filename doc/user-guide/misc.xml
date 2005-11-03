@@ -59,11 +59,11 @@ Since version 0.8x, BitlBee supports groupchats on the MSN and Yahoo! networks. 
 </para>
 
 <para>
-As soon as someone invites you into a groupchat, you will be force-joined or invited into a new virtual channel with all the people in there. You can leave the channel at any time, just like you would close the window in regular IM clients. Please note that root-commands don't work in groupchat channels, they only work in the control channel (or to root directly).
+As soon as someone invites you into a groupchat, you will be force-joined or invited (depending on the protocol) into a new virtual channel with all the people in there. You can leave the channel at any time, just like you would close the window in regular IM clients. Please note that root-commands don't work in groupchat channels, they only work in the control channel (or to root directly).
 </para>
 
 <para>
-You can also create your own groupchats, if you really think they work better than regular IRC channels... Read more about this with <emphasis>help groupchats2</emphasis>.
+Of course you can also create your own groupchats. Type <emphasis>help groupchats2</emphasis> to see how.
 </para>
 
 </sect1>
@@ -76,7 +76,7 @@ If you want to start a groupchat with the person <emphasis>jim_msn</emphasis> in
 </para>
 
 <para>
-Now you'll think "Dude, this is just a channel with two people in it, that's not what I want!". Yes, I know. But just try to invite some other people to the channel. (I guess you already know about your client's <emphasis>/invite</emphasis> command?) Please do keep in mind that all the people have to be on the same network and contact list! You can't invite Yahoo! buddies into a MSN groupchat.
+Of course a channel with only two people isn't really exciting yet. So the next step is to invite some other people to the channel. For this, you can use the <emphasis>/invite</emphasis> command of your IRC client. Please do keep in mind that all the people have to be on the same network and contact list! You can't invite Yahoo! buddies into an MSN groupchat.
 </para>
 
 <para>
@@ -89,11 +89,11 @@ This is all you'll probably need to know. If you have any problems, please read 
 <title>Groupchat channel names</title>
 
 <para>
-About the virtual channel names (<emphasis>#chat_xxx</emphasis>): Please just learn to live with them. Channels don't have (useful) names on most IM-networks, so we just had to find an algorithm which generates 'unique' names. You can't rename them, and I think that'd not be too useful anyway...
+Obviously the (numbered) channel names don't make a lot of sense. Problem is that groupchats usually don't have names at all in the IM-world, while IRC insists on a name. So BitlBee just generates something random, just don't pay attention to it. :-)
 </para>
 
 <para>
-If BitlBee fails to create the channel (root should tell you about it), there might not be an available 'switchbox' to the person you chose. Just send the person an ordinary message then, and the switchbox will be created. You can retry the join then.
+Please also note that BitlBee doesn't support groupchats for all protocols yet. BitlBee will tell you so. Support for other protocols will hopefully come later.
 </para>
 
 </sect1>

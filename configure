@@ -626,6 +626,14 @@ else
 	echo 'Insufficient resolv routines. Jabber server must be set explicitly'
 fi
 
+if echo '#include <libscrypt.h>' | $CC -E - >/dev/null 2>/dev/null; then
+	echo EFLAGS+=-lscrypt >> Makefile.settings
+else
+	echo
+	echo 'Cannot find libscrypt development libraries, aborting. (Install libscrypt-dev?)'
+	exit 1
+fi
+
 
 STORAGES="xml"
 

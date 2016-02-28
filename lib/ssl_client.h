@@ -32,6 +32,7 @@
    is completed. */
 
 #include <glib.h>
+#include <libscrypt.h>
 #include "proxy.h"
 
 /* Some generic error codes. Especially SSL_AGAIN is important if you
@@ -104,3 +105,30 @@ G_MODULE_EXPORT char *ssl_verify_strerror(int code);
 
 G_MODULE_EXPORT size_t ssl_des3_encrypt(const unsigned char *key, size_t key_len, const unsigned char *input,
                                         size_t input_len, const unsigned char *iv, unsigned char **res);
+
+/* Encrypt/decrypt data using AES-GCR with a random IV and "bitlbee" as auth
+   data. The key is not used directly, but first turned into a 32-bit key using
+   scrypt as kdf and the same IV as we use for encryption Stores the IV,
+   encrypted data and tag  in the last argument and returns the length or a
+   negative number on error. */
+G_MODULE_EXPORT size_t ssl_aes_encrypt(const unsigned char *plain, size_t plain_len, const unsigned char *pkey, size_t pkey_len, unsigned char **crypt);
+
+/* Descrypts and verifies data encrypted with the previous function */
+G_MODULE_EXPORT int ssl_aes_decrypt(const unsigned char *crypt, size_t crypt_len, const unsigned char *pkey, size_t pkey_len, unsigned char **plain);
+
+
+/* The default p in libscrypt is 16384, which is very slow. The libscrypt
+   documentation acknowledges this and says that even p=1 is safe. p=2 is fast
+   enough, so we'll use that. */
+#undef SCRYPT_p
+#define SCRYPT_p 2
+
+/* When using scrypt as a kdf, we don't want to use its MCF format, but just
+   the raw bytes. This gives us that and avoids the need to specify N, r and p. */
+#define scrypt_kdf(key, key_len, hash, hash_len, out, out_len) \
+           libscrypt_scrypt(key, key_len, hash, hash_len, SCRYPT_N, SCRYPT_r, SCRYPT_p, out, out_len)
+
+/* Wrap libscrypt_hash to make sure we always use the same N, r and p */
+#define scrypt_hash(dst, data) \
+           libscrypt_hash(dst, data, SCRYPT_N, SCRYPT_r, SCRYPT_p)
+#define scrypt_check libscrypt_check

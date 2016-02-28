@@ -437,3 +437,103 @@ out:
 
 	return rc;
 }
+
+size_t ssl_aes_encrypt(const unsigned char *plain, size_t plain_len, const unsigned char *pkey, size_t pkey_len, unsigned char **crypt)
+{
+	unsigned char dkey[32];
+	PK11SlotInfo *slot = NULL;
+	PK11SymKey *symkey = NULL;
+	SECItem key;
+	SECItem param;
+	CK_GCM_PARAMS gcmParam = { NULL, 12, (unsigned char *) "bitlbee", 7, 96 };
+
+	unsigned int ret;
+
+	if (!initialized)
+		ssl_init();
+
+	*crypt = g_new0(unsigned char, plain_len + 12 + 12);
+	random_bytes(*crypt, 12);
+	scrypt_kdf(pkey, pkey_len, *crypt, 12, dkey, 32);
+
+	key.data = (unsigned char *) dkey;
+	key.len = 32;
+
+	gcmParam.pIv = *crypt;
+	param.type = siBuffer;
+	param.data = (unsigned char *)&gcmParam;
+	param.len = sizeof(gcmParam);
+
+	if(!(slot = PK11_GetBestSlot(CKM_AES_GCM, NULL))) {
+		fprintf(stderr, "PK11_GetBestSlot failed, error %d (%d)\n", PR_GetError(), 0x2000 + PR_GetError());
+		ret = -1;
+	} else if(!(symkey = PK11_ImportSymKey(slot, CKM_AES_GCM, PK11_OriginUnwrap, CKA_ENCRYPT, &key, NULL))) {
+		fprintf(stderr, "PK11_ImportSymKey failed, error %d (%d)\n", PR_GetError(), 0x2000 + PR_GetError());
+		ret = -1;
+	} else if (PK11_Encrypt(symkey, CKM_AES_GCM, &param, *crypt+12, &ret, plain_len + 12, plain, plain_len) != SECSuccess) {
+		fprintf(stderr, "PK11_Encrypt failed, error %d (%d)\n", PR_GetError(), 0x2000 + PR_GetError());
+		ret = -1;
+	}
+	else {
+		ret += 12;
+	}
+
+	if (symkey)
+		PK11_FreeSymKey(symkey);
+	if (slot)
+		PK11_FreeSlot(slot);
+	if (ret < 0) {
+		g_free(*crypt);
+		*crypt = NULL;
+	}
+	return ret;
+}
+
+int ssl_aes_decrypt(const unsigned char *crypt, size_t crypt_len, const unsigned char *pkey, size_t pkey_len, unsigned char **plain)
+{
+	unsigned char dkey[32];
+	PK11SlotInfo *slot = NULL;
+	PK11SymKey *symkey = NULL;
+	SECItem key;
+	SECItem param;
+	CK_GCM_PARAMS gcmParam = { (unsigned char *)crypt, 12, (unsigned char *) "bitlbee", 7, 96};
+
+	unsigned int ret;
+
+	if (!initialized)
+		ssl_init();
+
+	*plain = g_new0(unsigned char, crypt_len - 12 + 1);
+	scrypt_kdf(pkey, pkey_len, crypt, 12, dkey, 32);
+
+	key.data = dkey;
+	key.len = 32;
+
+	param.type = siBuffer;
+	param.data = (unsigned char *)&gcmParam;
+	param.len = sizeof(gcmParam);
+
+	if(!(slot = PK11_GetBestSlot(CKM_AES_GCM, NULL))) {
+		fprintf(stderr, "PK11_GetBestSlot failed, error %d (%d)\n", PR_GetError(), 0x2000 + PR_GetError());
+		ret = -1;
+	} else if(!(symkey = PK11_ImportSymKey(slot, CKM_AES_GCM, PK11_OriginUnwrap, CKA_DECRYPT, &key, NULL))) {
+		fprintf(stderr, "PK11_ImportSymKey failed, error %d (%d)\n", PR_GetError(), 0x2000 + PR_GetError());
+		ret = -1;
+	} else if(PK11_Decrypt(symkey, CKM_AES_GCM, &param, *plain, &ret, crypt_len-12, crypt+12, crypt_len-12) != SECSuccess) {
+		fprintf(stderr, "PK11_Decrypt failed, error %d (%d)\n", PR_GetError(), 0x2000 + PR_GetError());
+		ret = -1;
+	} else {
+		(*plain)[crypt_len-12-12] = '\0';
+		ret = crypt_len-12-12;
+	}
+
+	if (symkey)
+		PK11_FreeSymKey(symkey);
+	if (slot)
+		PK11_FreeSlot(slot);
+	if (ret < 0) {
+		g_free(*plain);
+		*plain = NULL;
+	}
+	return ret;
+}

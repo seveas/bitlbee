@@ -317,3 +317,98 @@ size_t ssl_des3_encrypt(const unsigned char *key, size_t key_len, const unsigned
 
 	return output_length;
 }
+
+
+size_t ssl_aes_encrypt(const unsigned char *plain, size_t plain_len, const unsigned char *pkey, size_t pkey_len, unsigned char **crypt) {
+	unsigned int ret = -1;
+	unsigned char dkey[32];
+	int outl, outl2;
+
+	EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
+
+	*crypt = g_malloc(plain_len+12+12);
+	random_bytes(*crypt, 12);
+	scrypt_kdf(pkey, pkey_len, *crypt, 12, dkey, 32);
+
+	if(!EVP_EncryptInit_ex(ctx, EVP_aes_256_gcm(), NULL, NULL, NULL)) {
+		fprintf(stderr, "EVP_EncryptInit_ex failed\n");
+		ret = -1;
+	} else {
+		EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_IVLEN, 12, NULL);
+		EVP_CIPHER_CTX_set_key_length(ctx, 32);
+
+		if(!EVP_EncryptInit_ex(ctx, NULL, NULL, dkey, *crypt)) {
+			fprintf(stderr, "EVP_EncryptInit_ex failed\n");
+			ret = -1;
+		} else if (!EVP_EncryptUpdate(ctx, NULL, &outl, (unsigned char *)"bitlbee", 7)) {
+			fprintf(stderr, "EVP_EncryptUpdate (AAD) failed\n");
+			ret = -1;
+		} else if (!EVP_EncryptUpdate(ctx, *crypt+12, &outl, plain, plain_len)) {
+			fprintf(stderr, "EVP_EncryptUpdate failed\n");
+			ret = -1;
+		} else if (!EVP_EncryptFinal_ex(ctx, *crypt+12+outl, &outl2)) {
+			fprintf(stderr, "EVP_EncryptFinal failed\n");
+			ret = -1;
+		} else if (!EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_GET_TAG, 12, *crypt+12+outl+outl2)) {
+			fprintf(stderr, "EVP_Encrypt get tag failed\n");
+			ret = -1;
+		} else {
+			ret = outl + outl2 + 12 + 12;
+		}
+	}
+
+	EVP_CIPHER_CTX_cleanup(ctx);
+	EVP_CIPHER_CTX_free(ctx);
+	if (ret < 0) {
+		g_free(*crypt);
+		*crypt = NULL;
+	}
+	return ret;
+}
+
+int ssl_aes_decrypt(const unsigned char *crypt, size_t crypt_len, const unsigned char *pkey, size_t pkey_len, unsigned char **plain) {
+	unsigned int ret = -1;
+	unsigned char dkey[32];
+	int outl, outl2;
+
+	EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
+
+	*plain = g_malloc(crypt_len-12-12+1);
+	scrypt_kdf(pkey, pkey_len, crypt, 12, dkey, 32);
+
+	if(!EVP_DecryptInit_ex(ctx, EVP_aes_256_gcm(), NULL, NULL, NULL)) {
+		fprintf(stderr, "EVP_DecryptInit_ex failed\n");
+		ret = -1;
+	} else {
+		EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_IVLEN, 12, NULL);
+		EVP_CIPHER_CTX_set_key_length(ctx, 32);
+
+		if(!EVP_DecryptInit_ex(ctx, NULL, NULL, dkey, crypt)) {
+			fprintf(stderr, "EVP_DecryptInit_ex failed\n");
+			ret = -1;
+		} else if (!EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_GCM_SET_TAG, 12, crypt+crypt_len-12)) {
+			fprintf(stderr, "EVP_Decrypt set tag failed\n");
+			ret = -1;
+		} else if (!EVP_DecryptUpdate(ctx, NULL, &outl, (unsigned char *)"bitlbee", 7)) {
+			fprintf(stderr, "EVP_DecryptUpdate (AAD) failed\n");
+			ret = -1;
+		} else if (!EVP_DecryptUpdate(ctx, *plain, &outl, crypt+12, crypt_len-12-12)) {
+			fprintf(stderr, "EVP_DecryptUpdate failed\n");
+			ret = -1;
+		} else if (!EVP_DecryptFinal_ex(ctx, *plain+outl, &outl2)) {
+			fprintf(stderr, "EVP_DecryptFinal failed\n");
+			ret = -1;
+		} else {
+			ret = outl + outl2;
+			plain[outl+outl2] = '\0';
+		}
+	}
+
+	EVP_CIPHER_CTX_cleanup(ctx);
+	EVP_CIPHER_CTX_free(ctx);
+	if (ret < 0) {
+		g_free(*plain);
+		*plain = NULL;
+	}
+	return ret;
+}

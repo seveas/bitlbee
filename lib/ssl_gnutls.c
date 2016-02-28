@@ -24,6 +24,7 @@
 */
 
 #include <gnutls/gnutls.h>
+#include <gnutls/crypto.h>
 #include <gnutls/x509.h>
 #include <gcrypt.h>
 #include <fcntl.h>
@@ -496,4 +497,75 @@ size_t ssl_des3_encrypt(const unsigned char *key, size_t key_len, const unsigned
 
 	g_free(*res);
 	return 0;
+}
+
+size_t ssl_aes_encrypt(const unsigned char *plain, size_t plain_len, const unsigned char *pkey, size_t pkey_len, unsigned char **crypt)
+{
+	gnutls_aead_cipher_hd_t handle;
+	gnutls_datum_t key;
+	unsigned char dkey[32];
+	size_t ret;
+	size_t crypt_len = plain_len+12;
+
+	*crypt = g_malloc(crypt_len + 12);
+	random_bytes(*crypt, 12);
+	scrypt_kdf(pkey, pkey_len, *crypt, 12, dkey, 32);
+
+	key.data = dkey;
+	key.size = 32;
+
+	if ((ret = gnutls_aead_cipher_init(&handle, GNUTLS_CIPHER_AES_256_GCM, &key))) {
+		fprintf(stderr, "Encryption init failed: %s\n", gnutls_strerror(ret));
+		g_free(*crypt);
+		*crypt = NULL;
+	}
+	else if ((ret = gnutls_aead_cipher_encrypt(handle, *crypt, 12, "bitlbee", 7, 12, plain, plain_len, *crypt+12, &crypt_len))) {
+		fprintf(stderr, "Encryption failed: %s\n", gnutls_strerror(ret));
+		g_free(*crypt);
+		*crypt = NULL;
+		gnutls_aead_cipher_deinit(handle);
+	}
+	else {
+		gnutls_aead_cipher_deinit(handle);
+		ret = crypt_len + 12;
+	}
+
+	return ret;
+}
+
+int ssl_aes_decrypt(const unsigned char *crypt, size_t crypt_len, const unsigned char *pkey, size_t pkey_len, unsigned char **plain)
+{
+	gnutls_aead_cipher_hd_t handle;
+	gnutls_datum_t key;
+	size_t ret;
+	unsigned char dkey[32];
+	size_t plain_len = crypt_len - 24;
+
+	scrypt_kdf(pkey, pkey_len, crypt, 12, dkey, 32);
+
+	key.data = dkey;
+	key.size = 32;
+
+	*plain = g_malloc(plain_len + 1);
+
+	if ((ret = gnutls_aead_cipher_init(&handle, GNUTLS_CIPHER_AES_256_GCM, &key))) {
+		fprintf(stderr, "Decryption init failed: %s\n", gnutls_strerror(ret));
+	}
+	else if ((ret = gnutls_aead_cipher_decrypt(handle, crypt, 12, "bitlbee", 7, 12, crypt+12, crypt_len-12, *plain, &plain_len))) {
+		fprintf(stderr, "Decryption failed: %s\n", gnutls_strerror(ret));
+		gnutls_aead_cipher_deinit(handle);
+	}
+	else {
+		gnutls_aead_cipher_deinit(handle);
+		plain_len = crypt_len-24;
+		(*plain)[plain_len] = '\0';
+	}
+
+	if (ret < 0) {
+		g_free(*plain);
+		**plain = '\0';
+		*plain = NULL;
+	}
+
+	return ret;
 }

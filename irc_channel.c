@@ -35,6 +35,7 @@ irc_channel_t *irc_channel_new(irc_t *irc, const char *name)
 {
 	irc_channel_t *ic;
 	set_t *s;
+	GSList *l;
 
 	if (!irc_channel_name_ok(name) || irc_channel_by_name(irc, name)) {
 		return NULL;
@@ -58,6 +59,14 @@ irc_channel_t *irc_channel_new(irc_t *irc, const char *name)
 		set_setstr(&ic->set, "type", "control");
 	} else { /* if( name[0] == '#' ) */
 		set_setstr(&ic->set, "type", "chat");
+	}
+
+	/* Allow plugins to register settings */
+	for (l=irc_plugins; l; l=l->next) {
+		irc_plugin_t *p = l->data;
+		if (p->channel_new) {
+			p->channel_new(ic);
+		}
 	}
 
 	return ic;

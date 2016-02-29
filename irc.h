@@ -243,6 +243,10 @@ typedef struct irc_plugin {
 	gboolean (*irc_new)(irc_t *irc);
 	/* At the end of irc_free(). */
 	void (*irc_free)(irc_t *irc);
+	/* At the end of account_add */
+	void (*account_add)(struct account *acc);
+	/* At the end of channel_new */
+	void (*channel_new)(irc_channel_t *channel);
 
 	/* Problem with the following two functions is ordering if multiple
 	   plugins are handling them. Let's keep fixing that problem for

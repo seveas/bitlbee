@@ -38,6 +38,7 @@ account_t *account_add(bee_t *bee, struct prpl *prpl, char *user, char *pass)
 	account_t *a;
 	set_t *s;
 	char tag[strlen(prpl->name) + 10];
+	GSList *l;
 
 	if (bee->accounts) {
 		for (a = bee->accounts; a->next; a = a->next) {
@@ -117,6 +118,13 @@ account_t *account_add(bee_t *bee, struct prpl *prpl, char *user, char *pass)
 	if (a->flags & ACC_FLAG_STATUS_MESSAGE) {
 		s = set_add(&a->set, "status", NULL, set_eval_account, a);
 		s->flags |= SET_NULL_OK;
+	}
+	/* Allow plugins to register settings */
+	for (l=irc_plugins; l; l=l->next) {
+		irc_plugin_t *p = l->data;
+		if (p->account_add) {
+			p->account_add(a);
+		}
 	}
 
 	return a;

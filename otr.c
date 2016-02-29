@@ -507,6 +507,8 @@ static const struct irc_plugin otr_plugin =
 {
 	otr_irc_new,
 	otr_irc_free,
+	NULL,
+	NULL,
 	otr_filter_msg_out,
 	otr_filter_msg_in,
 	otr_load,

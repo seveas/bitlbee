@@ -326,7 +326,9 @@ static storage_status_t b_mysql_save_accounts(irc_t *irc, MYSQL *con) {
 	char *password;
 
 	for(acc=irc->b->accounts; acc; acc=acc->next) {
-		if(irc->auth_backend) {
+		if (acc->flags & ACC_FLAG_DONT_SAVE_PASSWORD) {
+			password = g_new0(char, 1);
+		} else if(irc->auth_backend) {
 			/* If we don't "own" the password, it may change without us
 			 * knowing, so we cannot encrypt the data, as we then may not be
 			 * able to decrypt it */

@@ -71,6 +71,7 @@ typedef enum {
 	ACC_FLAG_HANDLE_DOMAINS = 0x04, /* Contact handles need a domain portion. */
 	ACC_FLAG_LOCAL = 0x08,          /* Contact list is local. */
 	ACC_FLAG_LOCKED = 0x10,         /* Account is locked (cannot be deleted, certain settings can't changed) */
+	ACC_FLAG_DONT_SAVE_PASSWORD = 0x20 /* Do not save the password when storing the account, a plugin will handle it */
 } account_flag_t;
 
 #endif

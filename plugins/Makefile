@@ -14,6 +14,8 @@ distclean: clean
 
 $(plugins): ../Makefile.settings Makefile
 
+FLAGS_enterprise_jabber_proxy.so=-lldap
+
 $(PLUGINS): %.so: $(_SRCDIR_)%.c
 	@echo '*' Building plugin $@
 	@$(CC) $(CFLAGS) -fPIC -shared $(LDFLAGS) $< -o $@ $(FLAGS_$@)

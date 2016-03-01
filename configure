@@ -146,6 +146,8 @@ Option		Description				Default
 --gcov=0/1	Disable/enable test coverage reporting	$gcov
 --asan=0/1	Disable/enable AddressSanitizer		$asan
 --plugins=0/1	Disable/enable plugins support		$plugins
+--plugins=comma,separated,list,of,plugins
+		Build these plugins
 --otr=0/1/auto/plugin
 		Disable/enable OTR encryption support	$otr
 --skype=0/1/plugin
@@ -712,6 +714,19 @@ if [ "$plugins" = 0 ]; then
 	echo '#undef WITH_PLUGINS' >> config.h
 else
 	echo '#define WITH_PLUGINS' >> config.h
+	if [ "$plugins" != 1 ]; then (
+		PLUGINS=
+		IFS=,
+		for plugin in $plugins; do
+			if [ ! -e "plugins/$plugin.c" ]; then
+			    echo "Plugin $plugin does not exist"
+			    exit 1;
+			fi
+			PLUGINS="$PLUGINS$plugin.so "
+		done
+		echo PLUGINS=$PLUGINS >> Makefile.settings
+
+	) || exit 1; fi
 fi
 
 otrprefix=""
@@ -841,7 +856,7 @@ fi
 case "$CC" in
 *gcc* )
 	echo CFLAGS+=-MMD -MF .depend/\$@.d >> Makefile.settings
-	for i in . lib tests protocols protocols/*/; do
+	for i in . lib tests protocols protocols/*/ plugins; do
 		mkdir -p $i/.depend
 	done
 esac
@@ -985,4 +1000,12 @@ if [ -n "$protocols" ]; then
 	esac
 else
 	echo '  Building without IM-protocol support. We wish you a lot of fun...'
+fi
+
+if [ "$plugins" = "0" ]; then
+	echo '  Plugin support disabled'
+elif [ "$plugins" = "1" ]; then
+	echo '  Plugin support enabled'
+else
+	echo "  Plugin support enabled, building plugins: $plugins"
 fi

@@ -18,12 +18,15 @@ OUTFILE = bitlbee
 # Expansion of variables
 subdirobjs = $(foreach dir,$(subdirs),$(dir)/$(dir).o)
 
-all: $(OUTFILE) $(OTR_PI) $(SKYPE_PI) doc systemd
+all: $(OUTFILE) $(OTR_PI) $(SKYPE_PI) doc systemd build-plugins
 
 doc:
 ifdef DOC
 	$(MAKE) -C doc
 endif
+
+build-plugins:
+	$(MAKE) -C plugins $(PLUGINS)
 
 uninstall: uninstall-bin uninstall-doc 
 	@echo -e '\nmake uninstall does not remove files in '$(DESTDIR)$(ETCDIR)', you can use make uninstall-etc to do that.\n'
@@ -120,6 +123,7 @@ uninstall-etc:
 	-rmdir $(DESTDIR)$(ETCDIR)
 
 install-plugins: install-plugin-otr install-plugin-skype
+	$(MAKE) -C plugins install
 
 install-plugin-otr:
 ifdef OTR_PI

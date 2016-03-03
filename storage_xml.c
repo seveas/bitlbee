@@ -258,6 +258,7 @@ static storage_status_t xml_load_real(irc_t *irc, const char *my_nick, const cha
 		}
 	}
 
+	irc_setpass(irc, xd->given_pass);
 	if (action == XML_PASS_CHECK_ONLY) {
 		ret = STORAGE_OK;
 		goto error;

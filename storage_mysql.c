@@ -137,11 +137,14 @@ static storage_status_t b_mysql_check_pass_real(irc_t *irc, MYSQL *con, const ch
 	row = mysql_fetch_row(res);
 	if (row[1] && *row[1]) {
 		ret = auth_check_pass(row[1], nick, password);
-		if ((ret == STORAGE_OK) && irc)
+		if ((ret == STORAGE_OK) && irc) {
+			irc_setpass(irc, password);
 			irc->auth_backend = g_strdup(row[1]);
+		}
 	} else if ((ret = password_verify(password, row[0]))) {
 		ret = (ret == -1) ? STORAGE_OTHER_ERROR : STORAGE_INVALID_PASSWORD;
 	} else {
+		irc_setpass(irc, password);
 		ret = STORAGE_OK;
 	}
 	mysql_free_result(res);

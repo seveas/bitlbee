@@ -241,7 +241,7 @@ static storage_status_t b_mysql_load_accounts(irc_t *irc, MYSQL *con, const char
 
 		set_setstr(&acc->set, "tag", row[3]);
 		set_setstr(&acc->set, "server", row[4]);
-		set_setstr(&acc->set, "auto_connect", row[5][0] == '0' ? "true" : "false");
+		set_setstr(&acc->set, "auto_connect", row[5][0] == '0' ? "false" : "true");
 		if (row[6][0] == '1')
 			acc->flags |= ACC_FLAG_LOCKED;
 

@@ -150,8 +150,16 @@ storage_status_t storage_load(irc_t * irc, const char *password)
 	if (global.conf->auth_backend) {
 		storage_status_t status = auth_check_pass(global.conf->auth_backend, irc->user->nick, password);
 		if (status == STORAGE_OK) {
+			GSList *l;
+			irc_setpass(irc, password);
 			g_free(irc->auth_backend);
 			irc->auth_backend = g_strdup(global.conf->auth_backend);
+			for (l = irc_plugins; l; l = l->next) {
+				irc_plugin_t *p = l->data;
+				if (p->storage_load) {
+					p->storage_load(irc);
+				}
+			}
 		}
 		return status;
 	}

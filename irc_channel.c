@@ -266,6 +266,7 @@ int irc_channel_add_user(irc_channel_t *ic, irc_user_t *iu)
 int irc_channel_del_user(irc_channel_t *ic, irc_user_t *iu, irc_channel_del_user_type_t type, const char *msg)
 {
 	irc_channel_user_t *icu;
+	GSList *l;
 
 	if (!(icu = irc_channel_has_user(ic, iu))) {
 		if (iu == ic->irc->user && type == IRC_CDU_KICK) {
@@ -302,6 +303,14 @@ int irc_channel_del_user(irc_channel_t *ic, irc_user_t *iu, irc_channel_del_user
 				ic->users = g_slist_remove(ic->users, ic->users->data);
 			}
 			irc_channel_add_user(ic, ic->irc->root);
+
+			/* Allow plugins to register settings */
+			for (l=irc_plugins; l; l=l->next) {
+				irc_plugin_t *p = l->data;
+				if (p->channel_part) {
+					p->channel_part(ic);
+				}
+			}
 		}
 	}
 

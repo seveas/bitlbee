@@ -128,6 +128,13 @@ void jabber_account_add(account_t *acc)
 	}
 }
 
+void jabber_channel_part(irc_channel_t *ic)
+{
+	/* If the user leaves the conference room, we can simply delete it.
+	 * Whenever they want to come back, a simple /join will just work */
+	irc_channel_free(ic);
+}
+
 void jabber_channel_new(irc_channel_t *ic)
 {
 	/* XXX segfaults when trying to /join before auth */
@@ -167,6 +174,7 @@ static const struct irc_plugin jabber_proxy_plugin =
 	.storage_load = jabber_storage_load,
 	.account_add = jabber_account_add,
 	.channel_new = jabber_channel_new,
+	.channel_part = jabber_channel_part,
 };
 
 void init_plugin(void)
